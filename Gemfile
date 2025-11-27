@@ -9,7 +9,6 @@ gem "rails", "~> 7.1.6"
 gem "sprockets-rails"
 
 # Use postgresql as the database for Active Record
-gem 'pg', '~> 1.5', platforms: :ruby
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
@@ -71,3 +70,4 @@ group :test do
 end
 gem 'devise'
 gem 'pay', '~> 7.0'
+gem 'pg', '~> 1.5.6', platforms: :ruby
