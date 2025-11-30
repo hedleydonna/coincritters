@@ -79,6 +79,4 @@ test:
 #
 production:
   <<: *default
-  database: coincritters_production
-  username: coincritters
-  password: <%= ENV["COINCRITTERS_DATABASE_PASSWORD"] %>
+  url: <%= ENV["DATABASE_URL"] %>
