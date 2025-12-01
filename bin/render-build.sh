@@ -8,11 +8,12 @@ export RUBYOPT="-W0"
 gem update --system 3.4.10 --no-document
 
 # Update browserslist database to fix caniuse-lite warnings (if npx is available)
-if command -v npx >/dev/null 2>&1; then
-  npx update-browserslist-db@latest --yes
-else
-  echo "npx not found, skipping browserslist update"
-fi
+# NOTE: Removed - this is a Rails app, not a Node.js app
+# if command -v npx >/dev/null 2>&1; then
+#   npx update-browserslist-db@latest --yes
+# else
+#   echo "npx not found, skipping browserslist update"
+# fi
 
 # Clean up any conflicting gem specs
 gem cleanup stringio

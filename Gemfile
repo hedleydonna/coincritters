@@ -4,6 +4,8 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 # === CORE RAILS ===
 gem "rails", "~> 7.1.6"
 
+# ruby "3.3.5"
+
 # === DATABASE ===
 gem "pg", "~> 1.5.6", platforms: :ruby
 
