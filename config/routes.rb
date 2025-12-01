@@ -11,4 +11,5 @@ Rails.application.routes.draw do
 
   get "dashboard", to: "dashboard#index"
   get "up" => "rails/health#show", as: :rails_health_check
+  get "/whoami", to: ->(env) { [200, {}, ["You are logged in as: #{Current.user&.email || 'NOT logged in'}"]] }
 end
