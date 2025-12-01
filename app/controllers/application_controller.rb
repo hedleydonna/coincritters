@@ -1,9 +1,9 @@
 class ApplicationController < ActionController::Base
     protect_from_forgery with: :exception
   
-    # Only skip auth for Devise and home splash
-    before_action :authenticate_user!, unless: -> {
-      devise_controller? || (controller_name == "home" && action_name == "index")
-    }
+    # This single line is the magic that makes login go to dashboard instead of root
+    def after_sign_in_path_for(resource)
+      dashboard_path
+    end
   end
   
