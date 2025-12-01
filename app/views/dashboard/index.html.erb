@@ -1,4 +1,19 @@
-<div>
-  <h1 class="font-bold text-4xl">Dashboard#index</h1>
-  <p>Find me in app/views/dashboard/index.html.erb</p>
+<div class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+    <h1 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
+      Welcome back, <%= current_user.email.split("@").first.capitalize %>!
+    </h1>
+    
+    <div class="mt-8">
+      <p class="text-8xl animate-bounce">Baby Coinling</p>
+      <p class="text-2xl text-gray-600 mt-4">
+        Your critter collection is ready to grow!
+      </p>
+    </div>
+
+    <div class="mt-10">
+      <%= button_to "Sign out", destroy_user_session_path, method: :delete,
+                    class: "bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg" %>
+    </div>
+  </div>
 </div>
