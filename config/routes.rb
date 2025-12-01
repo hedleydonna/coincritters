@@ -4,12 +4,11 @@ Rails.application.routes.draw do
   # Public splash page
   root to: "home#index"
 
-  # Logged-in users go straight to dashboard
+  # THIS LINE IS THE ONLY THING THAT MATTERS
   authenticated :user do
     root "dashboard#index", as: :authenticated_root
   end
 
   get "dashboard", to: "dashboard#index"
   get "up" => "rails/health#show", as: :rails_health_check
-  get "/whoami", to: ->(env) { [200, {}, ["You are logged in as: #{Current.user&.email || 'NOT logged in'}"]] }
 end
