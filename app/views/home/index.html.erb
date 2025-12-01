@@ -1,4 +1,8 @@
-<div>
-  <h1 class="font-bold text-4xl">Home#index</h1>
-  <p>Find me in app/views/home/index.html.erb</p>
+<div class="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center">
+    <h1 class="text-5xl font-bold mb-8">Welcome to CoinCritters! 🪙</h1>
+    <p class="text-xl mb-8 text-gray-600">Your money streakling is waiting to thrive with your smart habits.</p>
+    <div class="text-9xl animate-bounce mb-8">🐾</div>
+    <%= link_to "Sign up & meet your coinling", new_user_registration_path, class: "bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 px-8 rounded-lg text-xl inline-block" %>
+  </div>
 </div>
