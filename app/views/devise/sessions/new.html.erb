@@ -1,7 +1,10 @@
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full">
     <h2 class="text-4xl font-bold text-center mb-8">Welcome back!</h2>
-    <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
+
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { data: { turbo: false } }) do |f| %>
+      <%= csrf_meta_tags %>   <!-- THIS LINE IS THE FIX -->
+
       <div class="field mb-6">
         <%= f.email_field :email, autofocus: true, autocomplete: "email", placeholder: "Email", class: "w-full px-4 py-3 border rounded-lg" %>
       </div>
