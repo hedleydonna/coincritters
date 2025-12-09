@@ -1,0 +1,6 @@
+#!/bin/bash
+cd /Users/donnahedley/projects/coincritters
+export GEM_HOME=/Users/donnahedley/.gem/ruby/3.3.5
+export GEM_PATH=/Users/donnahedley/.gem/ruby/3.3.5:/Users/donnahedley/.rubies/ruby-3.3.5/lib/ruby/gems/3.3.0
+export PATH=/Users/donnahedley/.gem/ruby/3.3.5/bin:/Users/donnahedley/.rubies/ruby-3.3.5/bin:$PATH
+exec /Users/donnahedley/.rubies/ruby-3.3.5/bin/bundle exec rails "$@"
