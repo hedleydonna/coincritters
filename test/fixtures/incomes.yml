@@ -1,0 +1,30 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user: one
+  name: Salary
+  frequency: monthly
+  estimated_amount: 5000.00
+  active: true
+
+two:
+  user: one
+  name: Freelance Work
+  frequency: irregular
+  estimated_amount: 1000.50
+  active: true
+
+three:
+  user: two
+  name: Part-time Job
+  frequency: weekly
+  estimated_amount: 500.00
+  active: true
+
+four:
+  user: two
+  name: Old Income Source
+  frequency: monthly
+  estimated_amount: 2000.00
+  active: false
+

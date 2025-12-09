@@ -10,9 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_09_184017) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_09_190750) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "incomes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "name", null: false
+    t.string "frequency", default: "monthly", null: false
+    t.decimal "estimated_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "active"], name: "index_incomes_on_user_id_and_active"
+    t.index ["user_id", "name"], name: "index_incomes_on_user_id_and_name", unique: true
+    t.index ["user_id"], name: "index_incomes_on_user_id"
+  end
 
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
@@ -28,4 +41,5 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_09_184017) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "incomes", "users", on_delete: :cascade
 end

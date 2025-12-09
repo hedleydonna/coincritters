@@ -4,6 +4,9 @@ class Admin::DashboardController < Admin::BaseController
   def index
     @user_count = User.count
     @recent_users = User.order(created_at: :desc).limit(5)
+    @income_count = Income.count
+    @active_income_count = Income.active.count
+    @recent_incomes = Income.includes(:user).order(created_at: :desc).limit(5)
   end
 end
 

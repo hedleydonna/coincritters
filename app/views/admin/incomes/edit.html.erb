@@ -1,0 +1,61 @@
+<div class="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 py-12 px-4">
+  <div class="max-w-2xl mx-auto">
+    <div class="mb-8 flex justify-between items-center">
+      <h1 class="text-5xl font-bold text-white mb-2">Edit Income</h1>
+      <%= link_to "← Back to Incomes", admin_incomes_path, class: "text-white hover:text-purple-200 font-medium" %>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-2xl p-8">
+      <%= form_with model: [:admin, @income], local: true do |f| %>
+        <% if @income.errors.any? %>
+          <div class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <h3 class="font-bold mb-2"><%= pluralize(@income.errors.count, "error") %> prohibited this income from being saved:</h3>
+            <ul class="list-disc list-inside">
+              <% @income.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div class="space-y-6">
+          <div>
+            <%= f.label :user_id, "User", class: "block text-sm font-medium text-gray-700 mb-2" %>
+            <%= f.collection_select :user_id, User.order(:email), :id, :email, {},
+                { class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" } %>
+          </div>
+
+          <div>
+            <%= f.label :name, class: "block text-sm font-medium text-gray-700 mb-2" %>
+            <%= f.text_field :name, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+          </div>
+
+          <div>
+            <%= f.label :frequency, class: "block text-sm font-medium text-gray-700 mb-2" %>
+            <%= f.select :frequency, Income::FREQUENCIES.map { |freq| [freq.humanize, freq] }, {},
+                { class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" } %>
+          </div>
+
+          <div>
+            <%= f.label :estimated_amount, "Estimated Amount", class: "block text-sm font-medium text-gray-700 mb-2" %>
+            <%= f.number_field :estimated_amount, step: 0.01, min: 0, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+          </div>
+
+          <div>
+            <div class="flex items-center">
+              <%= f.check_box :active, class: "h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" %>
+              <%= f.label :active, "Active Income", class: "ml-2 block text-sm text-gray-700" %>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">Active incomes are included in calculations</p>
+          </div>
+        </div>
+
+        <div class="mt-8 flex gap-4">
+          <%= f.submit "Update Income", class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
+          <%= link_to "Cancel", admin_income_path(@income), class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+

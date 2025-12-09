@@ -4,7 +4,7 @@ This document describes the data models used in the Willow application.
 
 ## Overview
 
-CoinCritters currently uses a single model: **User**. The application is built with Ruby on Rails and uses Devise for authentication.
+Willow currently uses two models: **User** and **Income**. The application is built with Ruby on Rails and uses Devise for authentication.
 
 ---
 
@@ -30,6 +30,7 @@ The User model represents registered users of the Willow application. It handles
 | `reset_password_sent_at` | datetime | | Timestamp when password reset was sent |
 | `remember_created_at` | datetime | | Timestamp for "remember me" functionality |
 | `display_name` | string | | Optional display name for the user |
+| `admin` | boolean | NOT NULL, Default: false | Admin privileges flag |
 | `created_at` | datetime | NOT NULL | Account creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
@@ -82,11 +83,13 @@ The User model includes the following Devise authentication modules:
 - `display_name` - Returns display name or falls back to email username
 - `update_without_password(params)` - Updates profile without password validation
 
+#### Admin Methods
+- `admin?` - Returns true if the user has admin privileges
+
 ### Relationships
 
-Currently, the User model has no associations with other models. Future models may include:
-- Has many relationships (e.g., posts, comments, transactions)
-- Belongs to relationships (e.g., organization, subscription)
+- `has_many :incomes` - A user can have multiple income sources
+  - When a user is deleted, all associated incomes are also deleted (dependent: :destroy)
 
 ### Validations
 
@@ -107,6 +110,13 @@ Currently, the User model has no associations with other models. Future models m
 - Can be updated without password verification
 - Falls back to email username if not set
 
+#### `admin`
+- Boolean field (default: false)
+- Grants administrative privileges when set to true
+- Admin users can access the admin dashboard
+- Admin users can manage users and incomes
+- Only existing admins can grant admin privileges to other users
+
 ### Security Features
 
 1. **Password Encryption**: Passwords are encrypted using bcrypt (via Devise)
@@ -118,6 +128,7 @@ Currently, the User model has no associations with other models. Future models m
 
 - `20251209010200_create_users.rb` - Initial users table creation
 - `20251209170000_add_display_name_to_users.rb` - Added display_name column
+- `20251209184017_add_admin_to_users.rb` - Added admin column
 
 ### Usage Examples
 
@@ -151,6 +162,18 @@ if user&.valid_password?("password123")
   # User authenticated successfully
 end
 ```
+
+---
+
+## Income Model
+
+For detailed documentation about the Income model, see [Income Model Documentation](./income_model.md).
+
+The Income model represents income sources for users. Key features:
+- Each income belongs to a user
+- Tracks estimated amount, frequency, and active status
+- Validates uniqueness of income name per user
+- Supports cascade deletion when user is deleted
 
 ---
 
