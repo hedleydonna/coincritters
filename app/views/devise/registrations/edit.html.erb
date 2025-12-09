@@ -1,40 +1,56 @@
-<h2>Edit <%= resource_name.to_s.humanize %></h2>
+<div class="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center py-12 px-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full">
+    <h2 class="text-4xl font-bold text-center mb-8 text-gray-800">Edit Profile</h2>
 
-<% if notice %>
-  <p class="notice"><%= notice %></p>
-<% end %>
-<% if alert %>
-  <p class="alert"><%= alert %></p>
-<% end %>
+    <% if notice %>
+      <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+        <%= notice %>
+      </div>
+    <% end %>
+    <% if alert %>
+      <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <%= alert %>
+      </div>
+    <% end %>
 
-<%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put }) do |f| %>
-  <%= render "devise/shared/error_messages", resource: resource %>
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put, data: { turbo: false } }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
 
-  <div class="field">
-    <%= f.label :display_name %><br />
-    <%= f.text_field :display_name, autocomplete: "display_name" %>
+      <div class="field mb-6">
+        <%= f.label :display_name, class: "block text-gray-700 text-sm font-bold mb-2" %>
+        <%= f.text_field :display_name, autocomplete: "display_name", placeholder: "Display name", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+      </div>
+
+      <div class="field mb-6">
+        <%= f.label :email, class: "block text-gray-700 text-sm font-bold mb-2" %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "email", placeholder: "Email", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+      </div>
+
+      <% if devise_mapping.confirmable? && resource.pending_reconfirmation? %>
+        <div class="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg text-sm">
+          Currently waiting confirmation for: <strong><%= resource.unconfirmed_email %></strong>
+        </div>
+      <% end %>
+
+      <div class="actions mb-6">
+        <%= f.submit "Update Profile", class: "w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-lg text-xl transition duration-200" %>
+      </div>
+    <% end %>
+
+    <div class="border-t border-gray-200 pt-6 mt-6">
+      <div class="text-center space-y-3">
+        <%= link_to "Forgot your password?", new_user_password_path, class: "text-purple-600 hover:text-purple-700 text-sm font-medium block" %>
+        <%= link_to "Return to Dashboard", dashboard_path, class: "text-purple-600 hover:text-purple-700 text-sm font-medium block" %>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 pt-6 mt-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-3">Danger Zone</h3>
+      <p class="text-sm text-gray-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+      <%= button_to "Cancel my account", registration_path(resource_name), 
+          data: { confirm: "Are you sure? This action cannot be undone.", turbo_confirm: "Are you sure? This action cannot be undone." }, 
+          method: :delete,
+          class: "w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200" %>
+    </div>
   </div>
-
-  <div class="field">
-    <%= f.label :email %><br />
-    <%= f.email_field :email, autofocus: true, autocomplete: "email" %>
-  </div>
-
-  <% if devise_mapping.confirmable? && resource.pending_reconfirmation? %>
-    <div>Currently waiting confirmation for: <%= resource.unconfirmed_email %></div>
-  <% end %>
-
-  <div class="actions">
-    <%= f.submit "Update" %>
-  </div>
-<% end %>
-
-<p class="mt-4 text-sm text-gray-600">
-  <%= link_to "Forgot your password?", new_user_password_path %> | 
-  <%= link_to "Return to Dashboard", dashboard_path %> | 
-  <%= link_to "Back", :back %>
-</p>
-
-<h3>Cancel my account</h3>
-
-<div>Unhappy? <%= button_to "Cancel my account", registration_path(resource_name), data: { confirm: "Are you sure?", turbo_confirm: "Are you sure?" }, method: :delete %></div>
+</div>

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get 'static/credits'
   devise_for :users, controllers: {
     registrations: 'users/registrations'
   }
@@ -13,4 +14,6 @@ Rails.application.routes.draw do
 
   get "dashboard", to: "dashboard#index"
   get "up" => "rails/health#show", as: :rails_health_check
+
+  get "/credits", to: "static#credits", as: :credits
 end
