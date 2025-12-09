@@ -4,6 +4,12 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
-  # Reset column information to ensure display_name is recognized
-  self.reset_column_information
+  # Ensure display_name attribute is accessible
+  def display_name
+    self[:display_name]
+  end
+
+  def display_name=(value)
+    self[:display_name] = value
+  end
 end
