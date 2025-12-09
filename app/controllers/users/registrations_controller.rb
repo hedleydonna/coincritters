@@ -34,18 +34,16 @@ class Users::RegistrationsController < Devise::RegistrationsController
     Rails.logger.info "=== NON PASSWORD FIELDS: #{non_password_fields.inspect} ==="
     Rails.logger.info "=== PASSWORD FIELDS PRESENT: #{password_fields_present} ==="
 
-    # Check if this is a display_name-only update
-    if non_password_fields.include?('display_name') && !password_fields_present
-      # Check if email is unchanged (just submitted as part of form)
-      email_unchanged = user_params['email'] == resource.email
+    # Allow profile updates (email + display_name) without password validation
+    # Only require password for actual password changes
+    profile_fields = ['email', 'display_name']
+    profile_only_update = non_password_fields.all? { |field| profile_fields.include?(field) } && !password_fields_present
 
-      # Allow if only display_name, or display_name + unchanged email
-      if non_password_fields == ['display_name'] || (non_password_fields == ['display_name', 'email'] && email_unchanged)
-        Rails.logger.info "=== DISPLAY NAME ONLY UPDATE - SKIPPING PASSWORD VALIDATION ==="
-        # Remove current_password from params to prevent validation
-        params[:user].delete(:current_password) if params[:user]
-        resource.skip_password_validation = true
-      end
+    if profile_only_update
+      Rails.logger.info "=== PROFILE UPDATE (EMAIL/DISPLAY_NAME) - SKIPPING PASSWORD VALIDATION ==="
+      # Remove current_password from params to prevent validation
+      params[:user].delete(:current_password) if params[:user]
+      resource.skip_password_validation = true
     end
 
     super
@@ -77,24 +75,23 @@ class Users::RegistrationsController < Devise::RegistrationsController
     devise_parameter_sanitizer.permit(:account_update, keys: [:display_name])
   end
 
-  # Override update_resource to handle display_name-only updates without password
+  # Override update_resource to handle profile updates without password
   def update_resource(resource, params)
-    # Check if display_name is being updated
     password_fields = ['password', 'password_confirmation', 'current_password']
     non_password_fields = params.keys - password_fields
     password_fields_present = password_fields.any? { |field| params[field].present? }
 
-    # Check if email is unchanged
-    email_unchanged = params['email'] == resource.email
+    # Allow profile updates (email, display_name) without password validation
+    profile_fields = ['email', 'display_name']
+    profile_only_update = non_password_fields.all? { |field| profile_fields.include?(field) } && !password_fields_present
 
-    # Allow display_name-only updates (with or without unchanged email)
-    if non_password_fields.include?('display_name') && !password_fields_present &&
-       (non_password_fields == ['display_name'] || (non_password_fields == ['display_name', 'email'] && email_unchanged))
-      # Update display_name directly without password validation
-      Rails.logger.info "=== USING DIRECT UPDATE FOR DISPLAY_NAME ==="
-      resource.update(display_name: params[:display_name])
+    if profile_only_update
+      # Update profile fields directly without password validation
+      Rails.logger.info "=== USING DIRECT UPDATE FOR PROFILE ==="
+      update_params = params.slice(*profile_fields)
+      resource.update(update_params)
     else
-      # Use default Devise behavior for password/email changes
+      # Use default Devise behavior for password changes
       Rails.logger.info "=== USING DEVISE DEFAULT UPDATE ==="
       super
     end
