@@ -7,6 +7,8 @@ module.exports = {
     './app/javascript/**/*.js',
     './app/views/**/*.{erb,haml,html,slim}'
   ],
+  input: './app/assets/tailwind/application.css',
+  output: './app/assets/builds/tailwind.css',
   theme: {
     extend: {
       fontFamily: {

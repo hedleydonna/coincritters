@@ -14,7 +14,7 @@ gem "sprockets-rails"
 gem "importmap-rails"
 gem "turbo-rails"
 gem "stimulus-rails"
-gem "tailwindcss-rails"
+gem "tailwindcss-rails", "~> 3.3.1"
 
 # === SERVER & PERFORMANCE ===
 gem "puma", ">= 5.0"
