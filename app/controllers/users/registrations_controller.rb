@@ -23,22 +23,21 @@ class Users::RegistrationsController < Devise::RegistrationsController
     Rails.logger.info "=== UPDATE PARAMS: #{params.inspect} ==="
     Rails.logger.info "=== DISPLAY_NAME PARAM: #{params.dig(:user, :display_name)} ==="
 
-    # Skip password validation if only display_name is being updated
     user_params = params[:user] || {}
     Rails.logger.info "=== USER PARAMS: #{user_params.inspect} ==="
 
-    # Check if we're only updating display_name (and possibly empty password fields)
+    # If only display_name is being updated and no password fields are filled
     password_fields = ['password', 'password_confirmation', 'current_password']
     non_password_fields = user_params.keys - password_fields
-
-    # Also check if password fields are empty
-    password_fields_empty = password_fields.all? { |field| user_params[field].blank? }
+    password_fields_present = password_fields.any? { |field| user_params[field].present? }
 
     Rails.logger.info "=== NON PASSWORD FIELDS: #{non_password_fields.inspect} ==="
-    Rails.logger.info "=== PASSWORD FIELDS EMPTY: #{password_fields_empty} ==="
+    Rails.logger.info "=== PASSWORD FIELDS PRESENT: #{password_fields_present} ==="
 
-    if non_password_fields == ['display_name'] && password_fields_empty
-      Rails.logger.info "=== SKIPPING PASSWORD VALIDATION ==="
+    if non_password_fields == ['display_name'] && !password_fields_present
+      Rails.logger.info "=== DISPLAY NAME ONLY UPDATE - SKIPPING PASSWORD VALIDATION ==="
+      # Remove current_password from params to prevent validation
+      params[:user].delete(:current_password)
       resource.skip_password_validation = true
     end
 
@@ -71,18 +70,33 @@ class Users::RegistrationsController < Devise::RegistrationsController
     devise_parameter_sanitizer.permit(:account_update, keys: [:display_name])
   end
 
+  # Override update_resource to handle display_name-only updates without password
+  def update_resource(resource, params)
+    # Check if only display_name is being updated
+    password_fields = ['password', 'password_confirmation', 'current_password']
+    non_password_fields = params.keys - password_fields
+    password_fields_present = password_fields.any? { |field| params[field].present? }
+
+    if non_password_fields == ['display_name'] && !password_fields_present
+      # Update display_name directly without password validation
+      resource.update(display_name: params[:display_name])
+    else
+      # Use default Devise behavior for password/email changes
+      super
+    end
+  end
+
   protected
 
   # Override password_required? to skip password validation for display_name-only updates
   def password_required?
-    return false if params.dig(:user, :display_name).present? && params[:user].keys.all? { |k| ['display_name', 'password', 'password_confirmation', 'current_password'].include?(k) }
-
-    # Check if password fields are all blank when only display_name is present
     user_params = params[:user] || {}
     password_fields = ['password', 'password_confirmation', 'current_password']
-    password_fields_empty = password_fields.all? { |field| user_params[field].blank? }
+    non_password_fields = user_params.keys - password_fields
+    password_fields_present = password_fields.any? { |field| user_params[field].present? }
 
-    return false if user_params['display_name'].present? && password_fields_empty
+    # Skip password validation if only display_name is being updated
+    return false if non_password_fields == ['display_name'] && !password_fields_present
 
     super
   end
