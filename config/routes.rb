@@ -16,4 +16,10 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   get "/credits", to: "static#credits", as: :credits
+
+  # Admin routes
+  namespace :admin do
+    root "dashboard#index"
+    resources :users
+  end
 end
