@@ -6,6 +6,10 @@
       <%= csrf_meta_tags %>   <!-- THIS LINE IS THE FIX -->
 
       <div class="field mb-6">
+        <%= f.text_field :display_name, autocomplete: "name", placeholder: "Display name (optional)", class: "w-full px-4 py-3 border rounded-lg" %>
+      </div>
+
+      <div class="field mb-6">
         <%= f.email_field :email, autofocus: true, autocomplete: "email", placeholder: "Email", class: "w-full px-4 py-3 border rounded-lg" %>
       </div>
 
