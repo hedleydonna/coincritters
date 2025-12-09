@@ -22,6 +22,16 @@ class Users::RegistrationsController < Devise::RegistrationsController
   def update
     Rails.logger.info "=== UPDATE PARAMS: #{params.inspect} ==="
     Rails.logger.info "=== DISPLAY_NAME PARAM: #{params.dig(:user, :display_name)} ==="
+
+    # Skip password validation if only display_name is being updated
+    user_params = params[:user] || {}
+    password_fields = ['password', 'password_confirmation', 'current_password']
+    non_password_fields = user_params.keys - password_fields
+
+    if non_password_fields == ['display_name']
+      resource.skip_password_validation = true
+    end
+
     super
   end
 

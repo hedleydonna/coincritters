@@ -39,8 +39,9 @@
   </div>
 
   <div class="field">
-    <%= f.label :current_password %> <i>(we need your current password to confirm your changes)</i><br />
+    <%= f.label :current_password %> <i>(required when changing password or email)</i><br />
     <%= f.password_field :current_password, autocomplete: "current-password" %>
+    <small class="text-gray-600">Leave blank when only updating display name</small>
   </div>
 
   <div class="actions">
