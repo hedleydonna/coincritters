@@ -19,6 +19,10 @@ gem update --system 3.4.10 --no-document
 gem cleanup stringio
 
 # Run the normal Rails build steps
+# Disable binstubs to avoid bundle binstub issues
+export BUNDLE_BINSTUBS=false
+export BUNDLE_DISABLE_EXEC_LOAD=true
+
 bundle install
 bundle exec rake assets:precompile
 bundle exec rake assets:clean
