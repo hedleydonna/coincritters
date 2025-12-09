@@ -22,12 +22,11 @@ gem cleanup stringio
 # Disable binstubs to avoid bundle binstub issues
 export BUNDLE_BINSTUBS=false
 export BUNDLE_DISABLE_EXEC_LOAD=true
-export BUNDLE_SKIP_BINSTUBS=true
 
 # Remove any existing bin/bundle that might have been created
 rm -f bin/bundle
 
 bundle install --no-binstubs
-bundle exec --no-binstubs rake assets:precompile
-bundle exec --no-binstubs rake assets:clean
-RAILS_ENV=production bundle exec --no-binstubs rails db:migrate
+bundle exec rake assets:precompile
+bundle exec rake assets:clean
+RAILS_ENV=production bundle exec rails db:migrate
