@@ -25,10 +25,20 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
     # Skip password validation if only display_name is being updated
     user_params = params[:user] || {}
+    Rails.logger.info "=== USER PARAMS: #{user_params.inspect} ==="
+
+    # Check if we're only updating display_name (and possibly empty password fields)
     password_fields = ['password', 'password_confirmation', 'current_password']
     non_password_fields = user_params.keys - password_fields
 
-    if non_password_fields == ['display_name']
+    # Also check if password fields are empty
+    password_fields_empty = password_fields.all? { |field| user_params[field].blank? }
+
+    Rails.logger.info "=== NON PASSWORD FIELDS: #{non_password_fields.inspect} ==="
+    Rails.logger.info "=== PASSWORD FIELDS EMPTY: #{password_fields_empty} ==="
+
+    if non_password_fields == ['display_name'] && password_fields_empty
+      Rails.logger.info "=== SKIPPING PASSWORD VALIDATION ==="
       resource.skip_password_validation = true
     end
 
@@ -59,6 +69,22 @@ class Users::RegistrationsController < Devise::RegistrationsController
   # If you have extra params to permit, append them to the sanitizer.
   def configure_account_update_params
     devise_parameter_sanitizer.permit(:account_update, keys: [:display_name])
+  end
+
+  protected
+
+  # Override password_required? to skip password validation for display_name-only updates
+  def password_required?
+    return false if params.dig(:user, :display_name).present? && params[:user].keys.all? { |k| ['display_name', 'password', 'password_confirmation', 'current_password'].include?(k) }
+
+    # Check if password fields are all blank when only display_name is present
+    user_params = params[:user] || {}
+    password_fields = ['password', 'password_confirmation', 'current_password']
+    password_fields_empty = password_fields.all? { |field| user_params[field].blank? }
+
+    return false if user_params['display_name'].present? && password_fields_empty
+
+    super
   end
 
   # The path used after sign up.
