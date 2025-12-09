@@ -24,33 +24,17 @@
     <div>Currently waiting confirmation for: <%= resource.unconfirmed_email %></div>
   <% end %>
 
-  <div class="field">
-    <%= f.label :password %> <i>(leave blank if you don't want to change it)</i><br />
-    <%= f.password_field :password, autocomplete: "new-password" %>
-    <% if @minimum_password_length %>
-      <br />
-      <em><%= @minimum_password_length %> characters minimum</em>
-    <% end %>
-  </div>
-
-  <div class="field">
-    <%= f.label :password_confirmation %><br />
-    <%= f.password_field :password_confirmation, autocomplete: "new-password" %>
-  </div>
-
-  <div class="field">
-    <%= f.label :current_password %> <i>(only required when changing password)</i><br />
-    <%= f.password_field :current_password, autocomplete: "current-password" %>
-    <small class="text-gray-600">Leave blank when updating email or display name</small>
-  </div>
-
   <div class="actions">
     <%= f.submit "Update" %>
   </div>
 <% end %>
 
+<p class="mt-4 text-sm text-gray-600">
+  <%= link_to "Forgot your password?", new_user_password_path %> | 
+  <%= link_to "Return to Dashboard", dashboard_path %> | 
+  <%= link_to "Back", :back %>
+</p>
+
 <h3>Cancel my account</h3>
 
 <div>Unhappy? <%= button_to "Cancel my account", registration_path(resource_name), data: { confirm: "Are you sure?", turbo_confirm: "Are you sure?" }, method: :delete %></div>
-
-<%= link_to "Return to Dashboard", dashboard_path %> | <%= link_to "Back", :back %>

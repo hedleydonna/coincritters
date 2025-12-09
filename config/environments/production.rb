@@ -73,6 +73,10 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
 
+  # Set default URL options for mailer (use environment variable or default to Render domain)
+  config.action_mailer.default_url_options = { host: ENV.fetch('MAILER_HOST', 'coincritters.onrender.com'), protocol: 'https' }
+  routes.default_url_options = { host: ENV.fetch('MAILER_HOST', 'coincritters.onrender.com'), protocol: 'https' }
+
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
