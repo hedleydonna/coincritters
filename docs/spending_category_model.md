@@ -159,7 +159,7 @@ monthly_budget = MonthlyBudget.find(1)
 envelope = Envelope.create!(
   monthly_budget: monthly_budget,
   spending_category: category,
-  spending_group_name: category.name,
+  # Name comes from the category
   allotted_amount: category.default_amount || 0
 )
 
@@ -186,5 +186,5 @@ The `SpendingCategory` model is the parent of `Envelope`. Each envelope belongs 
 3. **Centralized Management**: Changing a category's properties affects all envelopes using it
 4. **Organization**: Users can define their spending categories once and reuse them
 
-The envelope still maintains its own `spending_group_name` (which may differ from the category name) and tracks its own `allotted_amount` and `spent_amount` per monthly budget.
+The envelope uses the category's `name` directly (via the `name` method, which delegates to `spending_category.name`) and tracks its own `allotted_amount` per monthly budget. The `spent_amount` is calculated from related spending records.
 

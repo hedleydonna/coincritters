@@ -214,9 +214,9 @@ For detailed documentation about the Envelope model, see [Envelope Model Documen
 
 The Envelope model represents spending categories within monthly budgets. Key features:
 - Each envelope belongs to a monthly budget and a spending category
-- Tracks allotted amount and spent amount
-- Inherits group type and savings status from spending category
-- Enforces unique spending_group_name per budget
+- Tracks allotted amount; spent amount is calculated from related spending records
+- Inherits name, group type, and savings status from spending category
+- Enforces unique spending_category per budget
 - Supports cascade deletion when monthly budget or spending category is deleted
 
 ---
@@ -267,16 +267,18 @@ As the application grows, additional models may be added:
 
 ---
 
-## Bill Payment Model
+## Spending Model
 
-For detailed documentation about the Bill Payment model, see [Bill Payment Model Documentation](./bill_payment_model.md).
+For detailed documentation about the Spending model, see [Spending Model Documentation](./spending_model.md).
 
-The Bill Payment model represents individual payments made for fixed expenses (bills) within an envelope. Key features:
-- Each bill payment belongs to an envelope
-- Tracks `spending_group_name`, `actual_paid_amount`, `paid_on`, and `notes`
-- `actual_paid_amount` must be greater than 0
-- Typically associated with envelopes that have `group_type: fixed` (fixed/recurring bills)
+The Spending model represents individual spending transactions within an envelope. This unified model consolidates all spending records (both fixed bills and variable expenses). Key features:
+- Each spending record belongs to an envelope
+- Tracks `amount`, `spent_on`, and optional `notes`
+- `amount` must be greater than 0
+- Provides scopes for querying by date, date range, and envelope
+- Delegates `spending_group_name` to the associated envelope's name (which comes from spending_category)
 - Provides helper methods for date-based checks (`today?`, `this_week?`, `this_month?`)
+- Supports cascade deletion when envelope is deleted
 
 ---
 

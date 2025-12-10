@@ -55,7 +55,7 @@ class Admin::EnvelopesController < Admin::BaseController
   end
 
   def envelope_params
-    params.require(:envelope).permit(:monthly_budget_id, :spending_category_id, :spending_group_name, :allotted_amount, :spent_amount)
+    params.require(:envelope).permit(:monthly_budget_id, :spending_category_id, :allotted_amount)
   end
 end
 

@@ -4,18 +4,13 @@ class Envelope < ApplicationRecord
   belongs_to :spending_category
   has_one :user, through: :monthly_budget
 
-  has_many :variable_spending, dependent: :destroy
-  has_many :bill_payments, dependent: :destroy
+  has_many :spendings, dependent: :destroy
 
   # ------------------------------------------------------------------
   # Validations
   # ------------------------------------------------------------------
   validates :allotted_amount, numericality: { greater_than_or_equal_to: 0 }
-  validates :spent_amount, numericality: { greater_than_or_equal_to: 0 }
-
-  validates :spending_group_name, 
-  presence: true,
-  uniqueness: { scope: :monthly_budget_id, message: "already exists for this budget" }
+  validates :spending_category, uniqueness: { scope: :monthly_budget_id, message: "has already been taken" }
 
   # ------------------------------------------------------------------
   # Scopes
@@ -29,6 +24,11 @@ class Envelope < ApplicationRecord
   # ------------------------------------------------------------------
   # Instance methods
   # ------------------------------------------------------------------
+  # Calculate spent_amount from related spendings
+  def spent_amount
+    spendings.sum(:amount)
+  end
+
   def remaining
     allotted_amount - spent_amount
   end
@@ -65,13 +65,23 @@ class Envelope < ApplicationRecord
     spending_category.is_savings?
   end
 
+  # Get name from spending_category (delegated)
+  def name
+    spending_category.name
+  end
+
   # Friendly display name
   def display_name
     if is_savings?
-      "#{spending_group_name} (Savings)"
+      "#{name} (Savings)"
     else
-      spending_group_name
+      name
     end
+  end
+  
+  # Alias for backward compatibility
+  def spending_group_name
+    name
   end
 
   # How much is available (never negative)
@@ -92,6 +102,6 @@ class Envelope < ApplicationRecord
 
   # Helper for variable spending forms
   def display_name_with_budget
-    "#{spending_group_name} (#{monthly_budget.month_year})"
+    "#{name} (#{monthly_budget.month_year})"
   end
 end

@@ -45,9 +45,9 @@ class MonthlyBudget < ApplicationRecord
       envelopes.sum(:allotted_amount)
     end
   
-    # Total spent across all envelopes
+    # Total spent across all envelopes (calculated from spendings)
     def total_spent
-      envelopes.sum(:spent_amount)
+      envelopes.sum { |e| e.spent_amount }
     end
   
     # Remaining after envelopes — this is what shows on the dashboard

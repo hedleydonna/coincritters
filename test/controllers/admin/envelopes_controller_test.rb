@@ -45,7 +45,7 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     get admin_envelope_path(@envelope)
     assert_response :success
-    assert_match @envelope.spending_group_name, response.body
+    assert_match @envelope.name, response.body
   end
 
   # Test new action
@@ -60,23 +60,20 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
   test "should create envelope" do
     sign_in @admin
     monthly_budget = monthly_budgets(:one)
-    # Create or use a unique spending category
-    spending_category = SpendingCategory.find_or_create_by!(
+    # Create a unique spending category for this budget
+    spending_category = SpendingCategory.create!(
       user: monthly_budget.user,
-      name: "Utilities"
-    ) do |sc|
-      sc.group_type = :fixed
-      sc.is_savings = false
-    end
+      name: "Utilities Test",
+      group_type: :fixed,
+      is_savings: false
+    )
     
     assert_difference("Envelope.count", 1) do
       post admin_envelopes_path, params: {
         envelope: {
           monthly_budget_id: monthly_budget.id,
           spending_category_id: spending_category.id,
-          spending_group_name: "Utilities",
-          allotted_amount: 150.00,
-          spent_amount: 120.00
+          allotted_amount: 150.00
         }
       }
     end
@@ -89,7 +86,8 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("Envelope.count") do
       post admin_envelopes_path, params: {
         envelope: {
-          spending_group_name: ""
+          monthly_budget_id: nil,
+          spending_category_id: nil
         }
       }
     end
@@ -109,15 +107,13 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     patch admin_envelope_path(@envelope), params: {
       envelope: {
-        spending_group_name: "Updated Groceries",
         allotted_amount: 600.00,
-        spent_amount: 400.00,
-        monthly_budget_id: @envelope.monthly_budget_id
+        monthly_budget_id: @envelope.monthly_budget_id,
+        spending_category_id: @envelope.spending_category_id
       }
     }
     assert_redirected_to admin_envelope_path(@envelope)
     @envelope.reload
-    assert_equal "Updated Groceries", @envelope.spending_group_name
     assert_equal 600.00, @envelope.allotted_amount.to_f
   end
 

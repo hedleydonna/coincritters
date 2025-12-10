@@ -22,25 +22,13 @@
         <div class="field">
           <%= f.label :spending_category_id, "Spending Category", class: "block text-sm font-medium text-gray-700 mb-1" %>
           <%= f.collection_select :spending_category_id, @spending_categories, :id, :display_name, { prompt: "Select a spending category" }, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
-          <p class="mt-1 text-sm text-gray-500">The category defines the group type (fixed/variable) and savings status</p>
-        </div>
-
-        <div class="field">
-          <%= f.label :spending_group_name, "Spending Group Name", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.text_field :spending_group_name, placeholder: "e.g., Groceries, Rent, Entertainment", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
-          <p class="mt-1 text-sm text-gray-500">User-typed label for this spending category</p>
+          <p class="mt-1 text-sm text-gray-500">The category defines the name, group type (fixed/variable) and savings status</p>
         </div>
 
         <div class="field">
           <%= f.label :allotted_amount, "Allotted Amount", class: "block text-sm font-medium text-gray-700 mb-1" %>
           <%= f.number_field :allotted_amount, step: "0.01", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
           <p class="mt-1 text-sm text-gray-500">How much the user assigned to this envelope this month</p>
-        </div>
-
-        <div class="field">
-          <%= f.label :spent_amount, "Spent Amount", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.number_field :spent_amount, step: "0.01", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
-          <p class="mt-1 text-sm text-gray-500">How much has been spent from this envelope (updated live)</p>
         </div>
 
         <div class="actions">

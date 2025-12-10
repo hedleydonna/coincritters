@@ -1,7 +1,5 @@
-# app/models/variable_spending.rb
-class VariableSpending < ApplicationRecord
-  self.table_name = "variable_spending"
-  
+# app/models/spending.rb
+class Spending < ApplicationRecord
   belongs_to :envelope
   has_one :monthly_budget, through: :envelope
   has_one :user, through: :monthly_budget
@@ -9,7 +7,7 @@ class VariableSpending < ApplicationRecord
   # ------------------------------------------------------------------
   # Validations
   # ------------------------------------------------------------------
-  validates :amount, numericality: { greater_than: 0, message: "must be greater than 0" }
+  validates :amount, presence: true, numericality: { greater_than: 0, message: "must be greater than 0" }
   validates :spent_on, presence: true
 
   # ------------------------------------------------------------------
@@ -24,9 +22,9 @@ class VariableSpending < ApplicationRecord
   # Instance methods
   # ------------------------------------------------------------------
   
-  # Get spending_group_name from the associated envelope
+  # Get spending_group_name from the associated envelope's spending_category
   def spending_group_name
-    envelope.spending_group_name
+    envelope.name
   end
   
   # Formatted display of the spending amount

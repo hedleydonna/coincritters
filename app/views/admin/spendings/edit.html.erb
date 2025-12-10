@@ -3,16 +3,16 @@
     <div class="mb-8 flex justify-between items-center">
       <div>
         <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-          Edit Variable Spending
+          Edit Spending
         </h1>
-        <p class="text-gray-600 mt-2">Editing spending on <%= @variable_spending.spent_on.strftime("%B %d, %Y") %></p>
+        <p class="text-gray-600 mt-2">Editing spending on <%= @spending.spent_on.strftime("%B %d, %Y") %></p>
       </div>
-      <%= link_to "← Back to Variable Spending", admin_variable_spending_path(@variable_spending), class: "text-purple-600 hover:text-purple-700 font-medium" %>
+      <%= link_to "← Back to Spending", admin_spending_path(@spending), class: "text-purple-600 hover:text-purple-700 font-medium" %>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg p-8">
-      <%= form_with(model: [:admin, @variable_spending], class: "space-y-6") do |f| %>
-        <%= render "devise/shared/error_messages", resource: @variable_spending %>
+      <%= form_with(model: [:admin, @spending], class: "space-y-6") do |f| %>
+        <%= render "devise/shared/error_messages", resource: @spending %>
 
         <div class="field">
           <%= f.label :envelope_id, "Envelope", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="actions">
-          <%= f.submit "Update Variable Spending", class: "w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer" %>
+          <%= f.submit "Update Spending", class: "w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer" %>
         </div>
       <% end %>
     </div>

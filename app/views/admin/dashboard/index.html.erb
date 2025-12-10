@@ -7,7 +7,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-10 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-9 gap-6 mb-8">
       <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
         <div class="flex items-center justify-between">
           <div>
@@ -74,19 +74,10 @@
       <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Variable Spending</h3>
-            <p class="text-4xl font-bold text-cyan-600 mt-2"><%= @variable_spending_count %></p>
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Spending</h3>
+            <p class="text-4xl font-bold text-cyan-600 mt-2"><%= @spending_count %></p>
           </div>
           <div class="text-4xl">💸</div>
-        </div>
-      </div>
-      <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Bill Payments</h3>
-            <p class="text-4xl font-bold text-blue-600 mt-2"><%= @bill_payment_count %></p>
-          </div>
-          <div class="text-4xl">📄</div>
         </div>
       </div>
       <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
@@ -119,11 +110,8 @@
         <%= form_with url: admin_envelopes_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Envelopes", class: "bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
-        <%= form_with url: admin_variable_spendings_path, method: :get, local: true, class: "inline" do |f| %>
-          <%= f.submit "Manage Variable Spending", class: "bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
-        <% end %>
-        <%= form_with url: admin_bill_payments_path, method: :get, local: true, class: "inline" do |f| %>
-          <%= f.submit "Manage Bill Payments", class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
+        <%= form_with url: admin_spendings_path, method: :get, local: true, class: "inline" do |f| %>
+          <%= f.submit "Manage Spending", class: "bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
         <%= form_with url: admin_spending_categories_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Spending Categories", class: "bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
@@ -328,10 +316,10 @@
         <% end %>
       </div>
 
-      <!-- Recent Variable Spending -->
+      <!-- Recent Spending -->
       <div class="bg-white rounded-2xl shadow-2xl p-8">
-        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 mb-6">Recent Variable Spending</h2>
-        <% if @recent_variable_spendings.any? %>
+        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 mb-6">Recent Spending</h2>
+        <% if @recent_spendings.any? %>
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gradient-to-r from-cyan-50 to-blue-50">
@@ -343,19 +331,19 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
-                <% @recent_variable_spendings.each do |variable_spending| %>
+                <% @recent_spendings.each do |spending| %>
                   <tr class="hover:bg-cyan-50 transition duration-150">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <%= variable_spending.spent_on.strftime("%b %d, %Y") %>
+                      <%= spending.spent_on.strftime("%b %d, %Y") %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      <%= variable_spending.spending_group_name %>
+                      <%= spending.spending_group_name %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                      $<%= number_with_delimiter(variable_spending.amount, delimiter: ",") %>
+                      $<%= number_with_delimiter(spending.amount, delimiter: ",") %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <%= link_to "View", admin_variable_spending_path(variable_spending), class: "text-cyan-600 hover:text-cyan-800 font-semibold transition duration-150" %>
+                      <%= link_to "View", admin_spending_path(spending), class: "text-cyan-600 hover:text-cyan-800 font-semibold transition duration-150" %>
                     </td>
                   </tr>
                 <% end %>
@@ -364,48 +352,7 @@
           </div>
         <% else %>
           <div class="text-center py-12">
-            <p class="text-gray-500 text-lg">No variable spending found.</p>
-          </div>
-        <% end %>
-      </div>
-
-      <!-- Recent Bill Payments -->
-      <div class="bg-white rounded-2xl shadow-2xl p-8">
-        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-6">Recent Bill Payments</h2>
-        <% if @recent_bill_payments.any? %>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gradient-to-r from-blue-50 to-indigo-50">
-                <tr>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Category</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Amount</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-100">
-                <% @recent_bill_payments.each do |bill_payment| %>
-                  <tr class="hover:bg-blue-50 transition duration-150">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <%= bill_payment.paid_on.strftime("%b %d, %Y") %>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      <%= bill_payment.spending_group_name %>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                      $<%= number_with_delimiter(bill_payment.actual_paid_amount, delimiter: ",") %>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <%= link_to "View", admin_bill_payment_path(bill_payment), class: "text-blue-600 hover:text-blue-800 font-semibold transition duration-150" %>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        <% else %>
-          <div class="text-center py-12">
-            <p class="text-gray-500 text-lg">No bill payments found.</p>
+            <p class="text-gray-500 text-lg">No spending found.</p>
           </div>
         <% end %>
       </div>

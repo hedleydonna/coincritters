@@ -5,7 +5,7 @@
         <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
           Envelope Details
         </h1>
-        <p class="text-gray-600 mt-2">Details for envelope: <%= @envelope.spending_group_name %></p>
+        <p class="text-gray-600 mt-2">Details for envelope: <%= @envelope.name %></p>
       </div>
       <%= link_to "← Back to Envelopes", admin_envelopes_path, class: "text-purple-600 hover:text-purple-700 font-medium" %>
     </div>
@@ -21,8 +21,8 @@
           <p class="mt-1 text-lg text-gray-900"><%= @envelope.monthly_budget.user.display_name.presence || @envelope.monthly_budget.user.email.split("@").first.capitalize %></p>
         </div>
         <div>
-          <p class="text-sm font-medium text-gray-500">Spending Group Name</p>
-          <p class="mt-1 text-lg text-gray-900 font-semibold"><%= @envelope.spending_group_name %></p>
+          <p class="text-sm font-medium text-gray-500">Name</p>
+          <p class="mt-1 text-lg text-gray-900 font-semibold"><%= @envelope.name %></p>
         </div>
         <div>
           <p class="text-sm font-medium text-gray-500">Type</p>

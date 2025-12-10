@@ -44,7 +44,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= envelope.monthly_budget.month_year %></td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= envelope.monthly_budget.user.display_name.presence || envelope.monthly_budget.user.email.split("@").first.capitalize %></td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                    <%= envelope.spending_group_name %>
+                    <%= envelope.name %>
                     <% if envelope.is_savings? %>
                       <span class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Savings</span>
                     <% end %>

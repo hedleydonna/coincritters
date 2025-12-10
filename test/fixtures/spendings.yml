@@ -17,12 +17,24 @@ three:
   notes: "Monthly big shopping trip"
 
 four:
+  envelope: two
+  amount: 1200.00
+  spent_on: "2025-12-01"
+  notes: "Monthly rent payment"
+
+five:
+  envelope: two
+  amount: 1200.00
+  spent_on: "2025-11-01"
+  notes: "November rent"
+
+six:
   envelope: five
   amount: 35.00
   spent_on: "2025-12-12"
   notes: "Movie tickets"
 
-five:
+seven:
   envelope: five
   amount: 50.00
   spent_on: "2025-12-18"
