@@ -1,0 +1,35 @@
+one:
+  envelope: one
+  spending_group_name: "Groceries"
+  amount: 75.50
+  spent_on: "2025-12-10"
+  notes: "Weekly grocery shopping"
+
+two:
+  envelope: one
+  spending_group_name: "Groceries"
+  amount: 45.25
+  spent_on: "2025-12-15"
+  notes: "Quick grocery run"
+
+three:
+  envelope: one
+  spending_group_name: "Groceries"
+  amount: 120.00
+  spent_on: "2025-12-20"
+  notes: "Monthly big shopping trip"
+
+four:
+  envelope: five
+  spending_group_name: "Entertainment"
+  amount: 35.00
+  spent_on: "2025-12-12"
+  notes: "Movie tickets"
+
+five:
+  envelope: five
+  spending_group_name: "Entertainment"
+  amount: 50.00
+  spent_on: "2025-12-18"
+  notes: "Concert tickets"
+

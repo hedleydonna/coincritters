@@ -3,8 +3,8 @@ class Envelope < ApplicationRecord
   belongs_to :monthly_budget
   has_one :user, through: :monthly_budget
 
-  # TODO: Uncomment when these models are created
-  # has_many :variable_spending, dependent: :destroy
+  has_many :variable_spending, dependent: :destroy
+  # TODO: Uncomment when bill_payments model is created
   # has_many :bill_payments, dependent: :destroy
 
   # ------------------------------------------------------------------
@@ -71,5 +71,10 @@ class Envelope < ApplicationRecord
   def spent_percentage
     return 0 if allotted_amount.zero?
     [(spent_amount / allotted_amount * 100).round(1), 100].min
+  end
+
+  # Helper for variable spending forms
+  def display_name_with_budget
+    "#{spending_group_name} (#{monthly_budget.month_year})"
   end
 end
