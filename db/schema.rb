@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_180000) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_202659) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -99,13 +99,11 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_180000) do
 
   create_table "variable_spending", force: :cascade do |t|
     t.bigint "envelope_id", null: false
-    t.string "spending_group_name", null: false
     t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
     t.date "spent_on", null: false
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["envelope_id", "spending_group_name"], name: "index_variable_spending_on_envelope_id_and_spending_group_name"
     t.index ["envelope_id", "spent_on"], name: "index_variable_spending_on_envelope_id_and_spent_on"
     t.index ["envelope_id"], name: "index_variable_spending_on_envelope_id"
   end

@@ -11,7 +11,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "should be valid with valid attributes" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Groceries",
       amount: 50.00,
       spent_on: Date.today
     )
@@ -20,7 +19,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
 
   test "should require an envelope" do
     variable_spending = VariableSpending.new(
-      spending_group_name: "Groceries",
       amount: 50.00,
       spent_on: Date.today
     )
@@ -28,20 +26,18 @@ class VariableSpendingTest < ActiveSupport::TestCase
     assert_includes variable_spending.errors[:envelope], "must exist"
   end
 
-  test "should require spending_group_name" do
+  test "spending_group_name should return envelope's spending_group_name" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
       amount: 50.00,
       spent_on: Date.today
     )
-    assert_not variable_spending.valid?
-    assert_includes variable_spending.errors[:spending_group_name], "can't be blank"
+    assert_equal @envelope_one.spending_group_name, variable_spending.spending_group_name
   end
 
   test "should require amount to be greater than 0" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Groceries",
       amount: 0.00,
       spent_on: Date.today
     )
@@ -56,7 +52,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "should require spent_on" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Groceries",
       amount: 50.00
     )
     assert_not variable_spending.valid?
@@ -66,7 +61,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "should have default amount of 0.0" do
     variable_spending = VariableSpending.create!(
       envelope: @envelope_one,
-      spending_group_name: "Groceries",
       amount: 50.00,
       spent_on: Date.today
     )
@@ -78,7 +72,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "should allow notes to be blank" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Groceries",
       amount: 50.00,
       spent_on: Date.today,
       notes: nil
@@ -94,7 +87,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
     )
     variable_spending = VariableSpending.create!(
       envelope: envelope,
-      spending_group_name: "Test",
       amount: 25.00,
       spent_on: Date.today
     )
@@ -146,7 +138,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "today? should return true if spent_on is today" do
     today_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Test",
       amount: 10.00,
       spent_on: Date.today
     )
@@ -156,7 +147,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
     past_date = 1.day.ago.to_date
     past_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Test",
       amount: 10.00,
       spent_on: past_date
     )
@@ -169,7 +159,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "this_week? should return true if spent_on is this week" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Test",
       amount: 10.00,
       spent_on: Date.today
     )
@@ -182,7 +171,6 @@ class VariableSpendingTest < ActiveSupport::TestCase
   test "this_month? should return true if spent_on is this month" do
     variable_spending = VariableSpending.new(
       envelope: @envelope_one,
-      spending_group_name: "Test",
       amount: 10.00,
       spent_on: Date.today
     )

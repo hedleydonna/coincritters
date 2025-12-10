@@ -52,7 +52,7 @@ class Admin::VariableSpendingsController < Admin::BaseController
   end
 
   def variable_spending_params
-    params.require(:variable_spending).permit(:envelope_id, :spending_group_name, :amount, :spent_on, :notes)
+    params.require(:variable_spending).permit(:envelope_id, :amount, :spent_on, :notes)
   end
 end
 

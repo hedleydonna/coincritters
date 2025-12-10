@@ -9,7 +9,6 @@ class VariableSpending < ApplicationRecord
   # ------------------------------------------------------------------
   # Validations
   # ------------------------------------------------------------------
-  validates :spending_group_name, presence: true
   validates :amount, numericality: { greater_than: 0, message: "must be greater than 0" }
   validates :spent_on, presence: true
 
@@ -24,6 +23,11 @@ class VariableSpending < ApplicationRecord
   # ------------------------------------------------------------------
   # Instance methods
   # ------------------------------------------------------------------
+  
+  # Get spending_group_name from the associated envelope
+  def spending_group_name
+    envelope.spending_group_name
+  end
   
   # Formatted display of the spending amount
   def formatted_amount
