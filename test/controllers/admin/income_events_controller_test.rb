@@ -65,7 +65,7 @@ class Admin::IncomeEventsControllerTest < ActionDispatch::IntegrationTest
       post admin_income_events_path, params: {
         income_event: {
           user_id: user.id,
-          income_type: "Bonus",
+          custom_label: "Bonus",
           month_year: "2025-12",
           received_on: Date.today,
           actual_amount: 1000.00
@@ -105,14 +105,14 @@ class Admin::IncomeEventsControllerTest < ActionDispatch::IntegrationTest
         actual_amount: 6000.00,
         received_on: "2025-11-15",
         user_id: @income_event.user_id,
-        income_type: "Updated Type"
+        custom_label: "Updated Type"
       }
     }
     assert_redirected_to admin_income_event_path(@income_event)
     @income_event.reload
     assert_equal "2025-11", @income_event.month_year
     assert_equal 6000.00, @income_event.actual_amount.to_f
-    assert_equal "Updated Type", @income_event.income_type
+    assert_equal "Updated Type", @income_event.custom_label
   end
 
   # Test destroy action
@@ -120,7 +120,7 @@ class Admin::IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     income_event_to_delete = IncomeEvent.create!(
       user: @regular_user,
-      income_type: "Test Type",
+      custom_label: "Test Type",
       month_year: "2025-12",
       received_on: Date.today,
       actual_amount: 1000.00

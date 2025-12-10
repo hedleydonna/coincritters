@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_013234) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_175104) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -30,7 +30,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_013234) do
   create_table "income_events", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "income_id"
-    t.string "income_type", default: "Paycheck", null: false
+    t.string "custom_label"
     t.string "month_year", null: false
     t.string "assigned_month_year"
     t.date "received_on", null: false
@@ -53,6 +53,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_013234) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "auto_create", default: false, null: false
+    t.integer "auto_day_of_month"
     t.index ["user_id", "active"], name: "index_incomes_on_user_id_and_active"
     t.index ["user_id", "name"], name: "index_incomes_on_user_id_and_name", unique: true
     t.index ["user_id"], name: "index_incomes_on_user_id"

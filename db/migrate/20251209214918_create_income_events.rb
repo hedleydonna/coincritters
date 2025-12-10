@@ -1,4 +1,3 @@
-# db/migrate/20251210000000_create_income_events.rb
 class CreateIncomeEvents < ActiveRecord::Migration[7.1]
   def change
     create_table :income_events do |t|

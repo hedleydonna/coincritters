@@ -54,7 +54,7 @@ class Admin::IncomeEventsController < Admin::BaseController
   end
 
   def income_event_params
-    params.require(:income_event).permit(:user_id, :income_id, :income_type, :month_year, :assigned_month_year, :received_on, :actual_amount, :notes)
+    params.require(:income_event).permit(:user_id, :income_id, :custom_label, :month_year, :assigned_month_year, :received_on, :actual_amount, :notes)
   end
 end
 

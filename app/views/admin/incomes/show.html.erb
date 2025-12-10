@@ -48,6 +48,32 @@
         </div>
 
         <div>
+          <label class="block text-sm font-medium text-gray-500">Auto-Create</label>
+          <p class="mt-1">
+            <% if @income.auto_create? && @income.auto_day_of_month.present? %>
+              <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                Enabled (Day <%= @income.auto_day_of_month %> of month)
+              </span>
+              <p class="mt-2 text-sm text-gray-600">
+                Income events will be automatically created on the <%= @income.auto_day_of_month.ordinalize %> of each month.
+                <br>
+                <strong>Estimated amount ($<%= number_with_delimiter(@income.estimated_amount, delimiter: ",") %>) will be used as the actual amount</strong> in auto-generated events.
+              </p>
+            <% elsif @income.auto_create? %>
+              <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                Enabled (Day not set)
+              </span>
+              <p class="mt-2 text-sm text-yellow-600">Auto-create is enabled but day of month is not configured. Please edit to set a day.</p>
+            <% else %>
+              <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-gray-100 text-gray-500 border border-gray-200">Manual</span>
+              <p class="mt-2 text-sm text-gray-600">
+                User must manually create income events and enter the actual amount received (which may differ from the estimated amount above).
+              </p>
+            <% end %>
+          </p>
+        </div>
+
+        <div>
           <label class="block text-sm font-medium text-gray-500">Created</label>
           <p class="mt-1 text-lg text-gray-900"><%= @income.created_at.strftime("%B %d, %Y at %I:%M %p") %></p>
         </div>

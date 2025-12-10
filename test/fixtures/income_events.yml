@@ -1,7 +1,7 @@
 one:
   user: one
   income: one
-  income_type: "Paycheck"
+  custom_label: "Paycheck"
   month_year: "2025-12"
   assigned_month_year: "2025-12"
   received_on: "2025-12-01"
@@ -11,7 +11,7 @@ one:
 two:
   user: one
   income: two
-  income_type: "Freelance"
+  custom_label: "Freelance"
   month_year: "2025-12"
   assigned_month_year: "2025-12"
   received_on: "2025-12-15"
@@ -21,7 +21,7 @@ two:
 three:
   user: two
   income: three
-  income_type: "Investment"
+  custom_label: "Investment"
   month_year: "2025-11"
   assigned_month_year: "2025-11"
   received_on: "2025-11-30"
@@ -30,7 +30,7 @@ three:
 four:
   user: two
   income: four
-  income_type: "Rental"
+  custom_label: "Rental"
   month_year: "2025-12"
   assigned_month_year: "2025-12"
   received_on: "2025-12-05"

@@ -7,6 +7,7 @@ class Admin::IncomesController < Admin::BaseController
     @incomes = Income.includes(:user).order(created_at: :desc)
     @total_incomes = Income.count
     @active_incomes = Income.active.count
+    @auto_create_incomes = Income.auto_create.count
   end
 
   def show
@@ -35,7 +36,7 @@ class Admin::IncomesController < Admin::BaseController
   end
 
   def income_params
-    params.require(:income).permit(:name, :frequency, :estimated_amount, :active, :user_id)
+    params.require(:income).permit(:name, :frequency, :estimated_amount, :active, :user_id, :auto_create, :auto_day_of_month)
   end
 end
 

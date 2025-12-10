@@ -176,8 +176,10 @@ For detailed documentation about the Income model, see [Income Model Documentati
 The Income model represents income sources for users. Key features:
 - Each income belongs to a user
 - Tracks estimated amount, frequency, and active status
+- Supports auto-create functionality for automatic income event generation (`auto_create`, `auto_day_of_month`)
 - Validates uniqueness of income name per user
 - Supports cascade deletion when user is deleted
+- Has many income events (dependent: :destroy)
 
 ## Monthly Budget Model
 
