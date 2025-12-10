@@ -179,6 +179,18 @@ The Income model represents income sources for users. Key features:
 - Validates uniqueness of income name per user
 - Supports cascade deletion when user is deleted
 
+## Monthly Budget Model
+
+For detailed documentation about the Monthly Budget model, see [Monthly Budget Model Documentation](./monthly_budget_model.md).
+
+The Monthly Budget model represents monthly budget tracking for users. Key features:
+- One budget per user per month (unique constraint)
+- Tracks total actual income, flex fund, and optional bank balance
+- Validates month_year format (YYYY-MM)
+- Supports cascade deletion when user is deleted
+
+---
+
 ## Income Event Model
 
 For detailed documentation about the Income Event model, see [Income Event Model Documentation](./income_event_model.md).

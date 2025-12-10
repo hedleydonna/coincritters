@@ -1,0 +1,27 @@
+one:
+  user: one
+  month_year: "2025-12"
+  total_actual_income: 5000.00
+  flex_fund: 500.00
+  bank_balance: 3000.00
+
+two:
+  user: one
+  month_year: "2025-11"
+  total_actual_income: 4500.00
+  flex_fund: 300.00
+  bank_balance: 2500.00
+
+three:
+  user: two
+  month_year: "2025-12"
+  total_actual_income: 3000.00
+  flex_fund: 200.00
+
+four:
+  user: two
+  month_year: "2025-11"
+  total_actual_income: 2800.00
+  flex_fund: 150.00
+  bank_balance: 1500.00
+

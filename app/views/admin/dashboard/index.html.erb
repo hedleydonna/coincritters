@@ -7,7 +7,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
       <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
         <div class="flex items-center justify-between">
           <div>
@@ -53,6 +53,15 @@
           <div class="text-4xl">📅</div>
         </div>
       </div>
+      <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Monthly Budgets</h3>
+            <p class="text-4xl font-bold text-teal-600 mt-2"><%= @monthly_budget_count %></p>
+          </div>
+          <div class="text-4xl">📊</div>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Actions -->
@@ -68,6 +77,9 @@
         <%= form_with url: admin_income_events_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Income Events", class: "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
+        <%= form_with url: admin_monthly_budgets_path, method: :get, local: true, class: "inline" do |f| %>
+          <%= f.submit "Manage Monthly Budgets", class: "bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
+        <% end %>
         <%= form_with url: dashboard_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Back to Dashboard", class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
@@ -75,7 +87,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8">
       <!-- Recent Users -->
       <div class="bg-white rounded-2xl shadow-2xl p-8">
         <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-6">Recent Users</h2>
@@ -187,6 +199,43 @@
         <% else %>
           <div class="text-center py-12">
             <p class="text-gray-500 text-lg">No income events found.</p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Recent Monthly Budgets -->
+      <div class="bg-white rounded-2xl shadow-2xl p-8">
+        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600 mb-6">Recent Monthly Budgets</h2>
+        <% if @recent_monthly_budgets.any? %>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gradient-to-r from-teal-50 to-blue-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">User</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-100">
+                <% @recent_monthly_budgets.each do |budget| %>
+                  <tr class="hover:bg-teal-50 transition duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <%= budget.user.display_name.presence || budget.user.email.split("@").first.capitalize %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      <%= budget.month_year %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <%= link_to "View", admin_monthly_budget_path(budget), class: "text-teal-600 hover:text-teal-800 font-semibold transition duration-150" %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-12">
+            <p class="text-gray-500 text-lg">No monthly budgets found.</p>
           </div>
         <% end %>
       </div>
