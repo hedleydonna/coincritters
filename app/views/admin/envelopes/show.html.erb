@@ -1,0 +1,79 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-4xl mx-auto py-8 px-4">
+    <div class="mb-8 flex justify-between items-center">
+      <div>
+        <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+          Envelope Details
+        </h1>
+        <p class="text-gray-600 mt-2">Details for envelope: <%= @envelope.spending_group_name %></p>
+      </div>
+      <%= link_to "← Back to Envelopes", admin_envelopes_path, class: "text-purple-600 hover:text-purple-700 font-medium" %>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p class="text-sm font-medium text-gray-500">Monthly Budget</p>
+          <p class="mt-1 text-lg text-gray-900 font-semibold"><%= @envelope.monthly_budget.month_year %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">User</p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope.monthly_budget.user.display_name.presence || @envelope.monthly_budget.user.email.split("@").first.capitalize %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Spending Group Name</p>
+          <p class="mt-1 text-lg text-gray-900 font-semibold"><%= @envelope.spending_group_name %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Type</p>
+          <p class="mt-1">
+            <span class="px-3 py-1 inline-flex text-sm font-semibold rounded-full <%= @envelope.fixed? ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800' %>">
+              <%= @envelope.fixed? ? "Fixed" : "Variable" %>
+            </span>
+            <% if @envelope.is_savings? %>
+              <span class="ml-2 px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-blue-100 text-blue-800">Savings</span>
+            <% end %>
+          </p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Allotted Amount</p>
+          <p class="mt-1 text-2xl font-bold text-gray-900">$<%= number_with_delimiter(@envelope.allotted_amount, delimiter: ",") %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Spent Amount</p>
+          <p class="mt-1 text-2xl font-bold <%= @envelope.over_budget? ? 'text-red-600' : 'text-green-600' %>">$<%= number_with_delimiter(@envelope.spent_amount, delimiter: ",") %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Remaining</p>
+          <p class="mt-1 text-2xl font-bold <%= @envelope.remaining < 0 ? 'text-red-600' : 'text-gray-900' %>">$<%= number_with_delimiter(@envelope.remaining, delimiter: ",") %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Spent Percentage</p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope.spent_percentage %>%</p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Created At</p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope.created_at.strftime("%b %d, %Y %H:%M") %></p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500">Last Updated</p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope.updated_at.strftime("%b %d, %Y %H:%M") %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-4">
+      <div>
+        <%= link_to "New Envelope", new_admin_envelope_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
+      </div>
+      <div class="flex gap-4">
+        <%= link_to "Edit Envelope", edit_admin_envelope_path(@envelope), class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg" %>
+        <%= button_to "Delete Envelope", admin_envelope_path(@envelope), method: :delete,
+                    data: { confirm: "Are you sure you want to delete this envelope? This action cannot be undone.", turbo_confirm: "Are you sure you want to delete this envelope? This action cannot be undone." },
+                    form: { data: { turbo_confirm: "Are you sure you want to delete this envelope? This action cannot be undone." } },
+                    class: "bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg" %>
+      </div>
+    </div>
+  </div>
+</div>
+

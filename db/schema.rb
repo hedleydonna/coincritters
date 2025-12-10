@@ -10,9 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_003311) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_005820) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "envelopes", force: :cascade do |t|
+    t.bigint "monthly_budget_id", null: false
+    t.string "spending_group_name", null: false
+    t.integer "group_type", default: 1, null: false
+    t.boolean "is_savings", default: false, null: false
+    t.decimal "allotted_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "spent_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["monthly_budget_id", "spending_group_name"], name: "index_envelopes_on_budget_and_name", unique: true
+    t.index ["monthly_budget_id"], name: "index_envelopes_on_monthly_budget_id"
+  end
 
   create_table "income_events", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -71,6 +84,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_003311) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "envelopes", "monthly_budgets", on_delete: :cascade
   add_foreign_key "income_events", "incomes", on_delete: :cascade
   add_foreign_key "income_events", "users", on_delete: :cascade
   add_foreign_key "incomes", "users", on_delete: :cascade

@@ -188,6 +188,21 @@ The Monthly Budget model represents monthly budget tracking for users. Key featu
 - Tracks total actual income, flex fund, and optional bank balance
 - Validates month_year format (YYYY-MM)
 - Supports cascade deletion when user is deleted
+- Has many envelopes for spending categories
+
+---
+
+## Envelope Model
+
+For detailed documentation about the Envelope model, see [Envelope Model Documentation](./envelope_model.md).
+
+The Envelope model represents spending categories within monthly budgets. Key features:
+- Each envelope belongs to a monthly budget
+- Tracks allotted amount and spent amount
+- Supports fixed and variable expense types
+- Can be marked as savings pots
+- Enforces unique spending_group_name per budget
+- Supports cascade deletion when monthly budget is deleted
 
 ---
 
