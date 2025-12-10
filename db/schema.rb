@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_175104) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "bill_payments", force: :cascade do |t|
+    t.bigint "envelope_id", null: false
+    t.decimal "actual_paid_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.date "paid_on", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["envelope_id", "paid_on"], name: "index_bill_payments_on_envelope_id_and_paid_on"
+    t.index ["envelope_id"], name: "index_bill_payments_on_envelope_id"
+  end
 
   create_table "envelopes", force: :cascade do |t|
     t.bigint "monthly_budget_id", null: false
@@ -99,6 +110,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_175104) do
     t.index ["envelope_id"], name: "index_variable_spending_on_envelope_id"
   end
 
+  add_foreign_key "bill_payments", "envelopes", on_delete: :cascade
   add_foreign_key "envelopes", "monthly_budgets", on_delete: :cascade
   add_foreign_key "income_events", "incomes", on_delete: :cascade
   add_foreign_key "income_events", "users", on_delete: :cascade

@@ -252,5 +252,20 @@ As the application grows, additional models may be added:
 
 ---
 
+---
+
+## Bill Payment Model
+
+For detailed documentation about the Bill Payment model, see [Bill Payment Model Documentation](./bill_payment_model.md).
+
+The Bill Payment model represents individual payments made for fixed expenses (bills) within an envelope. Key features:
+- Each bill payment belongs to an envelope
+- Tracks `spending_group_name`, `actual_paid_amount`, `paid_on`, and `notes`
+- `actual_paid_amount` must be greater than 0
+- Typically associated with envelopes that have `group_type: fixed` (fixed/recurring bills)
+- Provides helper methods for date-based checks (`today?`, `this_week?`, `this_month?`)
+
+---
+
 **Last Updated**: December 2025
 

@@ -26,5 +26,6 @@ Rails.application.routes.draw do
     resources :monthly_budgets
     resources :envelopes
     resources :variable_spendings
+    resources :bill_payments
   end
 end

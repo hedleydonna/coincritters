@@ -4,8 +4,7 @@ class Envelope < ApplicationRecord
   has_one :user, through: :monthly_budget
 
   has_many :variable_spending, dependent: :destroy
-  # TODO: Uncomment when bill_payments model is created
-  # has_many :bill_payments, dependent: :destroy
+  has_many :bill_payments, dependent: :destroy
 
   # ------------------------------------------------------------------
   # Enums & Validations

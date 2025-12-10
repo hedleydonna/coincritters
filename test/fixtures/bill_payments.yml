@@ -1,0 +1,30 @@
+one:
+  envelope: two
+  actual_paid_amount: 1200.00
+  paid_on: "2025-12-01"
+  notes: "Monthly rent payment"
+
+two:
+  envelope: two
+  actual_paid_amount: 1200.00
+  paid_on: "2025-11-01"
+  notes: "November rent"
+
+three:
+  envelope: three
+  actual_paid_amount: 300.00
+  paid_on: "2025-12-05"
+  notes: "Monthly savings contribution"
+
+four:
+  envelope: two
+  actual_paid_amount: 1200.00
+  paid_on: "2025-10-01"
+  notes: "October rent"
+
+five:
+  envelope: three
+  actual_paid_amount: 300.00
+  paid_on: "2025-11-05"
+  notes: "November savings"
+
