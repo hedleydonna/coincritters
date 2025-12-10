@@ -83,10 +83,16 @@ class BillPaymentTest < ActiveSupport::TestCase
   end
 
   test "should destroy when envelope is destroyed" do
+    # Create a unique spending category to avoid duplicate key constraint
+    spending_category = SpendingCategory.create!(
+      user: monthly_budgets(:one).user,
+      name: "Test Bill Payment Category",
+      group_type: :fixed
+    )
     envelope = Envelope.create!(
       monthly_budget: monthly_budgets(:one),
-      spending_group_name: "Test Envelope",
-      group_type: :fixed
+      spending_category: spending_category,
+      spending_group_name: "Test Envelope"
     )
     bill_payment = BillPayment.create!(
       envelope: envelope,

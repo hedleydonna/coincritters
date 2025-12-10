@@ -7,7 +7,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-9 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-10 gap-6 mb-8">
       <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
         <div class="flex items-center justify-between">
           <div>
@@ -89,6 +89,15 @@
           <div class="text-4xl">📄</div>
         </div>
       </div>
+      <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Spending Categories</h3>
+            <p class="text-4xl font-bold text-yellow-600 mt-2"><%= @spending_category_count %></p>
+          </div>
+          <div class="text-4xl">📁</div>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Actions -->
@@ -116,6 +125,9 @@
         <%= form_with url: admin_bill_payments_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Bill Payments", class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
+        <%= form_with url: admin_spending_categories_path, method: :get, local: true, class: "inline" do |f| %>
+          <%= f.submit "Manage Spending Categories", class: "bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
+        <% end %>
         <%= form_with url: dashboard_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Back to Dashboard", class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
@@ -123,7 +135,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-7 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-8 gap-8">
       <!-- Recent Users -->
       <div class="bg-white rounded-2xl shadow-2xl p-8">
         <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-6">Recent Users</h2>
@@ -394,6 +406,50 @@
         <% else %>
           <div class="text-center py-12">
             <p class="text-gray-500 text-lg">No bill payments found.</p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Recent Spending Categories -->
+      <div class="bg-white rounded-2xl shadow-2xl p-8">
+        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 mb-6">Recent Spending Categories</h2>
+        <% if @recent_spending_categories.any? %>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gradient-to-r from-yellow-50 to-orange-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Type</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-100">
+                <% @recent_spending_categories.each do |category| %>
+                  <tr class="hover:bg-yellow-50 transition duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <%= category.name %>
+                      <% if category.is_savings? %>
+                        <span class="ml-2 text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full">Savings</span>
+                      <% end %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <% if category.fixed? %>
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full font-medium">Fixed</span>
+                      <% else %>
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full font-medium">Variable</span>
+                      <% end %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <%= link_to "View", admin_spending_category_path(category), class: "text-yellow-600 hover:text-yellow-800 font-semibold transition duration-150" %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-12">
+            <p class="text-gray-500 text-lg">No spending categories found.</p>
           </div>
         <% end %>
       </div>

@@ -17,6 +17,8 @@ class Admin::DashboardController < Admin::BaseController
     @recent_variable_spendings = VariableSpending.includes(envelope: { monthly_budget: :user }).recent.limit(5)
     @bill_payment_count = BillPayment.count
     @recent_bill_payments = BillPayment.includes(envelope: { monthly_budget: :user }).recent.limit(5)
+    @spending_category_count = SpendingCategory.count
+    @recent_spending_categories = SpendingCategory.includes(:user).order(created_at: :desc).limit(5)
   end
 end
 

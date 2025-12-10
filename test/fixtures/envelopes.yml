@@ -1,40 +1,35 @@
 one:
   monthly_budget: one
+  spending_category: one  # Groceries (variable)
   spending_group_name: "Groceries"
-  group_type: 1
-  is_savings: false
   allotted_amount: 500.00
   spent_amount: 320.50
 
 two:
   monthly_budget: one
+  spending_category: two  # Rent (fixed)
   spending_group_name: "Rent"
-  group_type: 0
-  is_savings: false
   allotted_amount: 1200.00
   spent_amount: 1200.00
 
 three:
   monthly_budget: one
+  spending_category: three  # Emergency Fund (fixed, savings)
   spending_group_name: "Emergency Fund"
-  group_type: 0
-  is_savings: true
   allotted_amount: 300.00
   spent_amount: 0.00
 
 four:
   monthly_budget: two
+  spending_category: four  # Groceries (variable) for user two
   spending_group_name: "Groceries"
-  group_type: 1
-  is_savings: false
   allotted_amount: 480.00
   spent_amount: 450.00
 
 five:
   monthly_budget: three
+  spending_category: five  # Entertainment (variable) for user three
   spending_group_name: "Entertainment"
-  group_type: 1
-  is_savings: false
   allotted_amount: 200.00
   spent_amount: 150.00
 

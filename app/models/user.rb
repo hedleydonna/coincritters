@@ -7,13 +7,12 @@ class User < ApplicationRecord
   has_many :incomes, dependent: :destroy
   has_many :income_events, dependent: :destroy
   has_many :monthly_budgets, dependent: :destroy
+  has_many :spending_categories, dependent: :destroy
 
   # Admin methods
   def admin?
     admin == true
   end
-
-  has_many :monthly_budgets, dependent: :destroy
 
   def current_budget
     monthly_budgets.current || create_default_budget

@@ -24,6 +24,7 @@ Rails.application.routes.draw do
     resources :incomes
     resources :income_events
     resources :monthly_budgets
+    resources :spending_categories
     resources :envelopes
     resources :variable_spendings
     resources :bill_payments

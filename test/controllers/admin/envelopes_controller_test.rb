@@ -60,14 +60,21 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
   test "should create envelope" do
     sign_in @admin
     monthly_budget = monthly_budgets(:one)
+    # Create or use a unique spending category
+    spending_category = SpendingCategory.find_or_create_by!(
+      user: monthly_budget.user,
+      name: "Utilities"
+    ) do |sc|
+      sc.group_type = :fixed
+      sc.is_savings = false
+    end
     
     assert_difference("Envelope.count", 1) do
       post admin_envelopes_path, params: {
         envelope: {
           monthly_budget_id: monthly_budget.id,
+          spending_category_id: spending_category.id,
           spending_group_name: "Utilities",
-          group_type: "fixed",
-          is_savings: false,
           allotted_amount: 150.00,
           spent_amount: 120.00
         }

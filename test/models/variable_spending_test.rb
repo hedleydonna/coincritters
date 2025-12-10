@@ -80,10 +80,16 @@ class VariableSpendingTest < ActiveSupport::TestCase
   end
 
   test "should destroy when envelope is destroyed" do
+    # Create a unique spending category to avoid duplicate key constraint
+    spending_category = SpendingCategory.create!(
+      user: monthly_budgets(:one).user,
+      name: "Test Variable Spending Category",
+      group_type: :variable
+    )
     envelope = Envelope.create!(
       monthly_budget: monthly_budgets(:one),
-      spending_group_name: "Test Envelope",
-      group_type: :variable
+      spending_category: spending_category,
+      spending_group_name: "Test Envelope"
     )
     variable_spending = VariableSpending.create!(
       envelope: envelope,

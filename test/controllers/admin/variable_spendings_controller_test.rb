@@ -102,7 +102,6 @@ class Admin::VariableSpendingsControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     patch admin_variable_spending_path(@variable_spending), params: {
       variable_spending: {
-        spending_group_name: "Updated Groceries",
         amount: 85.00,
         spent_on: @variable_spending.spent_on,
         envelope_id: @variable_spending.envelope_id
@@ -110,8 +109,9 @@ class Admin::VariableSpendingsControllerTest < ActionDispatch::IntegrationTest
     }
     assert_redirected_to admin_variable_spending_path(@variable_spending)
     @variable_spending.reload
-    assert_equal "Updated Groceries", @variable_spending.spending_group_name
     assert_equal 85.00, @variable_spending.amount.to_f
+    # spending_group_name comes from envelope, so it should still match the envelope's name
+    assert_equal @variable_spending.envelope.spending_group_name, @variable_spending.spending_group_name
   end
 
   # Test destroy action

@@ -194,17 +194,30 @@ The Monthly Budget model represents monthly budget tracking for users. Key featu
 
 ---
 
+## Spending Category Model
+
+For detailed documentation about the Spending Category model, see [Spending Category Model Documentation](./spending_category_model.md).
+
+The Spending Category model represents user-defined spending categories that can be reused across monthly budgets. Key features:
+- Each category belongs to a user
+- Defines group type (fixed vs variable) and savings status
+- Supports default amounts and auto-creation settings
+- Enforces unique category names per user
+- Supports cascade deletion when user is deleted
+- Has many envelopes that reference it
+
+---
+
 ## Envelope Model
 
 For detailed documentation about the Envelope model, see [Envelope Model Documentation](./envelope_model.md).
 
 The Envelope model represents spending categories within monthly budgets. Key features:
-- Each envelope belongs to a monthly budget
+- Each envelope belongs to a monthly budget and a spending category
 - Tracks allotted amount and spent amount
-- Supports fixed and variable expense types
-- Can be marked as savings pots
+- Inherits group type and savings status from spending category
 - Enforces unique spending_group_name per budget
-- Supports cascade deletion when monthly budget is deleted
+- Supports cascade deletion when monthly budget or spending category is deleted
 
 ---
 
