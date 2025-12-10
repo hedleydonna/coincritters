@@ -10,9 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_09_190750) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_09_214918) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "income_events", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "income_id"
+    t.string "income_type", default: "Paycheck", null: false
+    t.string "month_year", null: false
+    t.string "assigned_month_year"
+    t.date "received_on", null: false
+    t.decimal "actual_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["income_id", "month_year"], name: "index_income_events_on_income_id_and_month_year"
+    t.index ["income_id"], name: "index_income_events_on_income_id"
+    t.index ["user_id", "assigned_month_year"], name: "index_income_events_on_assigned_month"
+    t.index ["user_id", "month_year"], name: "index_income_events_on_user_id_and_month_year"
+    t.index ["user_id"], name: "index_income_events_on_user_id"
+  end
 
   create_table "incomes", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -41,5 +59,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_09_190750) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "income_events", "incomes", on_delete: :cascade
+  add_foreign_key "income_events", "users", on_delete: :cascade
   add_foreign_key "incomes", "users", on_delete: :cascade
 end

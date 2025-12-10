@@ -4,7 +4,7 @@ This document describes the data models used in the Willow application.
 
 ## Overview
 
-Willow currently uses two models: **User** and **Income**. The application is built with Ruby on Rails and uses Devise for authentication.
+Willow currently uses four models: **User**, **Income**, **IncomeType**, and **IncomeEvent**. The application is built with Ruby on Rails and uses Devise for authentication.
 
 ---
 
@@ -90,6 +90,10 @@ The User model includes the following Devise authentication modules:
 
 - `has_many :incomes` - A user can have multiple income sources
   - When a user is deleted, all associated incomes are also deleted (dependent: :destroy)
+- `has_many :income_events` - A user can have multiple income events
+  - When a user is deleted, all associated income events are also deleted (dependent: :destroy)
+
+**Note**: Income types are global/shared resources and do not belong to individual users. All users share the same set of income types for categorizing their income events.
 
 ### Validations
 
@@ -174,6 +178,18 @@ The Income model represents income sources for users. Key features:
 - Tracks estimated amount, frequency, and active status
 - Validates uniqueness of income name per user
 - Supports cascade deletion when user is deleted
+
+## Income Event Model
+
+For detailed documentation about the Income Event model, see [Income Event Model Documentation](./income_event_model.md).
+
+The Income Event model represents actual income received events. Key features:
+- Each income event belongs to a user (required)
+- Has a free-form `income_type` string field for categorization (defaults to "Paycheck")
+- Optionally linked to an income source
+- Tracks actual amount, received date, and month/year attribution
+- Supports both `month_year` (when received) and `assigned_month_year` (when attributed)
+- Validates date formats and non-negative amounts
 
 ---
 

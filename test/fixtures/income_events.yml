@@ -1,0 +1,38 @@
+one:
+  user: one
+  income: one
+  income_type: "Paycheck"
+  month_year: "2025-12"
+  assigned_month_year: "2025-12"
+  received_on: "2025-12-01"
+  actual_amount: 5000.00
+  notes: "Regular monthly salary"
+
+two:
+  user: one
+  income: two
+  income_type: "Freelance"
+  month_year: "2025-12"
+  assigned_month_year: "2025-12"
+  received_on: "2025-12-15"
+  actual_amount: 1500.50
+  notes: "Freelance project payment"
+
+three:
+  user: two
+  income: three
+  income_type: "Investment"
+  month_year: "2025-11"
+  assigned_month_year: "2025-11"
+  received_on: "2025-11-30"
+  actual_amount: 200.00
+
+four:
+  user: two
+  income: four
+  income_type: "Rental"
+  month_year: "2025-12"
+  assigned_month_year: "2025-12"
+  received_on: "2025-12-05"
+  actual_amount: 1200.00
+  notes: "Rental income for December"

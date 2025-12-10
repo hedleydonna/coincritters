@@ -7,6 +7,8 @@ class Admin::DashboardController < Admin::BaseController
     @income_count = Income.count
     @active_income_count = Income.active.count
     @recent_incomes = Income.includes(:user).order(created_at: :desc).limit(5)
+    @income_event_count = IncomeEvent.count
+    @recent_income_events = IncomeEvent.includes(:user, :income).order(created_at: :desc).limit(5)
   end
 end
 

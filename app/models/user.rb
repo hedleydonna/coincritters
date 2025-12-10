@@ -5,6 +5,7 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable
 
   has_many :incomes, dependent: :destroy
+  has_many :income_events, dependent: :destroy
 
   # Admin methods
   def admin?
