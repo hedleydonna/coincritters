@@ -169,6 +169,11 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
 
   test "current scope should return budget for current month" do
     current_month = Time.current.strftime("%Y-%m")
+    
+    # Clean up any existing budgets for current month first (across all users)
+    # since the scope doesn't filter by user
+    MonthlyBudget.where(month_year: current_month).destroy_all
+    
     budget = MonthlyBudget.create!(
       user: @user_one,
       month_year: current_month,
@@ -176,7 +181,9 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     )
     
     found_budget = MonthlyBudget.current
-    assert_equal budget.id, found_budget.id if found_budget
+    assert_not_nil found_budget
+    assert_equal budget.id, found_budget.id
+    assert_equal current_month, found_budget.month_year
   end
 
   test "for_month scope should return budget for specific month" do

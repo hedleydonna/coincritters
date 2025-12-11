@@ -157,8 +157,7 @@ class SpendingCategoryTest < ActiveSupport::TestCase
     )
     envelope = Envelope.create!(
       monthly_budget: monthly_budgets(:one),
-      spending_category: spending_category,
-      spending_group_name: "Test Envelope"
+      spending_category: spending_category
     )
     
     assert_difference("Envelope.count", -1) do

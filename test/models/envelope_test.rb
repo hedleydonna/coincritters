@@ -46,7 +46,7 @@ class EnvelopeTest < ActiveSupport::TestCase
       spending_category: spending_category
     )
     assert_not duplicate_envelope.valid?
-    assert_includes duplicate_envelope.errors[:spending_category], "has already been taken"
+    assert_includes duplicate_envelope.errors[:spending_category_id], "has already been taken"
   end
 
   test "different monthly_budgets can have envelopes with same spending_category" do
@@ -100,6 +100,19 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_not @envelope_one.is_savings?
   end
 
+  test "savings? should return true for savings envelopes" do
+    assert envelopes(:three).savings?
+    assert_not @envelope_one.savings?
+  end
+
+  test "savings? and is_savings? should return same value" do
+    savings_envelope = envelopes(:three)
+    assert_equal savings_envelope.savings?, savings_envelope.is_savings?
+    
+    non_savings_envelope = @envelope_one
+    assert_equal non_savings_envelope.savings?, non_savings_envelope.is_savings?
+  end
+
   test "should require allotted_amount to be greater than or equal to 0" do
     spending_category = SpendingCategory.create!(
       user: @monthly_budget_one.user,
@@ -115,18 +128,49 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_includes envelope.errors[:allotted_amount], "must be greater than or equal to 0"
   end
 
-  test "should have default allotted_amount of 0.0" do
-    # Create a unique spending category for this test to avoid unique constraint violation
+  test "should auto-fill allotted_amount from category default_amount when creating" do
+    # Create a unique spending category with a default amount
     spending_category = SpendingCategory.create!(
       user: @monthly_budget_one.user,
-      name: "Default Amount Test Category",
-      group_type: :variable
+      name: "Auto Fill Test Category",
+      group_type: :variable,
+      default_amount: 250.00
+    )
+    envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      spending_category: spending_category
+    )
+    assert_equal 250.00, envelope.allotted_amount.to_f
+  end
+
+  test "should use 0.0 as default allotted_amount if category default_amount is nil" do
+    # Create a unique spending category without a default amount
+    spending_category = SpendingCategory.create!(
+      user: @monthly_budget_one.user,
+      name: "No Default Amount Test Category",
+      group_type: :variable,
+      default_amount: nil
     )
     envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
       spending_category: spending_category
     )
     assert_equal 0.0, envelope.allotted_amount.to_f
+  end
+
+  test "should not override explicitly set allotted_amount with default" do
+    spending_category = SpendingCategory.create!(
+      user: @monthly_budget_one.user,
+      name: "Explicit Amount Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      spending_category: spending_category,
+      allotted_amount: 500.00
+    )
+    assert_equal 500.00, envelope.allotted_amount.to_f
   end
 
   test "spent_amount should calculate from spendings" do
@@ -182,6 +226,13 @@ class EnvelopeTest < ActiveSupport::TestCase
     non_savings_envelopes = Envelope.non_savings
     assert_includes non_savings_envelopes, @envelope_one
     assert_not_includes non_savings_envelopes, envelopes(:three)
+  end
+
+  test "over_budget scope should return only envelopes where spent exceeds allotted" do
+    # envelope_two is over budget (spent 2400 > allotted 1200)
+    over_budget_envelopes = Envelope.over_budget
+    assert_includes over_budget_envelopes, @envelope_two
+    assert_not_includes over_budget_envelopes, @envelope_one
   end
 
   test "fixed? should return true for fixed envelopes" do
@@ -263,11 +314,112 @@ class EnvelopeTest < ActiveSupport::TestCase
       allotted_amount: 0.00
     )
     assert_equal 0, empty_envelope.spent_percentage
+    
+    # Test with negative allotted_amount (edge case - shouldn't happen but safer)
+    negative_envelope = Envelope.new(
+      monthly_budget: @monthly_budget_one,
+      spending_category: spending_category,
+      allotted_amount: -100.00
+    )
+    assert_equal 0, negative_envelope.spent_percentage
   end
 
   test "spent_percentage should cap at 100" do
     # envelope_two already exceeds 100% so it should be capped
     assert_equal 100.0, @envelope_two.spent_percentage
+  end
+
+  test "paid? should return true for fixed envelopes when spent >= allotted" do
+    # Create a fixed category
+    fixed_category = SpendingCategory.create!(
+      user: @monthly_budget_one.user,
+      name: "Fixed Bill Test",
+      group_type: :fixed
+    )
+    
+    # Create envelope with allotted amount
+    fixed_envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      spending_category: fixed_category,
+      allotted_amount: 1000.00
+    )
+    
+    # Not paid yet
+    assert_not fixed_envelope.paid?
+    
+    # Add spending that equals allotted amount
+    Spending.create!(
+      envelope: fixed_envelope,
+      amount: 1000.00,
+      spent_on: Date.today
+    )
+    assert fixed_envelope.paid?
+    
+    # Add more spending (over paid)
+    Spending.create!(
+      envelope: fixed_envelope,
+      amount: 100.00,
+      spent_on: Date.today
+    )
+    assert fixed_envelope.paid?
+  end
+
+  test "paid? should return false for variable envelopes even when spent >= allotted" do
+    # Create a variable category
+    variable_category = SpendingCategory.create!(
+      user: @monthly_budget_one.user,
+      name: "Variable Test",
+      group_type: :variable
+    )
+    
+    variable_envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      spending_category: variable_category,
+      allotted_amount: 500.00
+    )
+    
+    # Add spending that exceeds allotted
+    Spending.create!(
+      envelope: variable_envelope,
+      amount: 600.00,
+      spent_on: Date.today
+    )
+    
+    # Variable envelopes are never "paid" - only fixed bills can be paid
+    assert_not variable_envelope.paid?
+  end
+
+  test "to_s should return friendly string with name and budget" do
+    envelope = @envelope_one
+    to_s_string = envelope.to_s
+    assert_match(/#{envelope.name}/, to_s_string)
+    assert_match(/#{envelope.monthly_budget.name}/, to_s_string)
+  end
+
+  test "display_name should delegate to spending_category" do
+    envelope = @envelope_one
+    assert_equal envelope.spending_category.display_name, envelope.display_name
+  end
+
+  test "percent_used should return integer percentage" do
+    # envelope_one: 240.75 / 500.00 = 48.15%, rounded to 48
+    assert_equal 48, @envelope_one.percent_used
+    
+    # envelope_two: 2400.00 / 1200.00 = 200%, rounded to 200
+    assert_equal 200, @envelope_two.percent_used
+    
+    # Empty envelope
+    spending_category = SpendingCategory.create!(
+      user: @monthly_budget_one.user,
+      name: "Empty Percent Test",
+      group_type: :variable
+    )
+    empty_envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      spending_category: spending_category,
+      allotted_amount: 0.00
+    )
+    assert_equal 0, empty_envelope.percent_used
   end
 end
 

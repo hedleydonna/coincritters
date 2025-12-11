@@ -232,6 +232,10 @@ The Monthly Budget model represents monthly budget tracking for users. Key featu
 - Validates month_year format (YYYY-MM)
 - Supports cascade deletion when user is deleted
 - Has many envelopes for spending categories
+- Provides scopes for finding budgets (`current`, `for_month`, `by_month`, `for_user`)
+- Calculates remaining income to assign and unassigned amounts
+- Supports bank balance reconciliation with tolerance checking
+- Auto-creates envelopes from spending categories with `auto_create: true`
 
 ---
 
@@ -256,9 +260,13 @@ For detailed documentation about the Envelope model, see [Envelope Model Documen
 The Envelope model represents spending categories within monthly budgets. Key features:
 - Each envelope belongs to a monthly budget and a spending category
 - Tracks allotted amount; spent amount is calculated from related spending records
+- Auto-fills `allotted_amount` from spending category's `default_amount` when creating
 - Inherits name, group type, and savings status from spending category
 - Enforces unique spending_category per budget
 - Supports cascade deletion when monthly budget or spending category is deleted
+- Provides scopes for filtering by type (`fixed`, `variable`, `savings`, `non_savings`, `over_budget`)
+- Calculates remaining, available, and spent percentages
+- Tracks if fixed bills are paid (`paid?` method)
 
 ---
 

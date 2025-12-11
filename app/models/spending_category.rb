@@ -33,6 +33,10 @@ class SpendingCategory < ApplicationRecord
     end
   end
 
+  def group_type_fixed?
+    group_type == "fixed"
+  end
+
   # Text description of group type
   def group_type_text
     group_type == "fixed" ? "Fixed bill" : "Variable spending"
