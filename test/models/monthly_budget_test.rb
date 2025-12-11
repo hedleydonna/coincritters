@@ -44,7 +44,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     assert_not budget.valid?
-    assert_includes budget.errors[:month_year], "must be in YYYY-MM format"
+    assert_includes budget.errors[:month_year], "must be YYYY-MM"
   end
 
   test "should accept valid month_year format" do
@@ -63,7 +63,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 6000.00
     )
     assert_not duplicate_budget.valid?
-    assert_includes duplicate_budget.errors[:month_year], "already has a budget for this month"
+    assert_includes duplicate_budget.errors[:month_year], "has already been taken"
   end
 
   test "different users can have budgets for same month_year" do
@@ -165,6 +165,319 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_includes budgets, @budget_one
     assert_includes budgets, @budget_two
     assert_not_includes budgets, monthly_budgets(:three)
+  end
+
+  test "current scope should return budget for current month" do
+    current_month = Time.current.strftime("%Y-%m")
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: current_month,
+      total_actual_income: 5000.00
+    )
+    
+    found_budget = MonthlyBudget.current
+    assert_equal budget.id, found_budget.id if found_budget
+  end
+
+  test "for_month scope should return budget for specific month" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-05",
+      total_actual_income: 5000.00
+    )
+    
+    found_budget = MonthlyBudget.for_month("2026-05")
+    assert_equal budget.id, found_budget.id if found_budget
+  end
+
+  test "name should return formatted month and year" do
+    budget = MonthlyBudget.new(month_year: "2025-12")
+    assert_equal "December 2025", budget.name
+    
+    budget = MonthlyBudget.new(month_year: "2026-01")
+    assert_equal "January 2026", budget.name
+  end
+
+  test "month_year_with_user should return formatted string with user info" do
+    user = User.create!(
+      email: "displaytest@example.com",
+      password: "password123",
+      display_name: "John Doe"
+    )
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-06",
+      total_actual_income: 5000.00
+    )
+    
+    assert_match(/2026-06/, budget.month_year_with_user)
+    assert_match(/John Doe/, budget.month_year_with_user)
+  end
+
+  test "month_year_with_user should use email prefix if display_name is nil" do
+    user = User.create!(
+      email: "testuser@example.com",
+      password: "password123",
+      display_name: nil
+    )
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-07",
+      total_actual_income: 5000.00
+    )
+    
+    assert_match(/2026-07/, budget.month_year_with_user)
+    assert_match(/Testuser/, budget.month_year_with_user)
+  end
+
+  test "total_allotted should sum allotted_amount from all envelopes" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-08",
+      total_actual_income: 5000.00
+    )
+    
+    category1 = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category 1",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    category2 = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category 2",
+      group_type: :variable,
+      default_amount: 200.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category1,
+      allotted_amount: 100.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category2,
+      allotted_amount: 200.00
+    )
+    
+    assert_equal 300.00, budget.total_allotted.to_f
+  end
+
+  test "total_spent should sum spent_amount from all envelopes" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-09",
+      total_actual_income: 5000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 500.00
+    )
+    
+    Spending.create!(
+      envelope: envelope,
+      amount: 100.00,
+      spent_on: Date.today
+    )
+    
+    Spending.create!(
+      envelope: envelope,
+      amount: 50.00,
+      spent_on: Date.today
+    )
+    
+    assert_equal 150.00, budget.total_spent.to_f
+  end
+
+  test "remaining_to_assign should return difference between income and allotted" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-10",
+      total_actual_income: 5000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    assert_equal 3000.00, budget.remaining_to_assign.to_f
+  end
+
+  test "remaining_to_assign can be negative if more allotted than income" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-11",
+      total_actual_income: 1000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    assert_equal(-1000.00, budget.remaining_to_assign.to_f)
+  end
+
+  test "unassigned should return remaining_to_assign but never negative" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2026-12",
+      total_actual_income: 5000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    assert_equal 3000.00, budget.unassigned.to_f
+    
+    # Test negative case
+    budget2 = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2027-01",
+      total_actual_income: 1000.00
+    )
+    
+    Envelope.create!(
+      monthly_budget: budget2,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    assert_equal 0.0, budget2.unassigned.to_f
+  end
+
+  test "bank_difference should return nil if bank_balance is not set" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2027-02",
+      total_actual_income: 5000.00,
+      bank_balance: nil
+    )
+    
+    assert_nil budget.bank_difference
+  end
+
+  test "bank_difference should calculate difference when bank_balance is set" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2027-03",
+      total_actual_income: 5000.00,
+      bank_balance: 3000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    Spending.create!(
+      envelope: envelope,
+      amount: 500.00,
+      spent_on: Date.today
+    )
+    
+    # bank_balance (3000) - (total_actual_income (5000) - total_spent (500)) = 3000 - 4500 = -1500
+    assert_equal(-1500.00, budget.bank_difference.to_f)
+  end
+
+  test "bank_match? should return true if bank_balance is not set" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2027-04",
+      total_actual_income: 5000.00,
+      bank_balance: nil
+    )
+    
+    assert budget.bank_match?
+  end
+
+  test "bank_match? should return true if difference is within 50 dollar tolerance" do
+    budget = MonthlyBudget.create!(
+      user: @user_one,
+      month_year: "2027-05",
+      total_actual_income: 5000.00,
+      bank_balance: 3000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: @user_one,
+      name: "Test Category",
+      group_type: :variable,
+      default_amount: 100.00
+    )
+    
+    envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 2000.00
+    )
+    
+    Spending.create!(
+      envelope: envelope,
+      amount: 500.00,
+      spent_on: Date.today
+    )
+    
+    # bank_balance (3000) vs calculated (5000 - 500 = 4500), difference = -1500
+    # This is outside the 50 tolerance, so should be false
+    assert_not budget.bank_match?
+    
+    # Set bank_balance to be within 50 of calculated
+    budget.update(bank_balance: 4500.00)
+    assert budget.bank_match?
+    
+    budget.update(bank_balance: 4525.00)
+    assert budget.bank_match?
+    
+    budget.update(bank_balance: 4551.00)
+    assert_not budget.bank_match?
   end
 
   # Test auto_create_envelopes method

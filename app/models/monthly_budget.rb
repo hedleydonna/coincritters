@@ -1,36 +1,36 @@
 # app/models/monthly_budget.rb
 class MonthlyBudget < ApplicationRecord
-    belongs_to :user
-    has_many :envelopes, dependent: :destroy
-  
-    # ------------------------------------------------------------------
-    # Validations
-    # ------------------------------------------------------------------
-    validates :month_year, 
-              presence: true,
-              format: { with: /\A\d{4}-\d{2}\z/, message: "must be in YYYY-MM format" },
-              uniqueness: { scope: :user_id, message: "already has a budget for this month" }
-  
-    validates :total_actual_income, 
-              numericality: { greater_than_or_equal_to: 0 }
-  
-    validates :flex_fund, 
-              numericality: { greater_than_or_equal_to: 0 }
+  belongs_to :user
+  has_many :envelopes, dependent: :destroy
 
-    validates :bank_balance, 
-              numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  
-    # ------------------------------------------------------------------
-    # Scopes — super handy
-    # ------------------------------------------------------------------
-    scope :current, -> { find_by(month_year: Time.current.strftime("%Y-%m")) }
-    scope :for_month, ->(year_month) { find_by(month_year: year_month) }
-    scope :by_month, ->(month_year) { where(month_year: month_year) }
-    scope :for_user, ->(user) { where(user: user) }
-  
-    # ------------------------------------------------------------------
-    # Instance methods
-    # ------------------------------------------------------------------
+  # ------------------------------------------------------------------
+  # Validations
+  # ------------------------------------------------------------------
+  validates :month_year, 
+            presence: true,
+            uniqueness: { scope: :user_id },
+            format: { with: /\A\d{4}-\d{2}\z/, message: "must be YYYY-MM" }
+
+  validates :total_actual_income, 
+            numericality: { greater_than_or_equal_to: 0 }
+
+  validates :flex_fund, 
+            numericality: { greater_than_or_equal_to: 0 }
+
+  validates :bank_balance, 
+            numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  # ------------------------------------------------------------------
+  # Scopes
+  # ------------------------------------------------------------------
+  scope :current, -> { find_by(month_year: Time.current.strftime("%Y-%m")) }
+  scope :for_month, ->(year_month) { find_by(month_year: year_month) }
+  scope :by_month, ->(month_year) { where(month_year: month_year) }
+  scope :for_user, ->(user) { where(user: user) }
+
+  # ------------------------------------------------------------------
+  # Friendly name
+  # ------------------------------------------------------------------
   def name
     Date.parse("#{month_year}-01").strftime("%B %Y")
   end
@@ -39,49 +39,53 @@ class MonthlyBudget < ApplicationRecord
   def month_year_with_user
     "#{month_year} - #{user.display_name.presence || user.email.split('@').first.capitalize}"
   end
-  
-    # Total allotted to envelopes
-    def total_allotted
-      envelopes.sum(:allotted_amount)
-    end
-  
-    # Total spent across all envelopes (calculated from spendings)
-    def total_spent
-      envelopes.sum { |e| e.spent_amount }
-    end
-  
-    # Remaining after envelopes — this is what shows on the dashboard
-    def remaining
-      total_actual_income - total_allotted
-    end
-  
-    # How much is "unassigned" (can be swept to savings or next month)
-    def unassigned
-      [remaining, 0].max
-    end
-  
-    # Optional: forgiving bank balance check
-    def bank_difference
-      return nil unless bank_balance.present?
-      bank_balance - (total_actual_income - total_spent)
-    end
-  
-    def bank_match?
-      return true unless bank_balance.present?
-      bank_difference.abs <= 50 # "close enough" — adjust as you like
-    end
 
-    # Auto-create envelopes based on spending categories with auto_create enabled
-    def auto_create_envelopes
-      user.spending_categories.auto_create.find_each do |category|
-        # Skip if envelope for this category already exists in this budget
-        next if envelopes.exists?(spending_category_id: category.id)
-        
-        envelopes.create!(
-          spending_category: category,
-          allotted_amount: category.default_amount || 0
-        )
-      end
+  # ------------------------------------------------------------------
+  # Calculated totals — no stored columns needed
+  # ------------------------------------------------------------------
+  def total_allotted
+    envelopes.sum(:allotted_amount)
+  end
+
+  def total_spent
+    envelopes.sum(&:spent_amount)
+  end
+
+  def remaining_to_assign
+    total_actual_income - total_allotted
+  end
+
+  def unassigned
+    [remaining_to_assign, 0].max
+  end
+
+  # ------------------------------------------------------------------
+  # Forgiving bank balance check
+  # ------------------------------------------------------------------
+  def bank_difference
+    return nil unless bank_balance.present?
+
+    bank_balance - (total_actual_income - total_spent)
+  end
+
+  def bank_match?
+    return true unless bank_balance.present?
+
+    bank_difference.abs <= 50  # "close enough" — adjust if you want
+  end
+
+  # ------------------------------------------------------------------
+  # Auto-create envelopes from user's recurring categories
+  # ------------------------------------------------------------------
+  def auto_create_envelopes
+    user.spending_categories.auto_create.find_each do |category|
+      # Skip if envelope for this category already exists in this budget
+      next if envelopes.exists?(spending_category_id: category.id)
+
+      envelopes.create!(
+        spending_category: category,
+        allotted_amount: category.default_amount || 0
+      )
     end
   end
-  
+end

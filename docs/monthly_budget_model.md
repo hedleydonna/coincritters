@@ -60,14 +60,14 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 
 ### Format Validations
 
-- `validates :month_year, format: { with: /\A\d{4}-\d{2}\z/, message: "must be in YYYY-MM format" }`:
+- `validates :month_year, format: { with: /\A\d{4}-\d{2}\z/, message: "must be YYYY-MM" }`:
   - `month_year` must match the pattern `YYYY-MM` (e.g., "2025-12").
   - Valid examples: "2025-01", "2025-12", "2024-03"
   - Invalid examples: "2025-1", "25-12", "December 2025"
 
 ### Uniqueness Validations
 
-- `validates :month_year, uniqueness: { scope: :user_id, message: "already has a budget for this month" }`:
+- `validates :month_year, uniqueness: { scope: :user_id }`:
   - A user can only have one budget per month/year combination.
   - Prevents duplicate budgets for the same user and month.
 
@@ -85,8 +85,17 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 
 ## Scopes
 
+- `scope :current, -> { find_by(month_year: Time.current.strftime("%Y-%m")) }`:
+  - Returns the budget for the current month/year (across all users, returns first match).
+  - Useful for finding the current month's budget.
+
+- `scope :for_month, ->(year_month) { find_by(month_year: year_month) }`:
+  - Returns a single budget for a specific month/year (across all users, returns first match).
+  - Similar to `current` but for any specified month.
+
 - `scope :by_month, ->(month_year) { where(month_year: month_year) }`:
   - Returns all budgets for a specific month/year (across all users).
+  - Returns a collection, unlike `for_month` which returns a single record.
 
 - `scope :for_user, ->(user) { where(user: user) }`:
   - Returns all budgets for a specific user.
@@ -117,15 +126,19 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
   budget.total_spent  # => 1500.00
   ```
 
-- `remaining` - Returns the difference between `total_actual_income` and `total_allotted`
+- `remaining_to_assign` - Returns the difference between `total_actual_income` and `total_allotted`
   ```ruby
-  budget.remaining  # => 3000.00 (if total_actual_income is 5000.00 and total_allotted is 2000.00)
+  budget.remaining_to_assign  # => 3000.00 (if total_actual_income is 5000.00 and total_allotted is 2000.00)
   ```
+  - This represents how much income is left to assign to envelopes.
+  - Can be negative if more has been allotted than actual income.
 
 - `unassigned` - Returns the remaining amount, but never negative (clamped to 0)
   ```ruby
-  budget.unassigned  # => 3000.00 (same as remaining if positive, otherwise 0)
+  budget.unassigned  # => 3000.00 (same as remaining_to_assign if positive, otherwise 0)
   ```
+  - This is the "safe" version that never goes below zero.
+  - Represents unassigned money that can be swept to savings or next month.
 
 - `bank_difference` - Returns the difference between `bank_balance` and calculated balance, or `nil` if `bank_balance` is not set
   ```ruby
@@ -245,14 +258,14 @@ invalid_budget = user.monthly_budgets.create(
   month_year: "December 2025",
   total_actual_income: 5000.00
 )
-# => #<MonthlyBudget ... errors: {:month_year=>["must be in YYYY-MM format"]}>
+# => #<MonthlyBudget ... errors: {:month_year=>["must be YYYY-MM"]}>
 
 # Duplicate month for same user
 duplicate_budget = user.monthly_budgets.create(
   month_year: user.monthly_budgets.first.month_year,
   total_actual_income: 6000.00
 )
-# => #<MonthlyBudget ... errors: {:month_year=>["already has a budget for this month"]}>
+# => #<MonthlyBudget ... errors: {:month_year=>["has already been taken"]}>
 
 # Negative amount
 invalid_amount = user.monthly_budgets.create(
