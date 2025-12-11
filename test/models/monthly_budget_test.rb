@@ -166,5 +166,155 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_includes budgets, @budget_two
     assert_not_includes budgets, monthly_budgets(:three)
   end
+
+  # Test auto_create_envelopes method
+  test "auto_create_envelopes should create envelopes for categories with auto_create true" do
+    user = User.create!(email: "autotest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-01",
+      total_actual_income: 5000.00
+    )
+    
+    # Create spending categories with auto_create: true
+    category1 = SpendingCategory.create!(
+      user: user,
+      name: "Groceries",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 500.00,
+      auto_create: true
+    )
+    
+    category2 = SpendingCategory.create!(
+      user: user,
+      name: "Rent",
+      group_type: :fixed,
+      is_savings: false,
+      default_amount: 1200.00,
+      auto_create: true
+    )
+    
+    # Create a category with auto_create: false (should be skipped)
+    category3 = SpendingCategory.create!(
+      user: user,
+      name: "Entertainment",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 200.00,
+      auto_create: false
+    )
+    
+    assert_difference("Envelope.count", 2) do
+      budget.auto_create_envelopes
+    end
+    
+    assert_equal 2, budget.envelopes.count
+    assert budget.envelopes.exists?(spending_category_id: category1.id)
+    assert budget.envelopes.exists?(spending_category_id: category2.id)
+    assert_not budget.envelopes.exists?(spending_category_id: category3.id)
+    
+    # Check that default_amount was used
+    envelope1 = budget.envelopes.find_by(spending_category: category1)
+    envelope2 = budget.envelopes.find_by(spending_category: category2)
+    assert_equal 500.00, envelope1.allotted_amount
+    assert_equal 1200.00, envelope2.allotted_amount
+  end
+
+  test "auto_create_envelopes should skip categories that already have envelopes" do
+    user = User.create!(email: "skiptest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-02",
+      total_actual_income: 5000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: user,
+      name: "Groceries",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 500.00,
+      auto_create: true
+    )
+    
+    # Create an envelope manually for this category
+    existing_envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: category,
+      allotted_amount: 600.00
+    )
+    
+    # Should not create duplicate envelope
+    assert_no_difference("Envelope.count") do
+      budget.auto_create_envelopes
+    end
+    
+    # Should still have only one envelope
+    assert_equal 1, budget.envelopes.count
+    assert_equal existing_envelope.id, budget.envelopes.first.id
+    assert_equal 600.00, budget.envelopes.first.allotted_amount
+  end
+
+  test "auto_create_envelopes should use default_amount of 0 if category default_amount is nil" do
+    user = User.create!(email: "defaulttest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-03",
+      total_actual_income: 5000.00
+    )
+    
+    category = SpendingCategory.create!(
+      user: user,
+      name: "New Category",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: nil,
+      auto_create: true
+    )
+    
+    budget.auto_create_envelopes
+    
+    envelope = budget.envelopes.find_by(spending_category: category)
+    assert_not_nil envelope
+    assert_equal 0.0, envelope.allotted_amount.to_f
+  end
+
+  test "auto_create_envelopes should only create envelopes for the budget's user's categories" do
+    user1 = User.create!(email: "user1_categories@example.com", password: "password123")
+    user2 = User.create!(email: "user2_categories@example.com", password: "password123")
+    
+    budget = MonthlyBudget.create!(
+      user: user1,
+      month_year: "2026-04",
+      total_actual_income: 5000.00
+    )
+    
+    # Create categories for both users
+    user1_category = SpendingCategory.create!(
+      user: user1,
+      name: "User1 Category",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 500.00,
+      auto_create: true
+    )
+    
+    user2_category = SpendingCategory.create!(
+      user: user2,
+      name: "User2 Category",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 300.00,
+      auto_create: true
+    )
+    
+    budget.auto_create_envelopes
+    
+    # Should only create envelope for user1's category
+    assert_equal 1, budget.envelopes.count
+    assert budget.envelopes.exists?(spending_category_id: user1_category.id)
+    assert_not budget.envelopes.exists?(spending_category_id: user2_category.id)
+  end
 end
 

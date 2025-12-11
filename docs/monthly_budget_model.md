@@ -91,6 +91,62 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 - `scope :for_user, ->(user) { where(user: user) }`:
   - Returns all budgets for a specific user.
 
+## Instance Methods
+
+### Display Methods
+
+- `name` - Returns a human-readable name for the budget (e.g., "December 2025")
+  ```ruby
+  budget.name  # => "December 2025"
+  ```
+
+- `month_year_with_user` - Returns a string combining month_year and user display name for dropdowns
+  ```ruby
+  budget.month_year_with_user  # => "2025-12 - John Doe"
+  ```
+
+### Calculation Methods
+
+- `total_allotted` - Returns the sum of `allotted_amount` from all associated envelopes
+  ```ruby
+  budget.total_allotted  # => 2000.00
+  ```
+
+- `total_spent` - Returns the sum of `spent_amount` (calculated from spendings) across all envelopes
+  ```ruby
+  budget.total_spent  # => 1500.00
+  ```
+
+- `remaining` - Returns the difference between `total_actual_income` and `total_allotted`
+  ```ruby
+  budget.remaining  # => 3000.00 (if total_actual_income is 5000.00 and total_allotted is 2000.00)
+  ```
+
+- `unassigned` - Returns the remaining amount, but never negative (clamped to 0)
+  ```ruby
+  budget.unassigned  # => 3000.00 (same as remaining if positive, otherwise 0)
+  ```
+
+- `bank_difference` - Returns the difference between `bank_balance` and calculated balance, or `nil` if `bank_balance` is not set
+  ```ruby
+  budget.bank_difference  # => 100.00 (if bank_balance is 3100.00 and calculated is 3000.00)
+  ```
+
+- `bank_match?` - Returns `true` if `bank_balance` matches calculated balance within $50 tolerance, or `true` if `bank_balance` is not set
+  ```ruby
+  budget.bank_match?  # => true or false
+  ```
+
+### Envelope Management Methods
+
+- `auto_create_envelopes` - Automatically creates envelopes for all spending categories with `auto_create: true` that don't already have an envelope in this budget
+  ```ruby
+  budget.auto_create_envelopes
+  # Creates envelopes for each spending category with auto_create: true
+  # Uses category.default_amount for the envelope's allotted_amount
+  # Skips categories that already have an envelope in this budget
+  ```
+
 ## Business Rules
 
 1. **One Budget Per User Per Month**: Each user can only have one budget for each month/year combination. The unique index on `[user_id, month_year]` enforces this at the database level.
@@ -151,6 +207,21 @@ user_budgets = MonthlyBudget.for_user(user)
 user = User.first
 december_budget = user.monthly_budgets.find_by(month_year: "2025-12")
 # => #<MonthlyBudget ... month_year: "2025-12">
+```
+
+### Auto-Creating Envelopes
+
+```ruby
+budget = MonthlyBudget.create!(
+  user: user,
+  month_year: "2026-01",
+  total_actual_income: 5000.00
+)
+
+# Auto-create envelopes for spending categories with auto_create: true
+budget.auto_create_envelopes
+# => Creates envelopes for categories like "Groceries", "Rent", "Emergency Fund"
+# Each envelope gets the category's default_amount as its allotted_amount
 ```
 
 ### Updating a Monthly Budget

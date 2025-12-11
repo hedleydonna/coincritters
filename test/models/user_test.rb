@@ -93,4 +93,241 @@ class UserTest < ActiveSupport::TestCase
     assert_not user2.valid?
     assert_includes user2.errors[:email], "has already been taken"
   end
+
+  # Test current_budget method
+  test "current_budget should return budget for current month" do
+    user = User.create!(email: "current_budget@example.com", password: "password123")
+    # Create a budget for current month
+    current_month = Time.current.strftime("%Y-%m")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: current_month,
+      total_actual_income: 5000.00
+    )
+    
+    assert_equal budget, user.current_budget
+  end
+
+  test "current_budget should return nil if no budget exists for current month" do
+    user = User.create!(email: "newuser@example.com", password: "password123")
+    assert_nil user.current_budget
+  end
+
+  # Test total_actual_savings_this_month method
+  test "total_actual_savings_this_month should return 0 if no current budget" do
+    user = User.create!(email: "savings_none@example.com", password: "password123")
+    assert_equal 0, user.total_actual_savings_this_month
+  end
+
+  test "total_actual_savings_this_month should sum spent_amount from savings envelopes in current budget" do
+    user = User.create!(email: "savings_current@example.com", password: "password123")
+    current_month = Time.current.strftime("%Y-%m")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: current_month,
+      total_actual_income: 5000.00
+    )
+    
+    # Create a savings spending category
+    savings_category = SpendingCategory.create!(
+      user: user,
+      name: "Emergency Fund",
+      group_type: :fixed,
+      is_savings: true,
+      default_amount: 300.00,
+      auto_create: false
+    )
+    
+    # Create envelope with savings category
+    envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    # Create spending records
+    Spending.create!(envelope: envelope, amount: 150.00, spent_on: Date.today)
+    Spending.create!(envelope: envelope, amount: 50.00, spent_on: Date.today)
+    
+    assert_equal 200.00, user.total_actual_savings_this_month
+  end
+
+  test "total_actual_savings_this_month should only include savings envelopes from current budget" do
+    user = User.create!(email: "savings_multimonth@example.com", password: "password123")
+    current_month = Time.current.strftime("%Y-%m")
+    old_month = (Date.today - 1.month).strftime("%Y-%m")
+    
+    # Create current month budget with savings
+    current_budget = MonthlyBudget.create!(
+      user: user,
+      month_year: current_month,
+      total_actual_income: 5000.00
+    )
+    
+    # Create old month budget with savings
+    old_budget = MonthlyBudget.create!(
+      user: user,
+      month_year: old_month,
+      total_actual_income: 4500.00
+    )
+    
+    savings_category = SpendingCategory.create!(
+      user: user,
+      name: "Emergency Fund",
+      group_type: :fixed,
+      is_savings: true,
+      default_amount: 300.00,
+      auto_create: false
+    )
+    
+    current_envelope = Envelope.create!(
+      monthly_budget: current_budget,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    old_envelope = Envelope.create!(
+      monthly_budget: old_budget,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    Spending.create!(envelope: current_envelope, amount: 100.00, spent_on: Date.today)
+    Spending.create!(envelope: old_envelope, amount: 200.00, spent_on: Date.today - 1.month)
+    
+    # Should only include current month's savings
+    assert_equal 100.00, user.total_actual_savings_this_month
+  end
+
+  # Test total_actual_savings_all_time method
+  test "total_actual_savings_all_time should sum spent_amount from all savings envelopes across all months" do
+    user = User.create!(email: "total_savings_all@example.com", password: "password123")
+    
+    # Create budgets for different months
+    budget1 = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-12",
+      total_actual_income: 5000.00
+    )
+    
+    budget2 = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-11",
+      total_actual_income: 4500.00
+    )
+    
+    savings_category = SpendingCategory.create!(
+      user: user,
+      name: "Emergency Fund",
+      group_type: :fixed,
+      is_savings: true,
+      default_amount: 300.00,
+      auto_create: false
+    )
+    
+    envelope1 = Envelope.create!(
+      monthly_budget: budget1,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    envelope2 = Envelope.create!(
+      monthly_budget: budget2,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    Spending.create!(envelope: envelope1, amount: 150.00, spent_on: Date.today)
+    Spending.create!(envelope: envelope1, amount: 50.00, spent_on: Date.today)
+    Spending.create!(envelope: envelope2, amount: 100.00, spent_on: Date.today - 1.month)
+    
+    assert_equal 300.00, user.total_actual_savings_all_time
+    assert_equal 300.00, user.total_savings  # Alias should work
+  end
+
+  # Test create_next_month_budget! method
+  test "create_next_month_budget! should create budget for next month" do
+    user = User.create!(email: "next_month_budget@example.com", password: "password123")
+    next_month = (Date.today + 1.month).strftime("%Y-%m")
+    
+    # Create spending category with auto_create: true
+    category = SpendingCategory.create!(
+      user: user,
+      name: "Next Month Groceries",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 500.00,
+      auto_create: true
+    )
+    
+    budget = user.create_next_month_budget!
+    
+    assert_not_nil budget
+    assert_equal next_month, budget.month_year
+    assert_equal 1, budget.envelopes.count
+    assert_equal category.id, budget.envelopes.first.spending_category_id
+  end
+
+  test "create_next_month_budget! should return nil if budget already exists" do
+    user = User.create!(email: "next_month_exists@example.com", password: "password123")
+    next_month = (Date.today + 1.month).strftime("%Y-%m")
+    
+    existing_budget = MonthlyBudget.create!(
+      user: user,
+      month_year: next_month,
+      total_actual_income: 5000.00
+    )
+    
+    result = user.create_next_month_budget!
+    assert_nil result
+    # Should still have only one budget for next month
+    assert_equal 1, MonthlyBudget.where(user: user, month_year: next_month).count
+  end
+
+  test "total_actual_savings_all_time should only include savings envelopes" do
+    user = User.create!(email: "total_savings_only@example.com", password: "password123")
+    
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-12",
+      total_actual_income: 5000.00
+    )
+    
+    savings_category = SpendingCategory.create!(
+      user: user,
+      name: "Emergency Fund",
+      group_type: :fixed,
+      is_savings: true,
+      default_amount: 300.00,
+      auto_create: false
+    )
+    
+    non_savings_category = SpendingCategory.create!(
+      user: user,
+      name: "Groceries",
+      group_type: :variable,
+      is_savings: false,
+      default_amount: 500.00,
+      auto_create: false
+    )
+    
+    savings_envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: savings_category,
+      allotted_amount: 300.00
+    )
+    
+    non_savings_envelope = Envelope.create!(
+      monthly_budget: budget,
+      spending_category: non_savings_category,
+      allotted_amount: 500.00
+    )
+    
+    Spending.create!(envelope: savings_envelope, amount: 200.00, spent_on: Date.today)
+    Spending.create!(envelope: non_savings_envelope, amount: 300.00, spent_on: Date.today)
+    
+    # Should only include savings envelope spending
+    assert_equal 200.00, user.total_actual_savings_all_time
+    assert_equal 200.00, user.total_savings  # Alias should work
+  end
 end

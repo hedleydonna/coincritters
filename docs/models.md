@@ -86,12 +86,26 @@ The User model includes the following Devise authentication modules:
 #### Admin Methods
 - `admin?` - Returns true if the user has admin privileges
 
+#### Budget Methods
+- `current_budget` - Returns the monthly budget for the current month (read-only, returns `nil` if no budget exists)
+- `create_next_month_budget!` - Creates next month's budget (if it doesn't exist) and auto-creates envelopes, returns the budget or `nil` if already exists
+
+#### Savings Methods
+- `total_actual_savings_this_month` - Returns the total amount saved this month across all savings envelopes in the current budget (returns `0` if no current budget)
+- `total_actual_savings_all_time` - Returns the total savings across all months and all budgets by summing `spent_amount` from all savings envelopes
+- `total_savings` - Alias for `total_actual_savings_all_time` (shortcut for dashboard)
+
 ### Relationships
 
 - `has_many :incomes` - A user can have multiple income sources
   - When a user is deleted, all associated incomes are also deleted (dependent: :destroy)
 - `has_many :income_events` - A user can have multiple income events
   - When a user is deleted, all associated income events are also deleted (dependent: :destroy)
+- `has_many :monthly_budgets` - A user can have multiple monthly budgets (one per month)
+  - When a user is deleted, all associated monthly budgets are also deleted (dependent: :destroy)
+- `has_many :envelopes, through: :monthly_budgets` - A user can access all envelopes through their monthly budgets
+- `has_many :spending_categories` - A user can have multiple spending categories
+  - When a user is deleted, all associated spending categories are also deleted (dependent: :destroy)
 
 **Note**: Income types are global/shared resources and do not belong to individual users. All users share the same set of income types for categorizing their income events.
 
@@ -165,6 +179,33 @@ user = User.find_by(email: "user@example.com")
 if user&.valid_password?("password123")
   # User authenticated successfully
 end
+```
+
+#### Working with Budgets
+```ruby
+user = User.first
+
+# Get current month's budget (returns nil if none exists)
+current = user.current_budget
+# => #<MonthlyBudget ... month_year: "2025-12"> or nil
+
+# Create next month's budget with auto-created envelopes
+next_budget = user.create_next_month_budget!
+# => #<MonthlyBudget ... month_year: "2026-01">
+# Returns nil if budget already exists
+# Automatically creates envelopes for spending categories with auto_create: true
+
+# Get total savings for current month
+monthly_savings = user.total_actual_savings_this_month
+# => 300.00 (sum of spent_amount from savings envelopes this month)
+
+# Get total savings across all months
+lifetime_savings = user.total_actual_savings_all_time
+# => 1500.00 (sum of spent_amount from all savings envelopes ever)
+
+# Shortcut alias (same as total_actual_savings_all_time)
+total = user.total_savings
+# => 1500.00
 ```
 
 ---

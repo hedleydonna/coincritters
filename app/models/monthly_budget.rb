@@ -70,5 +70,18 @@ class MonthlyBudget < ApplicationRecord
       return true unless bank_balance.present?
       bank_difference.abs <= 50 # "close enough" — adjust as you like
     end
+
+    # Auto-create envelopes based on spending categories with auto_create enabled
+    def auto_create_envelopes
+      user.spending_categories.auto_create.find_each do |category|
+        # Skip if envelope for this category already exists in this budget
+        next if envelopes.exists?(spending_category_id: category.id)
+        
+        envelopes.create!(
+          spending_category: category,
+          allotted_amount: category.default_amount || 0
+        )
+      end
+    end
   end
   
