@@ -14,21 +14,23 @@ The Envelope model represents spending categories within a monthly budget in the
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
 | `monthly_budget_id` | bigint | NOT NULL, Foreign Key | References the monthly budget this envelope belongs to |
-| `spending_category_id` | bigint | NOT NULL, Foreign Key | References the spending category this envelope belongs to |
+| `envelope_template_id` | bigint | NOT NULL, Foreign Key | References the envelope template this envelope is based on |
 | `allotted_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | How much the user assigned to this envelope this month |
+| `name` | string | Nullable | Override field: Custom name for this envelope (uses template name if null) |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
 ### Indexes
 
-- **Monthly Budget ID + Spending Category ID Index**: Unique composite index on `[monthly_budget_id, spending_category_id]` - ensures one envelope per spending category per budget
+- **Monthly Budget ID + Envelope Template ID Index**: Unique composite index on `[monthly_budget_id, envelope_template_id]` - ensures one envelope per template per budget (unless name override is used)
 - **Monthly Budget ID Index**: Index on `monthly_budget_id` for fast budget lookups
-- **Spending Category ID Index**: Index on `spending_category_id` for fast category lookups
+- **Envelope Template ID Index**: Index on `envelope_template_id` for fast template lookups
+- **Monthly Budget ID + Name Index**: Composite index on `[monthly_budget_id, name]` - for name override lookups
 
 ### Foreign Keys
 
 - `envelopes.monthly_budget_id` references `monthly_budgets.id` with `on_delete: :cascade`. If a monthly budget is deleted, all its envelopes are deleted.
-- `envelopes.spending_category_id` references `spending_categories.id` with `on_delete: :cascade`. If a spending category is deleted, all its envelopes are deleted.
+- `envelopes.envelope_template_id` references `envelope_templates.id` with `on_delete: :cascade`. If an envelope template is deleted, all its envelopes are deleted.
 
 ## Model Location
 
@@ -43,9 +45,9 @@ The Envelope model represents spending categories within a monthly budget in the
   envelope.monthly_budget  # Returns the MonthlyBudget object
   ```
 
-- **Spending Category**: Each envelope belongs to exactly one spending category
+- **Envelope Template**: Each envelope belongs to exactly one envelope template
   ```ruby
-  envelope.spending_category  # Returns the SpendingCategory object
+  envelope.envelope_template  # Returns the EnvelopeTemplate object
   ```
 
 ### Has Many
@@ -73,45 +75,49 @@ The Envelope model represents spending categories within a monthly budget in the
 
 ### Uniqueness Validations
 
-- `validates :spending_category_id, uniqueness: { scope: :monthly_budget_id }`:
-  - A monthly budget can only have one envelope for each spending category.
-  - Prevents duplicate spending categories within the same budget.
+- `validates :envelope_template_id, uniqueness: { scope: :monthly_budget_id }`:
+  - A monthly budget can only have one envelope for each envelope template (unless name override is used).
+  - Prevents duplicate templates within the same budget.
+- `validates :name, uniqueness: { scope: :monthly_budget_id }` (if name override is used):
+  - If using a name override, the name must be unique within the monthly budget.
 
 ### Database Constraints
 
-- **Unique Constraint**: The database enforces uniqueness on `[monthly_budget_id, spending_category_id]` - a monthly budget can only have one envelope per spending category.
+- **Unique Constraint**: The database enforces uniqueness on `[monthly_budget_id, envelope_template_id]` - a monthly budget can only have one envelope per template (unless name override is used).
 
 ## Callbacks
 
 - `before_validation :set_default_allotted_amount, on: :create`:
-  - Automatically sets `allotted_amount` from the spending category's `default_amount` when creating a new envelope.
+  - Automatically sets `allotted_amount` from the envelope template's `default_amount` when creating a new envelope.
   - Only applies if `allotted_amount` is not explicitly set.
-  - If category's `default_amount` is `nil`, defaults to `0.0`.
+  - If template's `default_amount` is `nil`, defaults to `0.0`.
 
 ## Scopes
 
-- `scope :fixed`: Returns only envelopes whose spending category has `group_type = 0` (fixed expenses).
-- `scope :variable`: Returns only envelopes whose spending category has `group_type = 1` (variable expenses).
-- `scope :savings`: Returns only envelopes whose spending category has `is_savings = true`.
-- `scope :non_savings`: Returns only envelopes whose spending category has `is_savings = false`.
+- `scope :fixed`: Returns only envelopes that are fixed (delegates to template).
+- `scope :variable`: Returns only envelopes that are variable (delegates to template).
+- `scope :savings`: Returns only envelopes that are savings (delegates to template).
+- `scope :non_savings`: Returns only envelopes that are not savings (delegates to template).
 - `scope :over_budget`: Returns only envelopes where the sum of spending amounts exceeds the allotted amount. Uses a SQL subquery for efficient database-level filtering.
 
 ## Instance Methods
 
-### Accessing Category Properties
+### Accessing Template Properties
 
-- `name`: Returns the name from the associated spending category (delegated to `spending_category.name`).
-- `display_name`: Returns the display name from the associated spending category (delegated to `spending_category.display_name`).
+- `name`: Returns the override name if present, otherwise returns the template name.
+- `display_name`: Returns a friendly display name (includes "(Savings)" if applicable).
 - `spending_group_name`: Alias for `name` (for backward compatibility).
-- `group_type`: Returns the group type from the associated spending category (delegated).
-- `group_type_text`: Returns the text description of the group type (delegated to spending category).
+- `group_type`: Returns the template's group_type (always from template).
+- `group_type_text`: Returns the text description of the group type ("Fixed bill" or "Variable spending").
 
 ### Type Checking
 
-- `fixed?`: Returns `true` if the spending category's `group_type == 0` (fixed expense).
-- `variable?`: Returns `true` if the spending category's `group_type == 1` (variable expense).
-- `savings?`: Returns `true` if the spending category's `is_savings == true`.
+- `fixed?`: Returns `true` if the envelope is fixed (always from template).
+- `variable?`: Returns `true` if the envelope is variable (always from template).
+- `savings?`: Returns `true` if the envelope is a savings envelope (always from template).
 - `is_savings?`: Alias for `savings?` (for backward compatibility).
+- `has_overrides?`: Returns `true` if the envelope has a name override.
+- `name_overridden?`: Returns `true` if the name is overridden.
 
 ### Financial Calculations
 
@@ -133,21 +139,23 @@ The Envelope model represents spending categories within a monthly budget in the
 
 1. **One Envelope Per Spending Category Per Budget**: Each monthly budget can only have one envelope for a given spending category. Different budgets can use the same spending category.
 
-2. **Name and Type from Category**: The envelope's name, group type (fixed/variable), and savings status all come from the associated spending category, not stored directly on the envelope.
+2. **Name, Type, and Savings Status from Template**: The envelope's group type (fixed/variable) and savings status always come from the associated envelope template. The envelope's name can optionally be overridden on a per-envelope basis. If the name override is not set, the template's name is used.
 
 3. **Spent Amount is Calculated**: The `spent_amount` is calculated from the sum of all related spending records. It is not stored in the database and updates automatically as spending records are added or removed.
 
 4. **Non-Negative Allotted Amount**: `allotted_amount` cannot be negative (zero is allowed).
 
 5. **Default Values**: 
-   - New envelopes automatically get `allotted_amount` from the spending category's `default_amount` (if set).
-   - If category's `default_amount` is `nil` or not set, defaults to `0.0`.
+   - New envelopes automatically get `allotted_amount` from the envelope template's `default_amount` (if set).
+   - If template's `default_amount` is `nil` or not set, defaults to `0.0`.
    - Explicitly set `allotted_amount` values are not overridden by the default.
    - `spent_amount` always starts at 0.0 (when there are no spending records)
+   - The `name` override field defaults to `nil` and uses the template name when not set.
+   - `group_type` and `is_savings` always come from the template (not overrideable).
 
 6. **Cascade Deletion**: 
    - Deleting a monthly budget will delete all its associated envelopes.
-   - Deleting a spending category will delete all associated envelopes.
+   - Deleting an envelope template will delete all associated envelopes.
    - Deleting an envelope will delete all its associated spending records.
 
 ## Usage Examples
@@ -156,42 +164,51 @@ The Envelope model represents spending categories within a monthly budget in the
 
 ```ruby
 budget = MonthlyBudget.first
-groceries_category = budget.user.spending_categories.find_or_create_by!(name: "Groceries") do |sc|
-  sc.group_type = :variable
-  sc.is_savings = false
-  sc.default_amount = 500.00
+groceries_template = budget.user.envelope_templates.find_or_create_by!(name: "Groceries") do |et|
+  et.group_type = :variable
+  et.is_savings = false
+  et.default_amount = 500.00
 end
 
-# Create envelope - allotted_amount will be auto-filled from category default_amount
+# Create envelope - allotted_amount will be auto-filled from template default_amount
 envelope = budget.envelopes.create(
-  spending_category: groceries_category
+  envelope_template: groceries_template
 )
-# => #<Envelope id: 1, monthly_budget_id: 1, spending_category_id: 1, allotted_amount: 500.00, ...>
+# => #<Envelope id: 1, monthly_budget_id: 1, envelope_template_id: 1, allotted_amount: 500.00, ...>
 
 # Or explicitly set the amount (overrides default)
 envelope = budget.envelopes.create(
-  spending_category: groceries_category,
+  envelope_template: groceries_template,
   allotted_amount: 600.00
 )
 # => #<Envelope ... allotted_amount: 600.00>
 
-# Access the name (from spending category)
+# Access the name (from template, unless overridden)
 envelope.name  # => "Groceries"
 envelope.display_name  # => "Groceries" (or "Groceries (Savings)" if savings)
 envelope.spending_group_name  # => "Groceries" (alias for name)
+
+# Create envelope with name override
+custom_envelope = budget.envelopes.create(
+  envelope_template: groceries_template,
+  name: "Custom Groceries",  # Override template name
+  allotted_amount: 600.00
+)
+custom_envelope.name  # => "Custom Groceries" (override)
+custom_envelope.variable?  # => true (from template - cannot override)
 ```
 
 ### Creating a Fixed Expense Envelope
 
 ```ruby
 budget = MonthlyBudget.first
-rent_category = budget.user.spending_categories.find_or_create_by!(name: "Rent") do |sc|
-  sc.group_type = :fixed
-  sc.is_savings = false
+rent_template = budget.user.envelope_templates.find_or_create_by!(name: "Rent") do |et|
+  et.group_type = :fixed
+  et.is_savings = false
 end
 
 rent_envelope = budget.envelopes.create(
-  spending_category: rent_category,
+  envelope_template: rent_template,
   allotted_amount: 1200.00
 )
 
@@ -204,13 +221,13 @@ rent_envelope.spent_amount  # => 1200.00 (calculated)
 
 ```ruby
 budget = MonthlyBudget.first
-emergency_category = budget.user.spending_categories.find_or_create_by!(name: "Emergency Fund") do |sc|
-  sc.group_type = :fixed
-  sc.is_savings = true
+emergency_template = budget.user.envelope_templates.find_or_create_by!(name: "Emergency Fund") do |et|
+  et.group_type = :fixed
+  et.is_savings = true
 end
 
 emergency_fund = budget.envelopes.create(
-  spending_category: emergency_category,
+  envelope_template: emergency_template,
   allotted_amount: 300.00
 )
 # spent_amount starts at 0.0 (no spending records yet)
@@ -254,7 +271,7 @@ envelope.over_budget?  # => false
 # Over budget example
 over_budget_envelope = Envelope.create!(
   monthly_budget: budget,
-  spending_category: category,
+  envelope_template: template,
   allotted_amount: 100.00
 )
 over_budget_envelope.spendings.create!(amount: 150.00, spent_on: Date.today)
@@ -287,12 +304,12 @@ envelope.percent_used  # => 100 (integer)
 
 ```ruby
 budget = MonthlyBudget.first
-rent_category = budget.user.spending_categories.find_or_create_by!(name: "Rent") do |sc|
-  sc.group_type = :fixed
-  sc.default_amount = 1200.00
+rent_template = budget.user.envelope_templates.find_or_create_by!(name: "Rent") do |et|
+  et.group_type = :fixed
+  et.default_amount = 1200.00
 end
 
-rent_envelope = budget.envelopes.create(spending_category: rent_category)
+rent_envelope = budget.envelopes.create(envelope_template: rent_template)
 rent_envelope.allotted_amount  # => 1200.00 (from category default)
 
 # Not paid yet
@@ -303,11 +320,11 @@ rent_envelope.spendings.create!(amount: 1200.00, spent_on: Date.today)
 rent_envelope.paid?  # => true
 
 # Variable expenses are never "paid"
-groceries_category = budget.user.spending_categories.find_or_create_by!(name: "Groceries") do |sc|
-  sc.group_type = :variable
+groceries_template = budget.user.envelope_templates.find_or_create_by!(name: "Groceries") do |et|
+  et.group_type = :variable
 end
 groceries_envelope = budget.envelopes.create(
-  spending_category: groceries_category,
+  envelope_template: groceries_template,
   allotted_amount: 500.00
 )
 groceries_envelope.spendings.create!(amount: 500.00, spent_on: Date.today)
@@ -330,17 +347,17 @@ envelope.display_name_with_budget  # => "Groceries (2025-12)"
 
 ```ruby
 budget = MonthlyBudget.first
-category = budget.user.spending_categories.first
+template = budget.user.envelope_templates.first
 
-# Duplicate spending category in same budget
+# Duplicate envelope template in same budget
 duplicate = budget.envelopes.create(
-  spending_category: category  # if already exists
+  envelope_template: template  # if already exists
 )
-# => #<Envelope ... errors: {:spending_category_id=>["has already been taken"]}>
+# => #<Envelope ... errors: {:envelope_template_id=>["already has an envelope for this template in this budget"]}>
 
 # Negative allotted amount
 negative_amount = budget.envelopes.create(
-  spending_category: category,
+  envelope_template: template,
   allotted_amount: -100.00
 )
 # => #<Envelope ... errors: {:allotted_amount=>["must be greater than or equal to 0"]}>

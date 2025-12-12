@@ -128,8 +128,8 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    # Create a savings spending category
-    savings_category = SpendingCategory.create!(
+    # Create a savings envelope template
+    savings_template = EnvelopeTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -138,10 +138,10 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    # Create envelope with savings category
+    # Create envelope with savings template
     envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
@@ -171,7 +171,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 4500.00
     )
     
-    savings_category = SpendingCategory.create!(
+    savings_template = EnvelopeTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -182,13 +182,13 @@ class UserTest < ActiveSupport::TestCase
     
     current_envelope = Envelope.create!(
       monthly_budget: current_budget,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
     old_envelope = Envelope.create!(
       monthly_budget: old_budget,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
@@ -216,7 +216,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 4500.00
     )
     
-    savings_category = SpendingCategory.create!(
+    savings_template = EnvelopeTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -227,13 +227,13 @@ class UserTest < ActiveSupport::TestCase
     
     envelope1 = Envelope.create!(
       monthly_budget: budget1,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
     envelope2 = Envelope.create!(
       monthly_budget: budget2,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
@@ -250,8 +250,8 @@ class UserTest < ActiveSupport::TestCase
     user = User.create!(email: "next_month_budget@example.com", password: "password123")
     next_month = (Date.today + 1.month).strftime("%Y-%m")
     
-    # Create spending category with auto_create: true
-    category = SpendingCategory.create!(
+    # Create envelope template with auto_create: true
+    template = EnvelopeTemplate.create!(
       user: user,
       name: "Next Month Groceries",
       group_type: :variable,
@@ -265,7 +265,7 @@ class UserTest < ActiveSupport::TestCase
     assert_not_nil budget
     assert_equal next_month, budget.month_year
     assert_equal 1, budget.envelopes.count
-    assert_equal category.id, budget.envelopes.first.spending_category_id
+    assert_equal template.id, budget.envelopes.first.envelope_template_id
   end
 
   test "create_next_month_budget! should return nil if budget already exists" do
@@ -293,7 +293,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    savings_category = SpendingCategory.create!(
+    savings_template = EnvelopeTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -302,7 +302,7 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    non_savings_category = SpendingCategory.create!(
+    non_savings_template = EnvelopeTemplate.create!(
       user: user,
       name: "Groceries",
       group_type: :variable,
@@ -313,13 +313,13 @@ class UserTest < ActiveSupport::TestCase
     
     savings_envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: savings_category,
+      envelope_template: savings_template,
       allotted_amount: 300.00
     )
     
     non_savings_envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: non_savings_category,
+      envelope_template: non_savings_template,
       allotted_amount: 500.00
     )
     

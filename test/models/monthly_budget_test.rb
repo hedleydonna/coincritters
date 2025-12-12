@@ -244,29 +244,29 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category1 = SpendingCategory.create!(
+    template1 = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category 1",
+      name: "Test Template 1",
       group_type: :variable,
       default_amount: 100.00
     )
     
-    category2 = SpendingCategory.create!(
+    template2 = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category 2",
+      name: "Test Template 2",
       group_type: :variable,
       default_amount: 200.00
     )
     
     Envelope.create!(
       monthly_budget: budget,
-      spending_category: category1,
+      envelope_template: template1,
       allotted_amount: 100.00
     )
     
     Envelope.create!(
       monthly_budget: budget,
-      spending_category: category2,
+      envelope_template: template2,
       allotted_amount: 200.00
     )
     
@@ -280,16 +280,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 500.00
     )
     
@@ -315,16 +315,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -338,16 +338,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 1000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -361,16 +361,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -385,7 +385,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     
     Envelope.create!(
       monthly_budget: budget2,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -411,16 +411,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       bank_balance: 3000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -453,16 +453,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       bank_balance: 3000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: @user_one,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     
     envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 2000.00
     )
     
@@ -496,8 +496,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    # Create spending categories with auto_create: true
-    category1 = SpendingCategory.create!(
+    # Create envelope templates with auto_create: true
+    template1 = EnvelopeTemplate.create!(
       user: user,
       name: "Groceries",
       group_type: :variable,
@@ -506,7 +506,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       auto_create: true
     )
     
-    category2 = SpendingCategory.create!(
+    template2 = EnvelopeTemplate.create!(
       user: user,
       name: "Rent",
       group_type: :fixed,
@@ -515,8 +515,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       auto_create: true
     )
     
-    # Create a category with auto_create: false (should be skipped)
-    category3 = SpendingCategory.create!(
+    # Create a template with auto_create: false (should be skipped)
+    template3 = EnvelopeTemplate.create!(
       user: user,
       name: "Entertainment",
       group_type: :variable,
@@ -530,13 +530,13 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     end
     
     assert_equal 2, budget.envelopes.count
-    assert budget.envelopes.exists?(spending_category_id: category1.id)
-    assert budget.envelopes.exists?(spending_category_id: category2.id)
-    assert_not budget.envelopes.exists?(spending_category_id: category3.id)
+    assert budget.envelopes.exists?(envelope_template_id: template1.id)
+    assert budget.envelopes.exists?(envelope_template_id: template2.id)
+    assert_not budget.envelopes.exists?(envelope_template_id: template3.id)
     
     # Check that default_amount was used
-    envelope1 = budget.envelopes.find_by(spending_category: category1)
-    envelope2 = budget.envelopes.find_by(spending_category: category2)
+    envelope1 = budget.envelopes.find_by(envelope_template: template1)
+    envelope2 = budget.envelopes.find_by(envelope_template: template2)
     assert_equal 500.00, envelope1.allotted_amount
     assert_equal 1200.00, envelope2.allotted_amount
   end
@@ -549,7 +549,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: user,
       name: "Groceries",
       group_type: :variable,
@@ -561,7 +561,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     # Create an envelope manually for this category
     existing_envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: category,
+      envelope_template: template,
       allotted_amount: 600.00
     )
     
@@ -576,7 +576,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal 600.00, budget.envelopes.first.allotted_amount
   end
 
-  test "auto_create_envelopes should use default_amount of 0 if category default_amount is nil" do
+  test "auto_create_envelopes should use default_amount of 0 if template default_amount is nil" do
     user = User.create!(email: "defaulttest@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -584,9 +584,9 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    category = SpendingCategory.create!(
+    template = EnvelopeTemplate.create!(
       user: user,
-      name: "New Category",
+      name: "New Template",
       group_type: :variable,
       is_savings: false,
       default_amount: nil,
@@ -595,7 +595,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     
     budget.auto_create_envelopes
     
-    envelope = budget.envelopes.find_by(spending_category: category)
+    envelope = budget.envelopes.find_by(envelope_template: template)
     assert_not_nil envelope
     assert_equal 0.0, envelope.allotted_amount.to_f
   end
@@ -610,19 +610,19 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    # Create categories for both users
-    user1_category = SpendingCategory.create!(
+    # Create templates for both users
+    user1_template = EnvelopeTemplate.create!(
       user: user1,
-      name: "User1 Category",
+      name: "User1 Template",
       group_type: :variable,
       is_savings: false,
       default_amount: 500.00,
       auto_create: true
     )
     
-    user2_category = SpendingCategory.create!(
+    user2_template = EnvelopeTemplate.create!(
       user: user2,
-      name: "User2 Category",
+      name: "User2 Template",
       group_type: :variable,
       is_savings: false,
       default_amount: 300.00,
@@ -631,10 +631,10 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     
     budget.auto_create_envelopes
     
-    # Should only create envelope for user1's category
+    # Should only create envelope for user1's template
     assert_equal 1, budget.envelopes.count
-    assert budget.envelopes.exists?(spending_category_id: user1_category.id)
-    assert_not budget.envelopes.exists?(spending_category_id: user2_category.id)
+    assert budget.envelopes.exists?(envelope_template_id: user1_template.id)
+    assert_not budget.envelopes.exists?(envelope_template_id: user2_template.id)
   end
 end
 

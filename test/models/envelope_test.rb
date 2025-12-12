@@ -9,91 +9,91 @@ class EnvelopeTest < ActiveSupport::TestCase
   end
 
   test "should be valid with valid attributes" do
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Utilities",
       group_type: :fixed
     )
     envelope = Envelope.new(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: 150.00
     )
     assert envelope.valid?
   end
 
   test "should require a monthly_budget" do
-    spending_category = spending_categories(:one)
+    envelope_template = envelope_templates(:one)
     envelope = Envelope.new(
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     assert_not envelope.valid?
     assert_includes envelope.errors[:monthly_budget], "must exist"
   end
 
-  test "should require a spending_category" do
+  test "should require an envelope_template" do
     envelope = Envelope.new(
       monthly_budget: @monthly_budget_one
     )
     assert_not envelope.valid?
-    assert_includes envelope.errors[:spending_category], "must exist"
+    assert_includes envelope.errors[:envelope_template], "must exist"
   end
 
-  test "should enforce unique spending_category per monthly_budget" do
-    spending_category = spending_categories(:one)
+  test "should enforce unique envelope_template per monthly_budget" do
+    envelope_template = envelope_templates(:one)
     duplicate_envelope = Envelope.new(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     assert_not duplicate_envelope.valid?
-    assert_includes duplicate_envelope.errors[:spending_category_id], "has already been taken"
+    assert_includes duplicate_envelope.errors[:envelope_template_id], "already has an envelope for this template in this budget"
   end
 
-  test "different monthly_budgets can have envelopes with same spending_category" do
-    # envelope_one uses spending_category one in monthly_budget_one
-    # Different budgets can use the same spending category
-    assert_equal spending_categories(:one), envelopes(:one).spending_category
+  test "different monthly_budgets can have envelopes with same envelope_template" do
+    # envelope_one uses envelope_template one in monthly_budget_one
+    # Different budgets can use the same envelope template
+    assert_equal envelope_templates(:one), envelopes(:one).envelope_template
     assert_equal monthly_budgets(:one), envelopes(:one).monthly_budget
     
-    # Both envelopes are valid even though they share the same spending category (in different budgets)
+    # Both envelopes are valid even though they share the same envelope template (in different budgets)
     assert envelopes(:one).valid?
     assert envelopes(:four).valid?
   end
 
-  test "should get group_type from spending_category" do
-    fixed_category = spending_categories(:two)  # Rent (fixed)
-    variable_category = spending_categories(:one)  # Groceries (variable)
+  test "should get group_type from envelope_template" do
+    fixed_template = envelope_templates(:two)  # Rent (fixed)
+    variable_template = envelope_templates(:one)  # Groceries (variable)
     
-    # Need unique spending categories for different budgets to avoid unique constraint
-    fixed_category_two = SpendingCategory.create!(
+    # Need unique envelope templates for different budgets to avoid unique constraint
+    fixed_template_two = EnvelopeTemplate.create!(
       user: @monthly_budget_two.user,
-      name: "Fixed Test Category",
+      name: "Fixed Test Template",
       group_type: :fixed
     )
-    variable_category_two = SpendingCategory.create!(
+    variable_template_two = EnvelopeTemplate.create!(
       user: @monthly_budget_two.user,
-      name: "Variable Test Category",
+      name: "Variable Test Template",
       group_type: :variable
     )
     
     fixed_envelope = Envelope.new(
       monthly_budget: @monthly_budget_two,
-      spending_category: fixed_category_two
+      envelope_template: fixed_template_two
     )
     assert_equal "fixed", fixed_envelope.group_type
     assert fixed_envelope.fixed?
 
     variable_envelope = Envelope.new(
       monthly_budget: @monthly_budget_two,
-      spending_category: variable_category_two
+      envelope_template: variable_template_two
     )
     assert_equal "variable", variable_envelope.group_type
     assert variable_envelope.variable?
   end
 
-  test "should get is_savings from spending_category" do
-    savings_category = spending_categories(:three)  # Emergency Fund (savings)
-    non_savings_category = spending_categories(:one)  # Groceries (non-savings)
+  test "should get is_savings from envelope_template" do
+    savings_template = envelope_templates(:three)  # Emergency Fund (savings)
+    non_savings_template = envelope_templates(:one)  # Groceries (non-savings)
     
     # Using existing envelope from fixtures
     assert envelopes(:three).is_savings?
@@ -114,60 +114,60 @@ class EnvelopeTest < ActiveSupport::TestCase
   end
 
   test "should require allotted_amount to be greater than or equal to 0" do
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable
     )
     envelope = Envelope.new(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: -100.00
     )
     assert_not envelope.valid?
     assert_includes envelope.errors[:allotted_amount], "must be greater than or equal to 0"
   end
 
-  test "should auto-fill allotted_amount from category default_amount when creating" do
-    # Create a unique spending category with a default amount
-    spending_category = SpendingCategory.create!(
+  test "should auto-fill allotted_amount from template default_amount when creating" do
+    # Create a unique envelope template with a default amount
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Auto Fill Test Category",
+      name: "Auto Fill Test Template",
       group_type: :variable,
       default_amount: 250.00
     )
     envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     assert_equal 250.00, envelope.allotted_amount.to_f
   end
 
-  test "should use 0.0 as default allotted_amount if category default_amount is nil" do
-    # Create a unique spending category without a default amount
-    spending_category = SpendingCategory.create!(
+  test "should use 0.0 as default allotted_amount if template default_amount is nil" do
+    # Create a unique envelope template without a default amount
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "No Default Amount Test Category",
+      name: "No Default Amount Test Template",
       group_type: :variable,
       default_amount: nil
     )
     envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     assert_equal 0.0, envelope.allotted_amount.to_f
   end
 
   test "should not override explicitly set allotted_amount with default" do
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Explicit Amount Test Category",
+      name: "Explicit Amount Test Template",
       group_type: :variable,
       default_amount: 100.00
     )
     envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: 500.00
     )
     assert_equal 500.00, envelope.allotted_amount.to_f
@@ -189,14 +189,14 @@ class EnvelopeTest < ActiveSupport::TestCase
       user: users(:one),
       month_year: "2026-03"
     )
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: users(:one),
-      name: "Test Category",
+      name: "Test Template",
       group_type: :variable
     )
     envelope = Envelope.create!(
       monthly_budget: budget,
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     
     assert_difference("Envelope.count", -1) do
@@ -245,18 +245,18 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_not @envelope_two.variable?
   end
 
-  test "should destroy when spending_category is destroyed" do
-    spending_category = SpendingCategory.create!(
+  test "should destroy when envelope_template is destroyed" do
+    envelope_template = EnvelopeTemplate.create!(
       user: users(:one),
-      name: "Test Category For Deletion"
+      name: "Test Template For Deletion"
     )
     envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category
+      envelope_template: envelope_template
     )
     
     assert_difference("Envelope.count", -1) do
-      spending_category.destroy
+      envelope_template.destroy
     end
   end
 
@@ -272,14 +272,14 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_equal 259.25, @envelope_one.available.to_f
     
     # Create an envelope that's over budget
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Over Budget Test Category",
+      name: "Over Budget Test Template",
       group_type: :variable
     )
     over_budget = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: 100.00
     )
     Spending.create!(
@@ -303,14 +303,14 @@ class EnvelopeTest < ActiveSupport::TestCase
     # envelope_two: 2400.00 / 1200.00 = 200%, capped at 100%
     assert_equal 100.0, @envelope_two.spent_percentage
     
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Empty Test Category",
+      name: "Empty Test Template",
       group_type: :variable
     )
     empty_envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: 0.00
     )
     assert_equal 0, empty_envelope.spent_percentage
@@ -318,7 +318,7 @@ class EnvelopeTest < ActiveSupport::TestCase
     # Test with negative allotted_amount (edge case - shouldn't happen but safer)
     negative_envelope = Envelope.new(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: -100.00
     )
     assert_equal 0, negative_envelope.spent_percentage
@@ -330,8 +330,8 @@ class EnvelopeTest < ActiveSupport::TestCase
   end
 
   test "paid? should return true for fixed envelopes when spent >= allotted" do
-    # Create a fixed category
-    fixed_category = SpendingCategory.create!(
+    # Create a fixed template
+    fixed_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Fixed Bill Test",
       group_type: :fixed
@@ -340,7 +340,7 @@ class EnvelopeTest < ActiveSupport::TestCase
     # Create envelope with allotted amount
     fixed_envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: fixed_category,
+      envelope_template: fixed_template,
       allotted_amount: 1000.00
     )
     
@@ -365,8 +365,8 @@ class EnvelopeTest < ActiveSupport::TestCase
   end
 
   test "paid? should return false for variable envelopes even when spent >= allotted" do
-    # Create a variable category
-    variable_category = SpendingCategory.create!(
+    # Create a variable template
+    variable_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Variable Test",
       group_type: :variable
@@ -374,7 +374,7 @@ class EnvelopeTest < ActiveSupport::TestCase
     
     variable_envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: variable_category,
+      envelope_template: variable_template,
       allotted_amount: 500.00
     )
     
@@ -396,9 +396,34 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_match(/#{envelope.monthly_budget.name}/, to_s_string)
   end
 
-  test "display_name should delegate to spending_category" do
+  test "name should use envelope_template name by default" do
     envelope = @envelope_one
-    assert_equal envelope.spending_category.display_name, envelope.display_name
+    assert_equal envelope.envelope_template.name, envelope.name
+  end
+
+  test "name should use override when provided" do
+    envelope_template = EnvelopeTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "Template Name",
+      group_type: :variable
+    )
+    envelope = Envelope.create!(
+      monthly_budget: @monthly_budget_one,
+      envelope_template: envelope_template,
+      name: "Custom Override Name"
+    )
+    assert_equal "Custom Override Name", envelope.name
+    assert envelope.name_overridden?
+  end
+
+  test "display_name should use envelope_template or override" do
+    envelope = @envelope_one
+    assert_equal envelope.envelope_template.display_name, envelope.display_name
+  end
+
+  test "display_name should show (Savings) for savings envelopes" do
+    savings_envelope = envelopes(:three)
+    assert_match(/Savings/, savings_envelope.display_name)
   end
 
   test "percent_used should return integer percentage" do
@@ -409,14 +434,14 @@ class EnvelopeTest < ActiveSupport::TestCase
     assert_equal 200, @envelope_two.percent_used
     
     # Empty envelope
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Empty Percent Test",
       group_type: :variable
     )
     empty_envelope = Envelope.create!(
       monthly_budget: @monthly_budget_one,
-      spending_category: spending_category,
+      envelope_template: envelope_template,
       allotted_amount: 0.00
     )
     assert_equal 0, empty_envelope.percent_used

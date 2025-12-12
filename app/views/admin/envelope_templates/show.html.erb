@@ -1,8 +1,8 @@
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 py-12 px-4">
   <div class="max-w-4xl mx-auto">
     <div class="mb-8 flex justify-between items-center">
-      <h1 class="text-5xl font-bold text-white mb-2">Spending Category Details</h1>
-      <%= link_to "← Back to Categories", admin_spending_categories_path, class: "text-white hover:text-purple-200 font-medium" %>
+      <h1 class="text-5xl font-bold text-white mb-2">Envelope Template Details</h1>
+      <%= link_to "← Back to Templates", admin_envelope_templates_path, class: "text-white hover:text-purple-200 font-medium" %>
     </div>
 
     <div class="bg-white rounded-2xl shadow-2xl p-8">
@@ -10,22 +10,22 @@
         <div>
           <label class="block text-sm font-medium text-gray-500">User</label>
           <p class="mt-1 text-lg text-gray-900">
-            <%= @spending_category.user.email %>
-            <% if @spending_category.user.display_name.present? %>
-              <span class="text-gray-500">(<%= @spending_category.user.display_name %>)</span>
+            <%= @envelope_template.user.email %>
+            <% if @envelope_template.user.display_name.present? %>
+              <span class="text-gray-500">(<%= @envelope_template.user.display_name %>)</span>
             <% end %>
           </p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-500">Category Name</label>
-          <p class="mt-1 text-2xl font-bold text-gray-900"><%= @spending_category.name %></p>
+          <label class="block text-sm font-medium text-gray-500">Template Name</label>
+          <p class="mt-1 text-2xl font-bold text-gray-900"><%= @envelope_template.name %></p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-500">Group Type</label>
           <p class="mt-1">
-            <% if @spending_category.fixed? %>
+            <% if @envelope_template.fixed? %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">Fixed</span>
               <p class="mt-2 text-sm text-gray-600">Recurring bills that are consistent (rent, Netflix, insurance)</p>
             <% else %>
@@ -38,9 +38,9 @@
         <div>
           <label class="block text-sm font-medium text-gray-500">Savings Pot</label>
           <p class="mt-1">
-            <% if @spending_category.is_savings? %>
+            <% if @envelope_template.is_savings? %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-pink-100 text-pink-800 border border-pink-200">Yes - Savings Pot</span>
-              <p class="mt-2 text-sm text-gray-600">This category is used for savings goals (emergency fund, vacation, etc.)</p>
+              <p class="mt-2 text-sm text-gray-600">This template is used for savings goals (emergency fund, vacation, etc.)</p>
             <% else %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-gray-100 text-gray-500 border border-gray-200">No</span>
             <% end %>
@@ -50,21 +50,21 @@
         <div>
           <label class="block text-sm font-medium text-gray-500">Default Amount</label>
           <p class="mt-1 text-2xl font-bold text-gray-900">
-            <% if @spending_category.default_amount.present? %>
-              $<%= number_with_delimiter(@spending_category.default_amount, delimiter: ",") %>
+            <% if @envelope_template.default_amount.present? %>
+              $<%= number_with_delimiter(@envelope_template.default_amount, delimiter: ",") %>
             <% else %>
               <span class="text-gray-400">Not set</span>
             <% end %>
           </p>
-          <p class="mt-1 text-sm text-gray-600">Default amount to allocate when creating envelopes for this category</p>
+          <p class="mt-1 text-sm text-gray-600">Default amount to allocate when creating envelopes from this template</p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-500">Auto-Create</label>
           <p class="mt-1">
-            <% if @spending_category.auto_create? %>
+            <% if @envelope_template.auto_create? %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">Enabled</span>
-              <p class="mt-2 text-sm text-gray-600">Envelopes for this category will be automatically created in monthly budgets (future enhancement)</p>
+              <p class="mt-2 text-sm text-gray-600">Envelopes from this template will be automatically created in monthly budgets</p>
             <% else %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-gray-100 text-gray-500 border border-gray-200">Disabled</span>
               <p class="mt-2 text-sm text-gray-600">Envelopes must be manually created</p>
@@ -74,28 +74,28 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-500">Associated Envelopes</label>
-          <p class="mt-1 text-lg text-gray-900"><%= @spending_category.envelopes.count %></p>
-          <% if @spending_category.envelopes.any? %>
-            <p class="mt-1 text-sm text-gray-600">This category is used by <%= pluralize(@spending_category.envelopes.count, "envelope") %> across various monthly budgets</p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope_template.envelopes.count %></p>
+          <% if @envelope_template.envelopes.any? %>
+            <p class="mt-1 text-sm text-gray-600">This template is used by <%= pluralize(@envelope_template.envelopes.count, "envelope") %> across various monthly budgets</p>
           <% end %>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-500">Created</label>
-          <p class="mt-1 text-lg text-gray-900"><%= @spending_category.created_at.strftime("%B %d, %Y at %I:%M %p") %></p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope_template.created_at.strftime("%B %d, %Y at %I:%M %p") %></p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-500">Last Updated</label>
-          <p class="mt-1 text-lg text-gray-900"><%= @spending_category.updated_at.strftime("%B %d, %Y at %I:%M %p") %></p>
+          <p class="mt-1 text-lg text-gray-900"><%= @envelope_template.updated_at.strftime("%B %d, %Y at %I:%M %p") %></p>
         </div>
       </div>
 
       <div class="mt-8 flex gap-4">
-        <%= link_to "Edit Category", edit_admin_spending_category_path(@spending_category), class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
-        <%= button_to "Delete Category", admin_spending_category_path(@spending_category), method: :delete,
-            data: { confirm: "Are you sure you want to delete this category? All #{pluralize(@spending_category.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone.", turbo_confirm: "Are you sure you want to delete this category? All #{pluralize(@spending_category.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone." },
-            form: { data: { turbo_confirm: "Are you sure you want to delete this category? All #{pluralize(@spending_category.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone." } },
+        <%= link_to "Edit Template", edit_admin_envelope_template_path(@envelope_template), class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
+        <%= button_to "Delete Template", admin_envelope_template_path(@envelope_template), method: :delete,
+            data: { confirm: "Are you sure you want to delete this template? All #{pluralize(@envelope_template.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone.", turbo_confirm: "Are you sure you want to delete this template? All #{pluralize(@envelope_template.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone." },
+            form: { data: { turbo_confirm: "Are you sure you want to delete this template? All #{pluralize(@envelope_template.envelopes.count, 'associated envelope')} will be deleted. This action cannot be undone." } },
             class: "bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
       </div>
     </div>

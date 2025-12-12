@@ -1,7 +1,7 @@
 # app/models/envelope.rb
 class Envelope < ApplicationRecord
   belongs_to :monthly_budget
-  belongs_to :spending_category
+  belongs_to :envelope_template
   has_one :user, through: :monthly_budget
 
   has_many :spendings, dependent: :destroy
@@ -12,26 +12,45 @@ class Envelope < ApplicationRecord
   validates :allotted_amount,
             numericality: { greater_than_or_equal_to: 0 }
 
-  # Ensure only one envelope per category per month
-  validates :spending_category_id,
-            uniqueness: { scope: :monthly_budget_id }
+  # Ensure only one envelope per template per month (unless using name override)
+  # If name is overridden, we allow multiple envelopes from same template
+  validates :envelope_template_id,
+            uniqueness: { scope: :monthly_budget_id, 
+                         message: "already has an envelope for this template in this budget" },
+            unless: -> { read_attribute(:name).present? } # Allow duplicates if using name override
+
+  # If using name override, ensure unique name per budget
+  validates :name,
+            uniqueness: { scope: :monthly_budget_id, allow_nil: true },
+            if: -> { read_attribute(:name).present? }
 
   # ------------------------------------------------------------------
   # Scopes
   # ------------------------------------------------------------------
-  # Group type and savings scopes now come from spending_category
-  scope :fixed, -> { joins(:spending_category).merge(SpendingCategory.fixed) }
-  scope :variable, -> { joins(:spending_category).merge(SpendingCategory.variable) }
-  scope :savings, -> { joins(:spending_category).merge(SpendingCategory.savings) }
-  scope :non_savings, -> { joins(:spending_category).merge(SpendingCategory.non_savings) }
+  # Scopes that delegate to template (group_type and is_savings always come from template)
+  scope :fixed, -> {
+    joins(:envelope_template).merge(EnvelopeTemplate.fixed)
+  }
+  
+  scope :variable, -> {
+    joins(:envelope_template).merge(EnvelopeTemplate.variable)
+  }
+  
+  scope :savings, -> {
+    joins(:envelope_template).merge(EnvelopeTemplate.savings)
+  }
+  
+  scope :non_savings, -> {
+    joins(:envelope_template).merge(EnvelopeTemplate.non_savings)
+  }
   
   # Quick scope for envelopes that are over budget
   scope :over_budget, -> { where("(SELECT COALESCE(SUM(s.amount), 0) FROM spendings s WHERE s.envelope_id = envelopes.id) > allotted_amount") }
 
   # ------------------------------------------------------------------
-  # Auto-fill allotted_amount from category default when creating
+  # Auto-fill allotted_amount from template default when creating
   # ------------------------------------------------------------------
-  before_validation :set_default_allotted_amount, on: :create, if: -> { spending_category_id.present? }
+  before_validation :set_default_allotted_amount, on: :create, if: -> { envelope_template_id.present? }
 
   # ------------------------------------------------------------------
   # Calculated values — live from spends
@@ -50,7 +69,7 @@ class Envelope < ApplicationRecord
 
   # Fixed bills are "paid" when spent >= allotted
   def paid?
-    spending_category.group_type_fixed? && spent_amount >= allotted_amount
+    fixed? && spent_amount >= allotted_amount
   end
 
   def over_budget?
@@ -72,22 +91,38 @@ class Envelope < ApplicationRecord
   end
 
   # ------------------------------------------------------------------
-  # Delegated methods from spending_category
+  # Name override - use override if present, fallback to template
+  # ------------------------------------------------------------------
+  def name
+    read_attribute(:name).presence || envelope_template&.name || "Unnamed Envelope"
+  end
+
+  def display_name
+    if is_savings?
+      "#{name} (Savings)"
+    else
+      name
+    end
+  end
+
+  # ------------------------------------------------------------------
+  # Template-delegated methods - always come from template
   # ------------------------------------------------------------------
   def group_type
-    spending_category.group_type
+    envelope_template&.group_type || "variable"
   end
 
   def fixed?
-    spending_category.fixed?
+    envelope_template&.fixed? || false
   end
 
   def variable?
-    spending_category.variable?
+    return envelope_template.variable? if envelope_template
+    false  # Default to false if no template (shouldn't happen in practice)
   end
 
   def savings?
-    spending_category.is_savings?
+    envelope_template&.is_savings? || false
   end
 
   # Alias for backward compatibility
@@ -95,21 +130,26 @@ class Envelope < ApplicationRecord
     savings?
   end
 
-  def name
-    spending_category.name
-  end
-
-  def display_name
-    spending_category.display_name
+  def group_type_fixed?
+    fixed?
   end
 
   def group_type_text
-    spending_category.group_type_text
+    fixed? ? "Fixed bill" : "Variable spending"
   end
 
   # Alias for backward compatibility
   def spending_group_name
     name
+  end
+
+  # Check if envelope has name override
+  def has_overrides?
+    read_attribute(:name).present?
+  end
+
+  def name_overridden?
+    read_attribute(:name).present?
   end
 
   # ------------------------------------------------------------------
@@ -128,15 +168,14 @@ class Envelope < ApplicationRecord
   private
 
   def set_default_allotted_amount
-    # Reload spending_category to ensure default_amount is available
-    category = spending_category || SpendingCategory.find_by(id: spending_category_id)
-    return unless category
+    # Reload envelope_template to ensure default_amount is available
+    template = envelope_template || EnvelopeTemplate.find_by(id: envelope_template_id)
+    return unless template
     
     # Only set if allotted_amount is nil or zero (not explicitly set)
-    # Use category's default_amount, which defaults to 0.0 if not set
+    # Use template's default_amount, which defaults to 0.0 if not set
     if allotted_amount.nil? || allotted_amount.zero?
-      self.allotted_amount = category.default_amount || 0
+      self.allotted_amount = template.default_amount || 0
     end
   end
 end
-

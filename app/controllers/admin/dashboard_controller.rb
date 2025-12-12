@@ -15,8 +15,8 @@ class Admin::DashboardController < Admin::BaseController
     @recent_envelopes = Envelope.includes(monthly_budget: :user).order(created_at: :desc).limit(5)
     @spending_count = Spending.count
     @recent_spendings = Spending.includes(envelope: { monthly_budget: :user }).recent.limit(5)
-    @spending_category_count = SpendingCategory.count
-    @recent_spending_categories = SpendingCategory.includes(:user).order(created_at: :desc).limit(5)
+    @envelope_template_count = EnvelopeTemplate.active.count
+    @recent_envelope_templates = EnvelopeTemplate.active.includes(:user).reorder(created_at: :desc).limit(5)
   end
 end
 

@@ -73,14 +73,14 @@ class SpendingTest < ActiveSupport::TestCase
   end
 
   test "should destroy when envelope is destroyed" do
-    spending_category = SpendingCategory.create!(
+    envelope_template = EnvelopeTemplate.create!(
       user: users(:one),
-      name: "Test Spending Category",
+      name: "Test Envelope Template",
       group_type: :variable
     )
     envelope = Envelope.create!(
       monthly_budget: monthly_budgets(:one),
-      spending_category: spending_category,
+      envelope_template: envelope_template,
     )
     spending = Spending.create!(
       envelope: envelope,

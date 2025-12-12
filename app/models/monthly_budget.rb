@@ -75,16 +75,16 @@ class MonthlyBudget < ApplicationRecord
   end
 
   # ------------------------------------------------------------------
-  # Auto-create envelopes from user's recurring categories
+  # Auto-create envelopes from user's recurring templates
   # ------------------------------------------------------------------
   def auto_create_envelopes
-    user.spending_categories.auto_create.find_each do |category|
-      # Skip if envelope for this category already exists in this budget
-      next if envelopes.exists?(spending_category_id: category.id)
+    user.envelope_templates.active.auto_create.find_each do |template|
+      # Skip if envelope for this template already exists in this budget
+      next if envelopes.exists?(envelope_template_id: template.id)
 
       envelopes.create!(
-        spending_category: category,
-        allotted_amount: category.default_amount || 0
+        envelope_template: template,
+        allotted_amount: template.default_amount || 0
       )
     end
   end

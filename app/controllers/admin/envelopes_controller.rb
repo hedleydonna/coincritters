@@ -14,7 +14,7 @@ class Admin::EnvelopesController < Admin::BaseController
   def new
     @envelope = Envelope.new
     @monthly_budgets = MonthlyBudget.includes(:user).order(created_at: :desc)
-    @spending_categories = SpendingCategory.includes(:user).order(:name)
+    @envelope_templates = EnvelopeTemplate.active.includes(:user)
   end
 
   def create
@@ -23,14 +23,14 @@ class Admin::EnvelopesController < Admin::BaseController
       redirect_to admin_envelope_path(@envelope), notice: "Envelope was successfully created."
     else
       @monthly_budgets = MonthlyBudget.includes(:user).order(created_at: :desc)
-      @spending_categories = SpendingCategory.includes(:user).order(:name)
+      @envelope_templates = EnvelopeTemplate.active.includes(:user)
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
     @monthly_budgets = MonthlyBudget.includes(:user).order(created_at: :desc)
-    @spending_categories = SpendingCategory.includes(:user).order(:name)
+    @envelope_templates = EnvelopeTemplate.active.includes(:user)
   end
 
   def update
@@ -38,7 +38,7 @@ class Admin::EnvelopesController < Admin::BaseController
       redirect_to admin_envelope_path(@envelope), notice: "Envelope was successfully updated."
     else
       @monthly_budgets = MonthlyBudget.includes(:user).order(created_at: :desc)
-      @spending_categories = SpendingCategory.includes(:user).order(:name)
+      @envelope_templates = EnvelopeTemplate.active.includes(:user)
       render :edit, status: :unprocessable_entity
     end
   end
@@ -55,7 +55,7 @@ class Admin::EnvelopesController < Admin::BaseController
   end
 
   def envelope_params
-    params.require(:envelope).permit(:monthly_budget_id, :spending_category_id, :allotted_amount)
+    params.require(:envelope).permit(:monthly_budget_id, :envelope_template_id, :allotted_amount, :name)
   end
 end
 

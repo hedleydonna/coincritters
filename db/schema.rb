@@ -10,19 +10,37 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_224020) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_11_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "envelope_templates", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "name", null: false
+    t.integer "group_type", default: 1, null: false
+    t.boolean "is_savings", default: false, null: false
+    t.decimal "default_amount", precision: 12, scale: 2, default: "0.0"
+    t.boolean "auto_create", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "is_active", default: true, null: false
+    t.index ["is_active"], name: "index_envelope_templates_on_is_active"
+    t.index ["user_id", "group_type"], name: "index_envelope_templates_on_user_id_and_group_type"
+    t.index ["user_id", "name"], name: "index_envelope_templates_on_user_id_and_name", unique: true
+    t.index ["user_id"], name: "index_envelope_templates_on_user_id"
+  end
 
   create_table "envelopes", force: :cascade do |t|
     t.bigint "monthly_budget_id", null: false
     t.decimal "allotted_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "spending_category_id", null: false
-    t.index ["monthly_budget_id", "spending_category_id"], name: "index_envelopes_on_budget_and_spending_category", unique: true
+    t.bigint "envelope_template_id", null: false
+    t.string "name"
+    t.index ["envelope_template_id"], name: "index_envelopes_on_envelope_template_id"
+    t.index ["monthly_budget_id", "envelope_template_id"], name: "index_envelopes_on_budget_and_envelope_template", unique: true
+    t.index ["monthly_budget_id", "name"], name: "index_envelopes_on_budget_and_name_override"
     t.index ["monthly_budget_id"], name: "index_envelopes_on_monthly_budget_id"
-    t.index ["spending_category_id"], name: "index_envelopes_on_spending_category_id"
   end
 
   create_table "income_events", force: :cascade do |t|
@@ -70,20 +88,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_224020) do
     t.index ["user_id"], name: "index_monthly_budgets_on_user_id"
   end
 
-  create_table "spending_categories", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.string "name", null: false
-    t.integer "group_type", default: 1, null: false
-    t.boolean "is_savings", default: false, null: false
-    t.decimal "default_amount", precision: 12, scale: 2, default: "0.0"
-    t.boolean "auto_create", default: true, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["user_id", "group_type"], name: "index_spending_categories_on_user_id_and_group_type"
-    t.index ["user_id", "name"], name: "index_spending_categories_on_user_id_and_name", unique: true
-    t.index ["user_id"], name: "index_spending_categories_on_user_id"
-  end
-
   create_table "spendings", force: :cascade do |t|
     t.bigint "envelope_id", null: false
     t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
@@ -109,12 +113,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_224020) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "envelope_templates", "users", on_delete: :cascade
+  add_foreign_key "envelopes", "envelope_templates", on_delete: :cascade
   add_foreign_key "envelopes", "monthly_budgets", on_delete: :cascade
-  add_foreign_key "envelopes", "spending_categories", on_delete: :cascade
   add_foreign_key "income_events", "incomes", on_delete: :cascade
   add_foreign_key "income_events", "users", on_delete: :cascade
   add_foreign_key "incomes", "users", on_delete: :cascade
   add_foreign_key "monthly_budgets", "users", on_delete: :cascade
-  add_foreign_key "spending_categories", "users", on_delete: :cascade
   add_foreign_key "spendings", "envelopes", on_delete: :cascade
 end

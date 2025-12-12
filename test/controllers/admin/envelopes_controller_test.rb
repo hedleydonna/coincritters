@@ -60,8 +60,8 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
   test "should create envelope" do
     sign_in @admin
     monthly_budget = monthly_budgets(:one)
-    # Create a unique spending category for this budget
-    spending_category = SpendingCategory.create!(
+    # Create a unique envelope template for this budget
+    envelope_template = EnvelopeTemplate.create!(
       user: monthly_budget.user,
       name: "Utilities Test",
       group_type: :fixed,
@@ -72,7 +72,7 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
       post admin_envelopes_path, params: {
         envelope: {
           monthly_budget_id: monthly_budget.id,
-          spending_category_id: spending_category.id,
+          envelope_template_id: envelope_template.id,
           allotted_amount: 150.00
         }
       }
@@ -87,7 +87,7 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
       post admin_envelopes_path, params: {
         envelope: {
           monthly_budget_id: nil,
-          spending_category_id: nil
+          envelope_template_id: nil
         }
       }
     end
@@ -109,7 +109,7 @@ class Admin::EnvelopesControllerTest < ActionDispatch::IntegrationTest
       envelope: {
         allotted_amount: 600.00,
         monthly_budget_id: @envelope.monthly_budget_id,
-        spending_category_id: @envelope.spending_category_id
+        envelope_template_id: @envelope.envelope_template_id
       }
     }
     assert_redirected_to admin_envelope_path(@envelope)
