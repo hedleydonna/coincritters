@@ -77,14 +77,14 @@ Spending.recent  # Most recent spending first
 Returns all spending records for a specific date.
 
 ```ruby
-Spending.for_date(Date.today)  # All spending today
+Spending.for_date(Date.current)  # All spending today
 ```
 
 ### `for_date_range(start_date, end_date)`
 Returns all spending records within a date range (inclusive).
 
 ```ruby
-Spending.for_date_range(Date.today.beginning_of_month, Date.today.end_of_month)  # All spending this month
+Spending.for_date_range(Date.current.beginning_of_month, Date.current.end_of_month)  # All spending this month
 ```
 
 ### `for_envelope(envelope)`
@@ -98,38 +98,45 @@ Spending.for_envelope(envelope)  # All spending for this envelope
 ## Instance Methods
 
 ### `spending_group_name`
-Returns the spending group name from the associated envelope (delegated to `envelope.spending_group_name`).
+Returns the spending group name from the associated envelope (delegated to `envelope.name`).
 
 ```ruby
 spending.spending_group_name  # e.g., "Groceries", "Rent"
 ```
 
 ### `formatted_amount`
-Returns the amount formatted as a currency string.
+Returns the amount formatted as a currency string using Rails' `number_to_currency` helper. Handles localization and proper currency formatting.
 
 ```ruby
 spending.formatted_amount  # e.g., "$75.50"
 ```
 
 ### `today?`
-Returns `true` if the spending occurred today.
+Returns `true` if the spending occurred today. Uses `Date.current` for timezone-aware date comparison.
 
 ```ruby
-spending.today?  # true if spent_on == Date.today
+spending.today?  # true if spent_on == Date.current
 ```
 
 ### `this_week?`
-Returns `true` if the spending occurred this week (Monday through Sunday).
+Returns `true` if the spending occurred this week (Monday through Sunday). Uses `Date.current` for timezone-aware date comparison.
 
 ```ruby
 spending.this_week?  # true if spent_on is within current week
 ```
 
 ### `this_month?`
-Returns `true` if the spending occurred this month.
+Returns `true` if the spending occurred this month. Compares year and month for efficient and accurate month detection.
 
 ```ruby
-spending.this_month?  # true if spent_on is within current month
+spending.this_month?  # true if spent_on.year == Date.current.year && spent_on.month == Date.current.month
+```
+
+### `to_s`
+Returns a friendly string representation for debugging and display purposes.
+
+```ruby
+spending.to_s  # e.g., "$75.50 on December 15, 2025 – Groceries"
 ```
 
 ## Usage Examples
@@ -141,7 +148,7 @@ envelope = Envelope.find(1)
 spending = Spending.create!(
   envelope: envelope,
   amount: 75.50,
-  spent_on: Date.today,
+  spent_on: Date.current,
   notes: "Weekly grocery shopping"
 )
 ```
@@ -153,12 +160,12 @@ spending = Spending.create!(
 recent_spending = Spending.recent.limit(10)
 
 # Get spending for a specific date
-today_spending = Spending.for_date(Date.today)
+today_spending = Spending.for_date(Date.current)
 
 # Get spending for this month
 monthly_spending = Spending.for_date_range(
-  Date.today.beginning_of_month,
-  Date.today.end_of_month
+  Date.current.beginning_of_month,
+  Date.current.end_of_month
 )
 
 # Get all spending for a specific envelope
@@ -197,7 +204,7 @@ The `spendings` table consolidates what were previously two separate tables:
 - **Variable Spending**: Multiple spending records per envelope (e.g., multiple grocery trips totaling $500)
 - **Bill Payments**: Single payment records per envelope (e.g., one rent payment of $1200)
 
-Both are now represented as `spending` records, simplifying the data model while maintaining the same functionality. The distinction between fixed and variable spending is now handled at the envelope level through the `spending_category` association, which defines the `group_type`.
+Both are now represented as `spending` records, simplifying the data model while maintaining the same functionality. The distinction between fixed and variable spending is now handled at the envelope level through the `envelope_template` association, which defines the `group_type`.
 
 ### Benefits of Consolidation
 

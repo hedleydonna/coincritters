@@ -12,7 +12,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending = Spending.new(
       envelope: @envelope_one,
       amount: 50.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert spending.valid?
   end
@@ -20,7 +20,7 @@ class SpendingTest < ActiveSupport::TestCase
   test "should require an envelope" do
     spending = Spending.new(
       amount: 50.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert_not spending.valid?
     assert_includes spending.errors[:envelope], "must exist"
@@ -30,7 +30,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending = Spending.new(
       envelope: @envelope_one,
       amount: 50.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert_equal @envelope_one.spending_group_name, spending.spending_group_name
   end
@@ -39,7 +39,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending_zero = Spending.new(
       envelope: @envelope_one,
       amount: 0.0,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert_not spending_zero.valid?
     assert_includes spending_zero.errors[:amount], "must be greater than 0"
@@ -47,7 +47,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending_negative = Spending.new(
       envelope: @envelope_one,
       amount: -10.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert_not spending_negative.valid?
     assert_includes spending_negative.errors[:amount], "must be greater than 0"
@@ -66,7 +66,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending = Spending.new(
       envelope: @envelope_one,
       amount: 1200.00,
-      spent_on: Date.today,
+      spent_on: Date.current,
       notes: nil
     )
     assert spending.valid?
@@ -85,7 +85,7 @@ class SpendingTest < ActiveSupport::TestCase
     spending = Spending.create!(
       envelope: envelope,
       amount: 100.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     
     assert_difference("Spending.count", -1) do
@@ -95,9 +95,9 @@ class SpendingTest < ActiveSupport::TestCase
 
   test "recent scope should return records ordered by spent_on desc and created_at desc" do
     envelope = envelopes(:two)
-    s1 = Spending.create!(envelope: envelope, amount: 10, spent_on: Date.today - 2.days, created_at: 2.days.ago)
-    s2 = Spending.create!(envelope: envelope, amount: 20, spent_on: Date.today - 1.day, created_at: 1.day.ago)
-    s3 = Spending.create!(envelope: envelope, amount: 30, spent_on: Date.today - 1.day, created_at: 3.days.ago)
+    s1 = Spending.create!(envelope: envelope, amount: 10, spent_on: Date.current - 2.days, created_at: 2.days.ago)
+    s2 = Spending.create!(envelope: envelope, amount: 20, spent_on: Date.current - 1.day, created_at: 1.day.ago)
+    s3 = Spending.create!(envelope: envelope, amount: 30, spent_on: Date.current - 1.day, created_at: 3.days.ago)
 
     # Scope to just the records we created to avoid fixture interference
     recent_spendings = Spending.where(id: [s1.id, s2.id, s3.id]).recent.to_a
@@ -138,18 +138,19 @@ class SpendingTest < ActiveSupport::TestCase
 
   test "formatted_amount should return formatted currency string" do
     spending = Spending.new(amount: 123.456)
-    assert_equal "$123.46", spending.formatted_amount
+    # number_to_currency formats with 2 decimal places
+    assert_match(/\$123\.46/, spending.formatted_amount)
   end
 
   test "today? should return true if spent_on is today" do
     today_spending = Spending.new(
       envelope: @envelope_one,
       amount: 100.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert today_spending.today?
     
-    unless 1.day.ago.to_date == Date.today
+    unless 1.day.ago.to_date == Date.current
       yesterday_spending = Spending.new(
         envelope: @envelope_one,
         amount: 100.00,
@@ -163,7 +164,7 @@ class SpendingTest < ActiveSupport::TestCase
     this_week_spending = Spending.new(
       envelope: @envelope_one,
       amount: 100.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert this_week_spending.this_week?
     
@@ -179,7 +180,7 @@ class SpendingTest < ActiveSupport::TestCase
     this_month_spending = Spending.new(
       envelope: @envelope_one,
       amount: 100.00,
-      spent_on: Date.today
+      spent_on: Date.current
     )
     assert this_month_spending.this_month?
     
@@ -189,6 +190,18 @@ class SpendingTest < ActiveSupport::TestCase
       spent_on: 2.months.ago.to_date
     )
     assert_not last_month_spending.this_month?
+  end
+
+  test "to_s should return friendly string with formatted amount and date" do
+    spending = Spending.create!(
+      envelope: @envelope_one,
+      amount: 75.50,
+      spent_on: Date.parse("2025-12-15")
+    )
+    to_s_string = spending.to_s
+    assert_match(/\$75\.50/, to_s_string)
+    assert_match(/December 15, 2025/, to_s_string)
+    assert_match(/#{spending.spending_group_name}/, to_s_string)
   end
 
   test "should access monthly_budget through envelope" do

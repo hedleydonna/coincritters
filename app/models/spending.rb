@@ -27,24 +27,29 @@ class Spending < ApplicationRecord
     envelope.name
   end
   
-  # Formatted display of the spending amount
+  # Formatted display of the spending amount using Rails currency helper
   def formatted_amount
-    "$#{amount.to_f.round(2)}"
+    ActionController::Base.helpers.number_to_currency(amount, precision: 2)
   end
 
   # Check if this spending happened today
   def today?
-    spent_on == Date.today
+    spent_on == Date.current
   end
 
   # Check if this spending happened this week
   def this_week?
-    spent_on >= Date.today.beginning_of_week && spent_on <= Date.today.end_of_week
+    spent_on >= Date.current.beginning_of_week && spent_on <= Date.current.end_of_week
   end
 
   # Check if this spending happened this month
   def this_month?
-    spent_on >= Date.today.beginning_of_month && spent_on <= Date.today.end_of_month
+    spent_on.year == Date.current.year && spent_on.month == Date.current.month
+  end
+
+  # Friendly string for debugging and display
+  def to_s
+    "#{formatted_amount} on #{spent_on.to_fs(:long)} – #{spending_group_name}"
   end
 end
 
