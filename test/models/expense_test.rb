@@ -12,7 +12,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Utilities",
-      group_type: :fixed
+      frequency: "monthly"
     )
     expense = Expense.new(
       monthly_budget: @monthly_budget_one,
@@ -60,64 +60,51 @@ class ExpenseTest < ActiveSupport::TestCase
     assert expenses(:four).valid?
   end
 
-  test "should get group_type from expense_template" do
-    fixed_template = expense_templates(:two)  # Rent (fixed)
-    variable_template = expense_templates(:one)  # Groceries (variable)
-    
-    # Need unique expense templates for different budgets to avoid unique constraint
-    fixed_template_two = ExpenseTemplate.create!(
+  test "should get frequency from expense_template" do
+    monthly_template = ExpenseTemplate.create!(
       user: @monthly_budget_two.user,
-      name: "Fixed Test Template",
-      group_type: :fixed
+      name: "Monthly Test Template",
+      frequency: "monthly"
     )
-    variable_template_two = ExpenseTemplate.create!(
+    weekly_template = ExpenseTemplate.create!(
       user: @monthly_budget_two.user,
-      name: "Variable Test Template",
-      group_type: :variable
+      name: "Weekly Test Template",
+      frequency: "weekly"
     )
     
-    fixed_expense = Expense.new(
+    monthly_expense = Expense.new(
       monthly_budget: @monthly_budget_two,
-      expense_template: fixed_template_two
+      expense_template: monthly_template
     )
-    assert_equal "fixed", fixed_expense.group_type
-    assert fixed_expense.fixed?
+    assert_equal "monthly", monthly_expense.frequency
 
-    variable_expense = Expense.new(
+    weekly_expense = Expense.new(
       monthly_budget: @monthly_budget_two,
-      expense_template: variable_template_two
+      expense_template: weekly_template
     )
-    assert_equal "variable", variable_expense.group_type
-    assert variable_expense.variable?
+    assert_equal "weekly", weekly_expense.frequency
   end
 
-  test "should get is_savings from expense_template" do
-    savings_template = expense_templates(:three)  # Emergency Fund (savings)
-    non_savings_template = expense_templates(:one)  # Groceries (non-savings)
+  test "should get due_date from expense_template" do
+    template_with_due_date = ExpenseTemplate.create!(
+      user: @monthly_budget_two.user,
+      name: "Template With Due Date",
+      frequency: "monthly",
+      due_date: Date.new(2025, 1, 15)
+    )
     
-    # Using existing expense from fixtures
-    assert expenses(:three).is_savings?
-    assert_not @expense_one.is_savings?
-  end
-
-  test "savings? should return true for savings expenses" do
-    assert expenses(:three).savings?
-    assert_not @expense_one.savings?
-  end
-
-  test "savings? and is_savings? should return same value" do
-    savings_expense = expenses(:three)
-    assert_equal savings_expense.savings?, savings_expense.is_savings?
-    
-    non_savings_expense = @expense_one
-    assert_equal non_savings_expense.savings?, non_savings_expense.is_savings?
+    expense = Expense.new(
+      monthly_budget: @monthly_budget_two,
+      expense_template: template_with_due_date
+    )
+    assert_equal Date.new(2025, 1, 15), expense.due_date
   end
 
   test "should require allotted_amount to be greater than or equal to 0" do
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Test Template",
-      group_type: :variable
+      frequency: "monthly"
     )
     expense = Expense.new(
       monthly_budget: @monthly_budget_one,
@@ -133,7 +120,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Auto Fill Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 250.00
     )
     expense = Expense.create!(
@@ -148,7 +135,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "No Default Amount Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: nil
     )
     expense = Expense.create!(
@@ -162,7 +149,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Explicit Amount Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     expense = Expense.create!(
@@ -192,7 +179,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: users(:one),
       name: "Test Template",
-      group_type: :variable
+      frequency: "monthly"
     )
     expense = Expense.create!(
       monthly_budget: budget,
@@ -204,28 +191,30 @@ class ExpenseTest < ActiveSupport::TestCase
     end
   end
 
-  test "fixed scope should return only fixed expenses" do
-    fixed_expenses = Expense.fixed
-    assert_includes fixed_expenses, @expense_two
-    assert_not_includes fixed_expenses, @expense_one
-  end
-
-  test "variable scope should return only variable expenses" do
-    variable_expenses = Expense.variable
-    assert_includes variable_expenses, @expense_one
-    assert_not_includes variable_expenses, @expense_two
-  end
-
-  test "savings scope should return only savings expenses" do
-    savings_expenses = Expense.savings
-    assert_includes savings_expenses, expenses(:three)
-    assert_not_includes savings_expenses, @expense_one
-  end
-
-  test "non_savings scope should return only non-savings expenses" do
-    non_savings_expenses = Expense.non_savings
-    assert_includes non_savings_expenses, @expense_one
-    assert_not_includes non_savings_expenses, expenses(:three)
+  test "by_frequency scope should return only expenses with specific frequency" do
+    monthly_template = ExpenseTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "Monthly Template",
+      frequency: "monthly"
+    )
+    weekly_template = ExpenseTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "Weekly Template",
+      frequency: "weekly"
+    )
+    
+    monthly_expense = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      expense_template: monthly_template
+    )
+    weekly_expense = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      expense_template: weekly_template
+    )
+    
+    monthly_expenses = Expense.by_frequency("monthly")
+    assert_includes monthly_expenses, monthly_expense
+    assert_not_includes monthly_expenses, weekly_expense
   end
 
   test "over_budget scope should return only expenses where spent exceeds allotted" do
@@ -235,14 +224,17 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_not_includes over_budget_expenses, @expense_one
   end
 
-  test "fixed? should return true for fixed expenses" do
-    assert @expense_two.fixed?
-    assert_not @expense_one.fixed?
-  end
-
-  test "variable? should return true for variable expenses" do
-    assert @expense_one.variable?
-    assert_not @expense_two.variable?
+  test "frequency_text should return correct text" do
+    monthly_template = ExpenseTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "Monthly Template",
+      frequency: "monthly"
+    )
+    expense = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      expense_template: monthly_template
+    )
+    assert_equal "Monthly", expense.frequency_text
   end
 
   test "should destroy when expense_template is destroyed" do
@@ -275,7 +267,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Over Budget Test Template",
-      group_type: :variable
+      frequency: "monthly"
     )
     over_budget_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
@@ -306,7 +298,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Empty Test Template",
-      group_type: :variable
+      frequency: "monthly"
     )
     empty_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
@@ -334,7 +326,7 @@ class ExpenseTest < ActiveSupport::TestCase
     fixed_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Fixed Bill Test",
-      group_type: :fixed
+      frequency: "monthly"
     )
     
     # Create envelope with allotted amount
@@ -364,29 +356,39 @@ class ExpenseTest < ActiveSupport::TestCase
     assert fixed_expense.paid?
   end
 
-  test "paid? should return false for variable expenses even when spent >= allotted" do
-    # Create a variable template
-    variable_template = ExpenseTemplate.create!(
+  test "paid? should return true when spent >= allotted" do
+    # Create a new template to avoid uniqueness constraint
+    template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
-      name: "Variable Test",
-      group_type: :variable
+      name: "Test Paid Template",
+      frequency: "monthly"
     )
     
-    variable_expense = Expense.create!(
+    expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: variable_template,
+      expense_template: template,
       allotted_amount: 500.00
     )
     
-    # Add payment that exceeds allotted
+    # Add payment that equals allotted
     Payment.create!(
-      expense: variable_expense,
-      amount: 600.00,
+      expense: expense,
+      amount: 500.00,
       spent_on: Date.today
     )
     
-    # Variable envelopes are never "paid" - only fixed bills can be paid
-    assert_not variable_expense.paid?
+    # Expense is paid when spent >= allotted
+    assert expense.paid?
+    
+    # Add more payment
+    Payment.create!(
+      expense: expense,
+      amount: 100.00,
+      spent_on: Date.today
+    )
+    
+    # Still paid when spent > allotted
+    assert expense.paid?
   end
 
   test "to_s should return friendly string with name and budget" do
@@ -405,7 +407,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Template Name",
-      group_type: :variable
+      frequency: "monthly"
     )
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
@@ -421,9 +423,9 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_equal expense.expense_template.display_name, expense.display_name
   end
 
-  test "display_name should show (Savings) for savings expenses" do
-    savings_expense = expenses(:three)
-    assert_match(/Savings/, savings_expense.display_name)
+  test "display_name should return the expense name" do
+    expense = expenses(:one)
+    assert_equal expense.name, expense.display_name
   end
 
   test "percent_used should return integer percentage" do
@@ -437,7 +439,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Empty Percent Test",
-      group_type: :variable
+      frequency: "monthly"
     )
     empty_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,

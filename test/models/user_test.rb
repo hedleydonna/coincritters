@@ -119,7 +119,7 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 0, user.total_actual_savings_this_month
   end
 
-  test "total_actual_savings_this_month should sum spent_amount from savings expenses in current budget" do
+  test "total_actual_savings_this_month should return 0 since savings tracking was removed" do
     user = User.create!(email: "savings_current@example.com", password: "password123")
     current_month = Time.current.strftime("%Y-%m")
     budget = MonthlyBudget.create!(
@@ -128,20 +128,19 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    # Create a savings expense template
-    savings_template = ExpenseTemplate.create!(
+    # Create an expense template
+    template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
-      group_type: :fixed,
-      is_savings: true,
+      frequency: "monthly",
       default_amount: 300.00,
       auto_create: false
     )
     
-    # Create expense with savings template
+    # Create expense
     expense = Expense.create!(
       monthly_budget: budget,
-      expense_template: savings_template,
+      expense_template: template,
       allotted_amount: 300.00
     )
     
@@ -149,58 +148,58 @@ class UserTest < ActiveSupport::TestCase
     Payment.create!(expense: expense, amount: 150.00, spent_on: Date.today)
     Payment.create!(expense: expense, amount: 50.00, spent_on: Date.today)
     
-    assert_equal 200.00, user.total_actual_savings_this_month
+    # Returns 0 since savings scope was removed
+    assert_equal 0, user.total_actual_savings_this_month
   end
 
-  test "total_actual_savings_this_month should only include savings expenses from current budget" do
+  test "total_actual_savings_this_month should return 0 for multiple months since savings tracking was removed" do
     user = User.create!(email: "savings_multimonth@example.com", password: "password123")
     current_month = Time.current.strftime("%Y-%m")
     old_month = (Date.today - 1.month).strftime("%Y-%m")
     
-    # Create current month budget with savings
+    # Create current month budget
     current_budget = MonthlyBudget.create!(
       user: user,
       month_year: current_month,
       total_actual_income: 5000.00
     )
     
-    # Create old month budget with savings
+    # Create old month budget
     old_budget = MonthlyBudget.create!(
       user: user,
       month_year: old_month,
       total_actual_income: 4500.00
     )
     
-    savings_template = ExpenseTemplate.create!(
+    template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
-      group_type: :fixed,
-      is_savings: true,
+      frequency: "monthly",
       default_amount: 300.00,
       auto_create: false
     )
     
     current_expense = Expense.create!(
       monthly_budget: current_budget,
-      expense_template: savings_template,
+      expense_template: template,
       allotted_amount: 300.00
     )
     
     old_expense = Expense.create!(
       monthly_budget: old_budget,
-      expense_template: savings_template,
+      expense_template: template,
       allotted_amount: 300.00
     )
     
     Payment.create!(expense: current_expense, amount: 100.00, spent_on: Date.today)
     Payment.create!(expense: old_expense, amount: 200.00, spent_on: Date.today - 1.month)
     
-    # Should only include current month's savings
-    assert_equal 100.00, user.total_actual_savings_this_month
+    # Returns 0 since savings scope was removed
+    assert_equal 0, user.total_actual_savings_this_month
   end
 
   # Test total_actual_savings_all_time method
-  test "total_actual_savings_all_time should sum spent_amount from all savings expenses across all months" do
+  test "total_actual_savings_all_time should return 0 since savings tracking was removed" do
     user = User.create!(email: "total_savings_all@example.com", password: "password123")
     
     # Create budgets for different months
@@ -216,24 +215,23 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 4500.00
     )
     
-    savings_template = ExpenseTemplate.create!(
+    template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
-      group_type: :fixed,
-      is_savings: true,
+      frequency: "monthly",
       default_amount: 300.00,
       auto_create: false
     )
     
     expense1 = Expense.create!(
       monthly_budget: budget1,
-      expense_template: savings_template,
+      expense_template: template,
       allotted_amount: 300.00
     )
     
     expense2 = Expense.create!(
       monthly_budget: budget2,
-      expense_template: savings_template,
+      expense_template: template,
       allotted_amount: 300.00
     )
     
@@ -241,8 +239,9 @@ class UserTest < ActiveSupport::TestCase
     Payment.create!(expense: expense1, amount: 50.00, spent_on: Date.today)
     Payment.create!(expense: expense2, amount: 100.00, spent_on: Date.today - 1.month)
     
-    assert_equal 300.00, user.total_actual_savings_all_time
-    assert_equal 300.00, user.total_savings  # Alias should work
+    # Returns 0 since savings scope was removed
+    assert_equal 0, user.total_actual_savings_all_time
+    assert_equal 0, user.total_savings  # Alias should work
   end
 
   # Test create_next_month_budget! method
@@ -254,8 +253,7 @@ class UserTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: user,
       name: "Next Month Groceries",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 500.00,
       auto_create: true
     )
@@ -284,7 +282,7 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 1, MonthlyBudget.where(user: user, month_year: next_month).count
   end
 
-  test "total_actual_savings_all_time should only include savings expenses" do
+  test "total_actual_savings_all_time should return 0 for mixed expenses since savings tracking was removed" do
     user = User.create!(email: "total_savings_only@example.com", password: "password123")
     
     budget = MonthlyBudget.create!(
@@ -293,41 +291,39 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    savings_template = ExpenseTemplate.create!(
+    template1 = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
-      group_type: :fixed,
-      is_savings: true,
+      frequency: "monthly",
       default_amount: 300.00,
       auto_create: false
     )
     
-    non_savings_template = ExpenseTemplate.create!(
+    template2 = ExpenseTemplate.create!(
       user: user,
       name: "Groceries",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 500.00,
       auto_create: false
     )
     
-    savings_expense = Expense.create!(
+    expense1 = Expense.create!(
       monthly_budget: budget,
-      expense_template: savings_template,
+      expense_template: template1,
       allotted_amount: 300.00
     )
     
-    non_savings_expense = Expense.create!(
+    expense2 = Expense.create!(
       monthly_budget: budget,
-      expense_template: non_savings_template,
+      expense_template: template2,
       allotted_amount: 500.00
     )
     
-    Payment.create!(expense: savings_expense, amount: 200.00, spent_on: Date.today)
-    Payment.create!(expense: non_savings_expense, amount: 300.00, spent_on: Date.today)
+    Payment.create!(expense: expense1, amount: 200.00, spent_on: Date.today)
+    Payment.create!(expense: expense2, amount: 300.00, spent_on: Date.today)
     
-    # Should only include savings envelope payment
-    assert_equal 200.00, user.total_actual_savings_all_time
-    assert_equal 200.00, user.total_savings  # Alias should work
+    # Returns 0 since savings scope was removed
+    assert_equal 0, user.total_actual_savings_all_time
+    assert_equal 0, user.total_savings  # Alias should work
   end
 end

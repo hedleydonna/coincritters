@@ -64,8 +64,8 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
     expense_template = ExpenseTemplate.create!(
       user: monthly_budget.user,
       name: "Utilities Test",
-      group_type: :fixed,
-      is_savings: false
+      frequency: "monthly",
+      
     )
     
     assert_difference("Expense.count", 1) do

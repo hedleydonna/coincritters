@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ExpenseTemplate` model represents user-defined templates that can be reused across monthly budgets to create expense. Each template defines the type of payment (fixed vs variable), whether it's a savings pot, default amounts, and auto-creation behavior. Expense reference expensetemplates to inherit their properties, but can override name, group_type, and is_savings on a per-month basis.
+The `ExpenseTemplate` model represents user-defined templates that can be reused across monthly budgets to create expense. Each template defines the frequency of payment (monthly, weekly, biweekly, yearly), optional due date, default amounts, and auto-creation behavior. Expense reference expensetemplates to inherit their properties, but can override name on a per-month basis.
 
 ## Model Location
 
@@ -15,8 +15,8 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
 | `user_id` | bigint | NOT NULL, Foreign Key | References the user who owns this template |
 | `name` | string | NOT NULL | Template name (e.g., "Rent", "Groceries", "Emergency Fund") |
-| `group_type` | integer | NOT NULL, Default: 1 | 0 = fixed (rent, Netflix), 1 = variable (food, fun) |
-| `is_savings` | boolean | NOT NULL, Default: false | true = savings pot (emergency fund, vacation, etc.) |
+| `frequency` | string | NOT NULL, Default: "monthly" | Payment frequency: "monthly", "weekly", "biweekly", or "yearly" |
+| `due_date` | date | Nullable | Optional due date for this expense |
 | `default_amount` | decimal(12,2) | Nullable | Default amount to allocate when creating expense |
 | `auto_create` | boolean | NOT NULL, Default: true | Automatically create expensein monthly budgets |
 | `is_active` | boolean | NOT NULL, Default: true | Whether the template is active (soft delete) |
@@ -26,7 +26,6 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 ### Indexes
 
 - **User ID + Name Index**: Composite unique index on `[user_id, name]` - ensures unique template names per user (only among active templates)
-- **User ID + Group Type Index**: Composite index on `[user_id, group_type]` - optimized for finding templates by type
 - **Is Active Index**: Index on `is_active` - optimized for filtering active/inactive templates
 
 ### Foreign Keys
@@ -57,16 +56,9 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 
 - `validates :default_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true` - The default amount must be greater than or equal to 0 if provided, but can be nil.
 
-## Enums
+### Inclusion Validations
 
-- `enum :group_type, { fixed: 0, variable: 1 }, default: :variable` - Defines the two group types:
-  - `fixed` (0): Recurring bills that are consistent (rent, Netflix, insurance)
-  - `variable` (1): Flexible payment that varies (food, fun, entertainment)
-
-The enum automatically provides:
-- `group_type` attribute with string values ("fixed", "variable")
-- Boolean methods: `fixed?`, `variable?`
-- Scopes: `ExpenseTemplate.fixed`, `ExpenseTemplate.variable`
+- `validates :frequency, inclusion: { in: %w[monthly weekly biweekly yearly] }` - The frequency must be one of the valid values: "monthly", "weekly", "biweekly", or "yearly". Defaults to "monthly" if not specified.
 
 ## Default Scope
 
@@ -76,21 +68,21 @@ The enum automatically provides:
 
 - `scope :active` - Returns only active templates (`is_active: true`)
 - `scope :inactive` - Returns only inactive templates (`is_active: false`)
-- `scope :fixed` - Returns only fixed expensetemplates
-- `scope :variable` - Returns only variable expensetemplates
-- `scope :savings` - Returns only savings templates (`is_savings: true`)
-- `scope :non_savings` - Returns only non-savings templates (`is_savings: false`)
 - `scope :auto_create` - Returns only templates with `auto_create: true`
+- `scope :by_frequency` - Returns templates with a specific frequency (e.g., `ExpenseTemplate.by_frequency("monthly")`)
 
-**Note:** Most queries should use `.active` to only show active templates. The `active` scope should be chained with other scopes (e.g., `ExpenseTemplate.active.fixed`). To override the default alphabetical ordering, use `.reorder()` (e.g., `ExpenseTemplate.active.reorder(created_at: :desc)`).
+**Note:** Most queries should use `.active` to only show active templates. The `active` scope should be chained with other scopes (e.g., `ExpenseTemplate.active.by_frequency("monthly")`). To override the default alphabetical ordering, use `.reorder()` (e.g., `ExpenseTemplate.active.reorder(created_at: :desc)`).
 
 ## Instance Methods
 
-- `display_name` - Returns a friendly display name. If it's a savings template, returns `"#{name} (Savings)"`, otherwise just the name.
+- `display_name` - Returns the template name (same as `name`).
   
-- `group_type_text` - Returns a text description of the group type:
-  - `"Fixed bill"` for fixed templates
-  - `"Variable payment"` for variable templates
+- `frequency_text` - Returns a human-readable text description of the frequency:
+  - `"Monthly"` for monthly templates
+  - `"Weekly"` for weekly templates
+  - `"Biweekly"` for biweekly templates
+  - `"Yearly"` for yearly templates
+  - Defaults to `"Monthly"` if frequency is not set
 
 - `deactivate!` - Soft deletes the template by setting `is_active` to `false`. Preserves the template and all associated expense for historical purposes.
 
@@ -102,9 +94,9 @@ The enum automatically provides:
 
 1. **Unique Names Per User**: Each user can only have one template with a given name. Different users can have templates with the same name.
 
-2. **Group Type Classification**: Templates are classified as either "fixed" (consistent recurring bills) or "variable" (flexible payment). This affects how expense are used in budgeting.
+2. **Frequency**: Templates specify how often the expense occurs (monthly, weekly, biweekly, or yearly). This helps users understand the payment cadence.
 
-3. **Savings Pots**: Templates can be marked as savings pots, which are typically used for goals like emergency funds, vacations, or major purchases.
+3. **Due Dates**: Templates can optionally specify a due date, which helps users track when payments are typically due.
 
 4. **Default Amounts**: Templates can have a default amount that will be used when automatically creating expense in monthly budgets.
 
@@ -131,33 +123,32 @@ The enum automatically provides:
 ```ruby
 user = User.find(1)
 
-# Create a fixed expensetemplate for rent
+# Create a monthly expensetemplate for rent
 rent_template = ExpenseTemplate.create!(
   user: user,
   name: "Rent",
-  group_type: :fixed,
-  is_savings: false,
+  frequency: "monthly",
+  due_date: Date.new(2025, 1, 1), # First of the month
   default_amount: 1200.00,
   auto_create: true
 )
 
-# Create a variable expensetemplate for groceries
+# Create a weekly expensetemplate for groceries
 groceries_template = ExpenseTemplate.create!(
   user: user,
   name: "Groceries",
-  group_type: :variable,
-  is_savings: false,
+  frequency: "weekly",
   default_amount: 500.00,
   auto_create: true
 )
 
-# Create a savings template
-emergency_fund = ExpenseTemplate.create!(
+# Create a yearly template for insurance
+insurance = ExpenseTemplate.create!(
   user: user,
-  name: "Emergency Fund",
-  group_type: :fixed,
-  is_savings: true,
-  default_amount: 300.00,
+  name: "Car Insurance",
+  frequency: "yearly",
+  due_date: Date.new(2025, 6, 15),
+  default_amount: 1200.00,
   auto_create: true
 )
 ```
@@ -167,11 +158,11 @@ emergency_fund = ExpenseTemplate.create!(
 ```ruby
 user = User.find(1)
 
-# Find all active fixed templates
-fixed_templates = user.expense_templates.active.fixed
+# Find all active monthly templates
+monthly_templates = user.expense_templates.active.by_frequency("monthly")
 
-# Find all active savings templates
-savings_templates = user.expense_templates.active.savings
+# Find all active weekly templates
+weekly_templates = user.expense_templates.active.by_frequency("weekly")
 
 # Find a specific active template
 rent = user.expense_templates.active.find_by(name: "Rent")
@@ -194,17 +185,15 @@ expense= Expensecreate!(
   allotted_amount: template.default_amount || 0
 )
 
-# The expenseinherits group_type and is_savings from the template
-expensegroup_type  # => "fixed" (from template, unless overridden)
-expenseis_savings? # => false (from template, unless overridden)
+# The expenseinherits frequency and due_date from the template
+expense.frequency  # => "monthly" (from template)
+expense.due_date   # => Date object (from template, if set)
 
-# Create an expensewith overrides
+# Create an expensewith name override
 custom_expense= Expensecreate!(
   monthly_budget: monthly_budget,
   expense_template: template,
   name: "Custom Name",  # Override template name
-  group_type: 1,        # Override to variable
-  is_savings: true,     # Override to savings
   allotted_amount: 600.00
 )
 ```
@@ -214,8 +203,8 @@ custom_expense= Expensecreate!(
 ```ruby
 template = ExpenseTemplate.find(1)
 
-template.display_name      # => "Rent" or "Emergency Fund (Savings)"
-template.group_type_text   # => "Fixed bill" or "Variable payment"
+template.display_name      # => "Rent"
+template.frequency_text    # => "Monthly", "Weekly", "Biweekly", or "Yearly"
 ```
 
 ### Soft Delete (Deactivation)
@@ -256,7 +245,7 @@ The expenseuses the template's `name` by default (via the `name` method, which c
 Expense can override template values:
 - **name**: If `expense.name` is set, it overrides `expense_template.name`
 
-**Note:** `group_type` and `is_savings` always come from the template and cannot be overridden per expense
+**Note:** `frequency` and `due_date` always come from the template and cannot be overridden per expense. The expense inherits these values from its template.
 
 When override fields are `NULL`, the expenseuses the template's values. This allows for both consistency (using templates) and flexibility (customizing per month).
 

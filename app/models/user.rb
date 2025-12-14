@@ -36,14 +36,18 @@ class User < ApplicationRecord
 
   # ------------------------------------------------------------------
   # Savings — actual saved (this month and all time)
+  # Note: Since is_savings field was removed, these methods return 0
+  # TODO: Re-implement if savings tracking is needed with a different approach
   # ------------------------------------------------------------------
   def total_actual_savings_this_month
     return 0 unless current_budget
-    current_budget.expenses.savings.sum(&:spent_amount)
+    # Savings scope no longer exists - return 0 for now
+    0
   end
 
   def total_actual_savings_all_time
-    expenses.savings.sum(&:spent_amount)
+    # Savings scope no longer exists - return 0 for now
+    0
   end
 
   # Optional: shortcut for dashboard

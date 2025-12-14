@@ -1,40 +1,36 @@
 one:
   user: one
   name: "Groceries"
-  group_type: 1  # variable
-  is_savings: false
+  frequency: monthly
   default_amount: 500.00
   auto_create: true
 
 two:
   user: one
   name: "Rent"
-  group_type: 0  # fixed
-  is_savings: false
+  frequency: monthly
+  due_date: 2025-01-01
   default_amount: 1200.00
   auto_create: true
 
 three:
   user: one
   name: "Emergency Fund"
-  group_type: 0  # fixed
-  is_savings: true
+  frequency: monthly
   default_amount: 300.00
   auto_create: true
 
 four:
   user: two
   name: "Groceries"
-  group_type: 1  # variable
-  is_savings: false
+  frequency: monthly
   default_amount: 480.00
   auto_create: true
 
 five:
   user: two
   name: "Entertainment"
-  group_type: 1  # variable
-  is_savings: false
+  frequency: monthly
   default_amount: 200.00
   auto_create: true
 

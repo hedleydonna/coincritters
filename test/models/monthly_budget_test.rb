@@ -247,14 +247,14 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template1 = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template 1",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
     template2 = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template 2",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 200.00
     )
     
@@ -283,7 +283,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -318,7 +318,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -341,7 +341,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -364,7 +364,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -414,7 +414,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -456,7 +456,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Test Template",
-      group_type: :variable,
+      frequency: "monthly",
       default_amount: 100.00
     )
     
@@ -500,8 +500,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template1 = ExpenseTemplate.create!(
       user: user,
       name: "Groceries",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 500.00,
       auto_create: true
     )
@@ -509,8 +508,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template2 = ExpenseTemplate.create!(
       user: user,
       name: "Rent",
-      group_type: :fixed,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 1200.00,
       auto_create: true
     )
@@ -519,8 +517,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template3 = ExpenseTemplate.create!(
       user: user,
       name: "Entertainment",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 200.00,
       auto_create: false
     )
@@ -552,8 +549,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: user,
       name: "Groceries",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 500.00,
       auto_create: true
     )
@@ -587,8 +583,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     template = ExpenseTemplate.create!(
       user: user,
       name: "New Template",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: nil,
       auto_create: true
     )
@@ -614,8 +609,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     user1_template = ExpenseTemplate.create!(
       user: user1,
       name: "User1 Template",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 500.00,
       auto_create: true
     )
@@ -623,8 +617,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     user2_template = ExpenseTemplate.create!(
       user: user2,
       name: "User2 Template",
-      group_type: :variable,
-      is_savings: false,
+      frequency: "monthly",
       default_amount: 300.00,
       auto_create: true
     )

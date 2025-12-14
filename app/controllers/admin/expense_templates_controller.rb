@@ -56,7 +56,7 @@ class Admin::ExpenseTemplatesController < Admin::BaseController
   end
 
   def expense_template_params
-    params.require(:expense_template).permit(:user_id, :name, :group_type, :is_savings, :default_amount, :auto_create, :is_active)
+    params.require(:expense_template).permit(:user_id, :name, :frequency, :due_date, :default_amount, :auto_create, :is_active)
   end
 end
 

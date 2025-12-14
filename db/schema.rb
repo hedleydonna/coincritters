@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_11_000004) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_14_194309) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,6 +24,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_11_000004) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "is_active", default: true, null: false
+    t.string "frequency", default: "monthly"
+    t.date "due_date"
     t.index ["is_active"], name: "index_expense_templates_on_is_active"
     t.index ["user_id", "group_type"], name: "index_expense_templates_on_user_id_and_group_type"
     t.index ["user_id", "name"], name: "index_expense_templates_on_user_id_and_name", unique: true

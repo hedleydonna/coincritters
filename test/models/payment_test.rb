@@ -76,7 +76,7 @@ class PaymentTest < ActiveSupport::TestCase
     expense_template = ExpenseTemplate.create!(
       user: users(:one),
       name: "Test ExpenseTemplate",
-      group_type: :variable
+      frequency: "monthly"
     )
     expense = Expense.create!(
       monthly_budget: monthly_budgets(:one),

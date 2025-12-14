@@ -16,8 +16,8 @@
           <div class="flex-1">
             <h3 class="text-lg font-semibold text-gray-900 mb-2"><%= template.display_name %></h3>
             <div class="flex flex-wrap gap-3 text-sm text-gray-600">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= template.group_type == 'fixed' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' %>">
-                <%= template.group_type_text %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <%= template.frequency_text %>
               </span>
               <% if template.default_amount.present? && template.default_amount > 0 %>
                 <span class="text-gray-700">
@@ -59,7 +59,7 @@
               <h3 class="text-lg font-semibold text-gray-600 mb-2"><%= template.display_name %></h3>
               <div class="flex flex-wrap gap-3 text-sm text-gray-500">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-                  <%= template.group_type_text %>
+                  <%= template.frequency_text %>
                 </span>
                 <% if template.default_amount.present? && template.default_amount > 0 %>
                   <span class="text-gray-500">

@@ -27,25 +27,13 @@ class Expense < ApplicationRecord
   # ------------------------------------------------------------------
   # Scopes
   # ------------------------------------------------------------------
-  # Scopes that delegate to template (group_type and is_savings always come from template)
-  scope :fixed, -> {
-    joins(:expense_template).merge(ExpenseTemplate.fixed)
-  }
-  
-  scope :variable, -> {
-    joins(:expense_template).merge(ExpenseTemplate.variable)
-  }
-  
-  scope :savings, -> {
-    joins(:expense_template).merge(ExpenseTemplate.savings)
-  }
-  
-  scope :non_savings, -> {
-    joins(:expense_template).merge(ExpenseTemplate.non_savings)
-  }
-  
   # Quick scope for expenses that are over budget
   scope :over_budget, -> { where("(SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.expense_id = expenses.id) > allotted_amount") }
+  
+  # Scope for expenses by frequency
+  scope :by_frequency, ->(freq) {
+    joins(:expense_template).merge(ExpenseTemplate.by_frequency(freq))
+  }
 
   # ------------------------------------------------------------------
   # Auto-fill allotted_amount from template default when creating
@@ -67,9 +55,9 @@ class Expense < ApplicationRecord
     allotted_amount.zero? ? 0 : ((spent_amount / allotted_amount) * 100).round
   end
 
-  # Fixed bills are "paid" when spent >= allotted
+  # Check if expense is "paid" (spent >= allotted)
   def paid?
-    fixed? && spent_amount >= allotted_amount
+    spent_amount >= allotted_amount
   end
 
   def over_budget?
@@ -98,44 +86,22 @@ class Expense < ApplicationRecord
   end
 
   def display_name
-    if is_savings?
-      "#{name} (Savings)"
-    else
-      name
-    end
+    name
   end
 
   # ------------------------------------------------------------------
-  # Template-delegated methods - always come from template
+  # Template-delegated methods
   # ------------------------------------------------------------------
-  def group_type
-    expense_template&.group_type || "variable"
+  def frequency
+    expense_template&.frequency || "monthly"
   end
 
-  def fixed?
-    expense_template&.fixed? || false
+  def due_date
+    expense_template&.due_date
   end
 
-  def variable?
-    return expense_template.variable? if expense_template
-    false  # Default to false if no template (shouldn't happen in practice)
-  end
-
-  def savings?
-    expense_template&.is_savings? || false
-  end
-
-  # Alias for backward compatibility
-  def is_savings?
-    savings?
-  end
-
-  def group_type_fixed?
-    fixed?
-  end
-
-  def group_type_text
-    fixed? ? "Fixed bill" : "Variable payment"
+  def frequency_text
+    expense_template&.frequency_text || "Monthly"
   end
 
   # Alias for backward compatibility

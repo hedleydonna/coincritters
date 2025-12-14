@@ -50,9 +50,9 @@ class ExpenseTemplatesController < ApplicationController
   def template_params
     params.require(:expense_template).permit(
       :name,
+      :frequency,
+      :due_date,
       :default_amount,
-      :group_type,
-      :is_savings,
       :auto_create
     )
   end

@@ -4,12 +4,11 @@ class ExpenseTemplate < ApplicationRecord
   has_many :expenses, dependent: :destroy
 
   # ------------------------------------------------------------------
-  # Enums & Validations
+  # Validations
   # ------------------------------------------------------------------
-  enum :group_type, { fixed: 0, variable: 1 }, default: :variable
-
   validates :name, presence: true, uniqueness: { scope: :user_id, conditions: -> { where(is_active: true) } }
   validates :default_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :frequency, inclusion: { in: %w[monthly weekly biweekly yearly], message: "%{value} is not a valid frequency" }, allow_nil: true
 
   # Default ordering by name for consistent display
   default_scope -> { order(:name) }
@@ -20,12 +19,8 @@ class ExpenseTemplate < ApplicationRecord
   # Active templates (default for most queries)
   scope :active, -> { where(is_active: true) }
   scope :inactive, -> { where(is_active: false) }
-  
-  scope :fixed, -> { where(group_type: :fixed) }
-  scope :variable, -> { where(group_type: :variable) }
-  scope :savings, -> { where(is_savings: true) }
-  scope :non_savings, -> { where(is_savings: false) }
   scope :auto_create, -> { where(auto_create: true) }
+  scope :by_frequency, ->(freq) { where(frequency: freq) }
 
   # ------------------------------------------------------------------
   # Instance methods
@@ -33,20 +28,23 @@ class ExpenseTemplate < ApplicationRecord
   
   # Friendly display name
   def display_name
-    if is_savings?
-      "#{name} (Savings)"
+    name
+  end
+
+  # Frequency display helper
+  def frequency_text
+    case frequency
+    when "monthly"
+      "Monthly"
+    when "weekly"
+      "Weekly"
+    when "biweekly"
+      "Biweekly"
+    when "yearly"
+      "Yearly"
     else
-      name
+      "Monthly" # default
     end
-  end
-
-  def group_type_fixed?
-    group_type == "fixed"
-  end
-
-  # Text description of group type
-  def group_type_text
-    group_type == "fixed" ? "Fixed bill" : "Variable payment"
   end
 
   # Soft delete: deactivate the template instead of destroying it

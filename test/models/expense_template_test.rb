@@ -4,17 +4,17 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
   setup do
     @user_one = users(:one)
     @user_two = users(:two)
-    @expense_template_one = expense_templates(:one)  # Groceries (variable)
-    @expense_template_two = expense_templates(:two)  # Rent (fixed)
-    @expense_template_three = expense_templates(:three)  # Emergency Fund (fixed, savings)
+    @expense_template_one = expense_templates(:one)  # Groceries
+    @expense_template_two = expense_templates(:two)  # Rent
+    @expense_template_three = expense_templates(:three)  # Emergency Fund
   end
 
   test "should be valid with valid attributes" do
     expense_template = ExpenseTemplate.new(
       user: @user_one,
       name: "Utilities",
-      group_type: :fixed,
-      is_savings: false,
+      frequency: "monthly",
+      due_date: Date.today,
       default_amount: 150.00,
       auto_create: true
     )
@@ -24,7 +24,7 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
   test "should require a user" do
     expense_template = ExpenseTemplate.new(
       name: "Test Template",
-      group_type: :variable
+      frequency: "monthly"
     )
     assert_not expense_template.valid?
     assert_includes expense_template.errors[:user], "must exist"
@@ -33,7 +33,7 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
   test "should require name" do
     expense_template = ExpenseTemplate.new(
       user: @user_one,
-      group_type: :variable
+      frequency: "monthly"
     )
     assert_not expense_template.valid?
     assert_includes expense_template.errors[:name], "can't be blank"
@@ -43,7 +43,7 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     duplicate_template = ExpenseTemplate.new(
       user: @user_one,
       name: @expense_template_one.name,
-      group_type: :variable
+      frequency: "monthly"
     )
     assert_not duplicate_template.valid?
     assert_includes duplicate_template.errors[:name], "has already been taken"
@@ -60,51 +60,73 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     assert expense_templates(:four).valid?
   end
 
-  test "should validate group_type inclusion" do
+  test "should validate frequency inclusion" do
     expense_template = ExpenseTemplate.new(
       user: @user_one,
-      name: "Test"
+      name: "Test",
+      frequency: "invalid"
     )
-    # Rails enum raises ArgumentError for invalid values before validation
-    assert_raises(ArgumentError) do
-      expense_template.group_type = 999
-    end
-    # Valid values work fine
-    expense_template.group_type = :fixed
-    assert expense_template.valid?
+    assert_not expense_template.valid?
+    # Error message includes the value, so check for partial match
+    assert expense_template.errors[:frequency].any? { |msg| msg.include?("is not a valid frequency") }
   end
 
-  test "should accept valid group_type values" do
-    fixed_template = ExpenseTemplate.new(
+  test "should accept valid frequency values" do
+    monthly_template = ExpenseTemplate.new(
       user: @user_one,
-      name: "Fixed Test",
-      group_type: :fixed
+      name: "Monthly Test",
+      frequency: "monthly"
     )
-    assert fixed_template.valid?
+    assert monthly_template.valid?
 
-    variable_template = ExpenseTemplate.new(
+    weekly_template = ExpenseTemplate.new(
       user: @user_one,
-      name: "Variable Test",
-      group_type: :variable
+      name: "Weekly Test",
+      frequency: "weekly"
     )
-    assert variable_template.valid?
+    assert weekly_template.valid?
+
+    biweekly_template = ExpenseTemplate.new(
+      user: @user_one,
+      name: "Biweekly Test",
+      frequency: "biweekly"
+    )
+    assert biweekly_template.valid?
+
+    yearly_template = ExpenseTemplate.new(
+      user: @user_one,
+      name: "Yearly Test",
+      frequency: "yearly"
+    )
+    assert yearly_template.valid?
   end
 
-  test "should default group_type to variable" do
+  test "should default frequency to monthly" do
     expense_template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Default Test"
     )
-    assert_equal "variable", expense_template.group_type
-    assert expense_template.variable?
+    assert_equal "monthly", expense_template.frequency
   end
 
-  test "should default is_savings to false" do
-    expense_template = ExpenseTemplate.create!(
+  test "should allow due_date to be nil" do
+    expense_template = ExpenseTemplate.new(
       user: @user_one,
-      name: "Default Savings Test"
+      name: "Test Without Due Date",
+      frequency: "monthly",
+      due_date: nil
     )
-    assert_not expense_template.is_savings?
+    assert expense_template.valid?
+  end
+
+  test "should accept valid due_date" do
+    expense_template = ExpenseTemplate.new(
+      user: @user_one,
+      name: "Test With Due Date",
+      frequency: "monthly",
+      due_date: Date.today
+    )
+    assert expense_template.valid?
   end
 
   test "should default auto_create to true" do
@@ -165,28 +187,21 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     end
   end
 
-  test "fixed scope should return only fixed templates" do
-    fixed_templates = ExpenseTemplate.fixed
-    assert_includes fixed_templates, @expense_template_two
-    assert_not_includes fixed_templates, @expense_template_one
-  end
-
-  test "variable scope should return only variable templates" do
-    variable_templates = ExpenseTemplate.variable
-    assert_includes variable_templates, @expense_template_one
-    assert_not_includes variable_templates, @expense_template_two
-  end
-
-  test "savings scope should return only savings templates" do
-    savings_templates = ExpenseTemplate.savings
-    assert_includes savings_templates, @expense_template_three
-    assert_not_includes savings_templates, @expense_template_one
-  end
-
-  test "non_savings scope should return only non-savings templates" do
-    non_savings_templates = ExpenseTemplate.non_savings
-    assert_includes non_savings_templates, @expense_template_one
-    assert_not_includes non_savings_templates, @expense_template_three
+  test "by_frequency scope should return only templates with specific frequency" do
+    monthly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Monthly Template",
+      frequency: "monthly"
+    )
+    weekly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Weekly Template",
+      frequency: "weekly"
+    )
+    
+    monthly_templates = ExpenseTemplate.by_frequency("monthly")
+    assert_includes monthly_templates, monthly_template
+    assert_not_includes monthly_templates, weekly_template
   end
 
   test "auto_create scope should return only auto-create templates" do
@@ -194,14 +209,39 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     assert_includes auto_create_templates, @expense_template_one
   end
 
-  test "display_name should include (Savings) for savings templates" do
-    assert_equal "Emergency Fund (Savings)", @expense_template_three.display_name
+  test "display_name should return the template name" do
     assert_equal "Groceries", @expense_template_one.display_name
+    assert_equal "Rent", @expense_template_two.display_name
   end
 
-  test "group_type_text should return correct text" do
-    assert_equal "Fixed bill", @expense_template_two.group_type_text
-    assert_equal "Variable payment", @expense_template_one.group_type_text
+  test "frequency_text should return correct text" do
+    monthly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Monthly Test",
+      frequency: "monthly"
+    )
+    assert_equal "Monthly", monthly_template.frequency_text
+
+    weekly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Weekly Test",
+      frequency: "weekly"
+    )
+    assert_equal "Weekly", weekly_template.frequency_text
+
+    biweekly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Biweekly Test",
+      frequency: "biweekly"
+    )
+    assert_equal "Biweekly", biweekly_template.frequency_text
+
+    yearly_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Yearly Test",
+      frequency: "yearly"
+    )
+    assert_equal "Yearly", yearly_template.frequency_text
   end
 
   test "should default is_active to true" do

@@ -25,20 +25,20 @@
         </div>
 
         <div class="field">
-          <%= f.label :group_type, "Group Type", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.select :group_type, options_for_select([["Fixed", "fixed"], ["Variable", "variable"]], @expense_template.group_type), {}, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
+          <%= f.label :frequency, "Frequency", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.select :frequency, options_for_select([["Monthly", "monthly"], ["Weekly", "weekly"], ["Biweekly", "biweekly"], ["Yearly", "yearly"]], @expense_template.frequency || "monthly"), {}, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
+          <p class="mt-1 text-sm text-gray-500">How often this expense occurs</p>
+        </div>
+
+        <div class="field">
+          <%= f.label :due_date, "Due Date", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.date_field :due_date, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
+          <p class="mt-1 text-sm text-gray-500">Optional: When this expense is typically due</p>
         </div>
 
         <div class="field">
           <%= f.label :default_amount, "Default Amount", class: "block text-sm font-medium text-gray-700 mb-1" %>
           <%= f.number_field :default_amount, step: "0.01", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" %>
-        </div>
-
-        <div class="field">
-          <div class="flex items-center">
-            <%= f.check_box :is_savings, class: "h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" %>
-            <%= f.label :is_savings, "Savings Pot", class: "ml-2 block text-sm text-gray-700" %>
-          </div>
         </div>
 
         <div class="field">

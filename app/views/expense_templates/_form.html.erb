@@ -21,7 +21,28 @@
   </div>
 
   <div>
-    <%= f.label :default_amount, "Default Amount per Month", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.label :frequency, "Frequency", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.select :frequency, 
+          options_for_select([
+            ["Monthly", "monthly"], 
+            ["Weekly", "weekly"],
+            ["Biweekly", "biweekly"],
+            ["Yearly", "yearly"]
+          ], @template.frequency || "monthly"),
+          {}, 
+          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+    <p class="mt-1 text-sm text-gray-500">How often this expense occurs</p>
+  </div>
+
+  <div>
+    <%= f.label :due_date, "Due Date", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.date_field :due_date, 
+          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+    <p class="mt-1 text-sm text-gray-500">Optional: When this expense is typically due</p>
+  </div>
+
+  <div>
+    <%= f.label :default_amount, "Default Amount", class: "block text-sm font-medium text-gray-700 mb-2" %>
     <div class="relative">
       <span class="absolute left-3 top-2 text-gray-500">$</span>
       <%= f.number_field :default_amount, 
@@ -29,30 +50,10 @@
             min: "0",
             class: "w-full border border-gray-300 rounded-lg px-4 py-2 pl-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
     </div>
-    <p class="mt-1 text-sm text-gray-500">Optional: Set a default monthly amount for this expense</p>
-  </div>
-
-  <div>
-    <%= f.label :group_type, "Type", class: "block text-sm font-medium text-gray-700 mb-2" %>
-    <%= f.select :group_type, 
-          options_for_select([
-            ["Variable spending", "variable"], 
-            ["Fixed bill", "fixed"]
-          ], @template.group_type),
-          {}, 
-          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
-    <p class="mt-1 text-sm text-gray-500">Variable spending changes month-to-month; fixed bills stay the same</p>
+    <p class="mt-1 text-sm text-gray-500">Optional: Set a default amount for this expense</p>
   </div>
 
   <div class="space-y-4">
-    <div class="flex items-start gap-3">
-      <%= f.check_box :is_savings, 
-            class: "mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" %>
-      <div>
-        <%= f.label :is_savings, "This is a savings pot", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
-        <p class="text-sm text-gray-500">Mark this expense as a savings goal rather than regular spending</p>
-      </div>
-    </div>
 
     <div class="flex items-start gap-3">
       <%= f.check_box :auto_create, 
