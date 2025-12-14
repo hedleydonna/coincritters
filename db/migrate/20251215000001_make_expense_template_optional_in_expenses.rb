@@ -3,8 +3,8 @@ class MakeExpenseTemplateOptionalInExpenses < ActiveRecord::Migration[7.1]
     # Make expense_template_id nullable to allow one-off expenses
     change_column_null :expenses, :expense_template_id, true
     
-    # Foreign key constraint can remain - PostgreSQL foreign keys work fine with nulls
-    # We don't need to remove/re-add it
+    # Note: Foreign key constraints are not used in this codebase
+    # Referential integrity is handled at the model level via belongs_to validations
     
     # Update the uniqueness index to handle nulls properly
     # PostgreSQL treats nulls as distinct, but we need a partial unique index

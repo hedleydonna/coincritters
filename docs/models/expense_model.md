@@ -13,8 +13,8 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `monthly_budget_id` | bigint | NOT NULL, Foreign Key | References the monthly budget this expensebelongs to |
-| `expense_template_id` | bigint | Nullable, Foreign Key | References the expensetemplate this expenseis based on (nullable for one-off expenses) |
+| `monthly_budget_id` | bigint | NOT NULL | References the monthly budget this expensebelongs to (referential integrity enforced at model level) |
+| `expense_template_id` | bigint | Nullable | References the expensetemplate this expenseis based on (nullable for one-off expenses, referential integrity enforced at model level) |
 | `allotted_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | How much the user assigned to this expensethis month |
 | `name` | string | Conditionally Required | Custom name for one-off expenses, or override name for template-based expenses (required if expense_template_id is null) |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
@@ -27,10 +27,14 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 - **ExpenseTemplate ID Index**: Index on `expense_template_id` for fast template lookups
 - **Monthly Budget ID + Name Index**: Composite index on `[monthly_budget_id, name]` - ensures unique names per budget (used for one-off expenses and name overrides)
 
-### Foreign Keys
+### Referential Integrity
 
-- `expense.monthly_budget_id` references `monthly_budgets.id` with `on_delete: :cascade`. If a monthly budget is deleted, all its expense are deleted.
-- `expense.expense_template_id` references `expense_templates.id` with `on_delete: :cascade` (nullable - can be null for one-off expenses). If an expensetemplate is deleted, all its expense are deleted. One-off expenses (with null expense_template_id) are not affected.
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- `expense.monthly_budget_id` references `monthly_budgets.id` - enforced via `belongs_to :monthly_budget` validation
+- `expense.expense_template_id` references `expense_templates.id` (nullable) - enforced via `belongs_to :expense_template, optional: true` validation
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 
@@ -169,9 +173,10 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
    - `spent_amount` always starts at 0.0 (when there are no payment records)
 
 8. **Cascade Deletion**: 
-   - Deleting a monthly budget will delete all its associated expenses (both template-based and one-off)
-   - Deleting an expense template will delete all associated template-based expenses (one-off expenses are not affected)
-   - Deleting an expense will delete all its associated payment records
+   - Deleting a monthly budget will delete all its associated expenses (both template-based and one-off) via `dependent: :destroy` in `MonthlyBudget`
+   - Deleting an expense template will delete all associated template-based expenses via `dependent: :destroy` in `ExpenseTemplate` (one-off expenses are not affected)
+   - Deleting an expense will delete all its associated payment records via `dependent: :destroy` in `Expense`
+   - All cascade deletion is handled at the application level, not via database foreign key constraints
 
 ## Usage Examples
 

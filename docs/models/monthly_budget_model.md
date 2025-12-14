@@ -13,7 +13,7 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `user_id` | bigint | NOT NULL, Foreign Key | References the user who owns this budget |
+| `user_id` | bigint | NOT NULL | References the user who owns this budget (referential integrity enforced at model level) |
 | `month_year` | string | NOT NULL | Month and year for this budget (format: YYYY-MM, e.g., "2025-12") |
 | `total_actual_income` | decimal(12,2) | NOT NULL, Default: 0.0 | Total actual income assigned to this month from income events |
 | `flex_fund` | decimal(12,2) | NOT NULL, Default: 0.0 | Leftover/unassigned money (the user's flex fund) |
@@ -26,9 +26,13 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 - **User ID + Month Year Index**: Unique composite index on `[user_id, month_year]` - ensures one budget per user per month and provides fast lookup
 - **User ID Index**: Index on `user_id` for fast user lookups
 
-### Foreign Keys
+### Referential Integrity
 
-- `monthly_budgets.user_id` references `users.id` with `on_delete: :cascade`. If a user is deleted, all their monthly budgets are deleted.
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- `monthly_budgets.user_id` references `users.id` - enforced via `belongs_to :user` validation
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 
@@ -172,7 +176,7 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
    - New monthly budgets default to `total_actual_income: 0.0` if not specified
    - New monthly budgets default to `flex_fund: 0.0` if not specified
 
-5. **Cascade Deletion**: Deleting a user will delete all their monthly budgets.
+5. **Cascade Deletion**: Deleting a user will delete all their monthly budgets via `dependent: :destroy` in the `User` model association.
 
 ## Usage Examples
 

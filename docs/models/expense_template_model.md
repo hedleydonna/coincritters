@@ -13,7 +13,7 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `user_id` | bigint | NOT NULL, Foreign Key | References the user who owns this template |
+| `user_id` | bigint | NOT NULL | References the user who owns this template (referential integrity enforced at model level) |
 | `name` | string | NOT NULL | Template name (e.g., "Rent", "Groceries", "Emergency Fund") |
 | `frequency` | string | NOT NULL, Default: "monthly" | Payment frequency: "monthly", "weekly", "biweekly", or "yearly" |
 | `due_date` | date | Nullable | Optional due date for this expense |
@@ -28,9 +28,13 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 - **User ID + Name Index**: Composite unique index on `[user_id, name]` - ensures unique template names per user (only among active templates)
 - **Is Active Index**: Index on `is_active` - optimized for filtering active/inactive templates
 
-### Foreign Keys
+### Referential Integrity
 
-- `expense_templates.user_id` references `users.id` with `on_delete: :cascade`. If a user account is deleted (by admin), all their expensetemplates are automatically deleted via database cascade.
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- `expense_templates.user_id` references `users.id` - enforced via `belongs_to :user` validation
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Associations
 
@@ -111,7 +115,7 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 7. **Active Templates Only**: Most queries should filter to active templates using `.active`. Inactive templates are hidden from normal views but can still be accessed by admins.
 
 8. **Cascade Deletion**: 
-   - **User Deletion**: When a user account is deleted (by admin), all their expensetemplates are automatically deleted via database cascade (`on_delete: :cascade`).
+   - **User Deletion**: When a user account is deleted (by admin), all their expensetemplates are automatically deleted via `dependent: :destroy` in the `User` model association.
    - **Template Hard Delete**: When an expensetemplate is actually destroyed (hard delete, not just deactivated), all associated expense are deleted via `dependent: :destroy`. **Note:** Only admins can perform hard deletes on templates. Regular users can only soft delete (deactivate) templates.
 
 9. **Default Ordering**: All queries are ordered alphabetically by name by default. This provides consistent, user-friendly ordering in dropdowns and lists. Use `.reorder()` to override when needed (e.g., to show newest first).

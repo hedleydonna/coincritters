@@ -13,8 +13,8 @@ The Income Event model represents actual income received events in the Willow ap
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `user_id` | bigint | NOT NULL, Foreign Key | References the user who received this income |
-| `income_id` | bigint | Foreign Key (nullable) | Optionally references the income source this event came from. When present, the event's display name comes from `incomes.name`. |
+| `user_id` | bigint | NOT NULL | References the user who received this income (referential integrity enforced at model level) |
+| `income_id` | bigint | Nullable | Optionally references the income source this event came from (referential integrity enforced at model level). When present, the event's display name comes from `incomes.name`. |
 | `custom_label` | string | Nullable| Manual label for one-off income events that don't correspond to an income record (e.g., "Birthday Gift", "One-time Bonus"). Only used when `income_id` is null. When `income_id` is present, this field is typically `nil`. |
 | `month_year` | string | NOT NULL | Month/year the income was actually received (format: YYYY-MM) |
 | `assigned_month_year` | string | Nullable | Month/year this income should be attributed to (format: YYYY-MM) |
@@ -31,10 +31,14 @@ The Income Event model represents actual income received events in the Willow ap
 - **Income ID + Month Year Index**: Composite index on `[income_id, month_year]` - for finding events by income source and month
 - **Income ID Index**: Index on `income_id` for fast lookups by income source
 
-### Foreign Keys
+### Referential Integrity
 
-- **User**: `belongs_to :user` with `on_delete: :cascade` - when a user is deleted, all their income events are deleted
-- **Income**: `belongs_to :income, optional: true` with `on_delete: :cascade` - when an income source is deleted, associated events are deleted
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- **User**: `belongs_to :user` - enforced via model validation. When a user is deleted, all their income events are deleted via `dependent: :destroy` in the `User` model association.
+- **Income**: `belongs_to :income, optional: true` - enforced via model validation. When an income source is deleted, associated events are deleted via `dependent: :destroy` in the `Income` model association.
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 

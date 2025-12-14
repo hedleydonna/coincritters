@@ -13,7 +13,7 @@ The Income model represents income sources for users in the Willow application. 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `user_id` | bigint | NOT NULL, Foreign Key | References the user who owns this income |
+| `user_id` | bigint | NOT NULL | References the user who owns this income (referential integrity enforced at model level) |
 | `name` | string | NOT NULL | Name of the income source (e.g., "Salary", "Freelance") |
 | `frequency` | string | NOT NULL, Default: "monthly" | How often this income is received |
 | `estimated_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | Estimated amount of income |
@@ -29,9 +29,13 @@ The Income model represents income sources for users in the Willow application. 
 - **User ID + Name Index**: Unique composite index on `[user_id, name]` - prevents duplicate income names per user
 - **User ID + Active Index**: Composite index on `[user_id, active]` - optimized for filtering active incomes
 
-### Foreign Keys
+### Referential Integrity
 
-- **User**: `belongs_to :user` with `on_delete: :cascade` - when a user is deleted, all their incomes are deleted
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- **User**: `belongs_to :user` - enforced via model validation. When a user is deleted, all their incomes are deleted via `dependent: :destroy` in the `User` model association.
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 

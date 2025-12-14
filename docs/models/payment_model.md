@@ -13,7 +13,7 @@ The Payment model represents individual payment transactions within an expensein
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `envelope_id` | bigint | NOT NULL, Foreign Key | References the expensethis payment belongs to |
+| `envelope_id` | bigint | NOT NULL | References the expensethis payment belongs to (referential integrity enforced at model level) |
 | `amount` | decimal(12,2) | NOT NULL, Default: 0.0 | The amount spent (must be greater than 0) |
 | `spent_on` | date | NOT NULL | The date the payment occurred |
 | `notes` | text | | Optional notes about the payment |
@@ -23,11 +23,15 @@ The Payment model represents individual payment transactions within an expensein
 ### Indexes
 
 - **ExpenseID + Spent On Index**: Composite index on `[envelope_id, spent_on]` for fast lookups by expenseand date
-- **ExpenseID Index**: Automatically created by `t.references` for foreign key lookups
+- **ExpenseID Index**: Index on `expense_id` for fast expense lookups
 
-### Foreign Keys
+### Referential Integrity
 
-- `payments.envelope_id` references `expense.id` with `on_delete: :cascade`. If an expenseis deleted, all its payment records are deleted.
+**Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
+
+- `payments.expense_id` references `expenses.id` - enforced via `belongs_to :expense` validation. If an expense is deleted, all its payment records are deleted via `dependent: :destroy` in the `Expense` model association.
+
+Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 

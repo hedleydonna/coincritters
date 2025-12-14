@@ -111,30 +111,30 @@ erDiagram
 
 1. **users → incomes** (1:N)
    - One user can have many income sources
-   - Cascade delete: When a user is deleted, all their incomes are deleted
+   - Delete behavior: When a user is deleted, all their incomes are deleted via `dependent: :destroy` in the User model
 
 2. **users → income_events** (1:N)
    - One user can have many income events
-   - Cascade delete: When a user is deleted, all their income events are deleted
+   - Delete behavior: When a user is deleted, all their income events are deleted via `dependent: :destroy` in the User model
 
 3. **users → monthly_budgets** (1:N)
    - One user can have many monthly budgets (one per month)
-   - Cascade delete: When a user is deleted, all their monthly budgets are deleted
+   - Delete behavior: When a user is deleted, all their monthly budgets are deleted via `dependent: :destroy` in the User model
    - Unique constraint: One budget per user per month (`user_id`, `month_year`)
 
 4. **users → expense_templates** (1:N)
    - One user can have many expensetemplates (reusable templates for creating expense)
-   - Cascade delete: When a user is deleted, all their expensetemplates are deleted
+   - Delete behavior: When a user is deleted, all their expensetemplates are deleted via `dependent: :destroy` in the User model
    - Unique constraint: One template name per user (`user_id`, `name`)
 
 5. **incomes → income_events** (1:N, optional)
    - One income source can have many income events (tracking actual payments)
    - Optional relationship: Income events can exist without being linked to an income source
-   - Cascade delete: When an income is deleted, all related income events are deleted
+   - Delete behavior: When an income is deleted, all related income events are deleted via `dependent: :destroy` in the Income model
 
 6. **monthly_budgets → expense** (1:N)
    - One monthly budget can have many expense (payment categories for that month)
-   - Cascade delete: When a monthly budget is deleted, all its expense are deleted
+   - Delete behavior: When a monthly budget is deleted, all its expense are deleted via `dependent: :destroy` in the MonthlyBudget model
    - Unique constraint: One expenseper template per budget (`monthly_budget_id`, `expense_template_id`), unless name override is used
 
 7. **expense_templates → expense** (1:N, optional)
@@ -143,11 +143,11 @@ erDiagram
    - Expense can be template-based (has expense_template_id) or one-off (expense_template_id is null)
    - Template-based expenses can override template name on a per-month basis
    - One-off expenses require a name and don't use templates
-   - Cascade delete: When an expensetemplate is deleted, only template-based related expenses are deleted (one-off expenses are unaffected)
+   - Delete behavior: When an expensetemplate is deleted, only template-based related expenses are deleted via `dependent: :destroy` in the ExpenseTemplate model (one-off expenses are unaffected)
 
 8. **expense → payments** (1:N)
    - One expensecan have many payment records (tracking individual transactions)
-   - Cascade delete: When an expenseis deleted, all its payment records are deleted
+   - Delete behavior: When an expense is deleted, all its payment records are deleted via `dependent: :destroy` in the Expense model
 
 ## Unique Constraints
 
@@ -189,7 +189,7 @@ These fields are calculated at the model level and are not stored in the databas
 
 ## Notes
 
-- All foreign keys use `on_delete: :cascade`, meaning child records are automatically deleted when parent records are deleted
+- **Referential Integrity**: This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+. Cascade deletion is handled via `dependent: :destroy` in model associations.
 - All tables include `created_at` and `updated_at` timestamps (managed by Rails)
 - Decimal fields use `precision: 12, scale: 2` for currency values
 - The `frequency` field in `expense_templates` can be: "monthly", "weekly", "biweekly", or "yearly"
