@@ -1,44 +1,61 @@
 <div class="max-w-4xl mx-auto py-8 px-4">
   <!-- Header -->
   <div class="mb-6">
-    <div class="flex items-center justify-between mb-2">
-      <h1 class="text-3xl font-bold text-gray-900"><%= @budget.name %></h1>
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-3xl font-bold text-gray-900">Money Map</h1>
+      <%= link_to "← Dashboard", dashboard_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+    </div>
+    
+    <!-- Month Navigation: Segmented Control Style (Mobile-Friendly) -->
+    <div class="mb-4">
+      <!-- Segmented Control for Current/Next -->
+      <div class="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1 mb-3" role="tablist">
+        <%= link_to expenses_path(month: @current_month), 
+              class: "rounded-md px-4 py-2 text-sm font-medium transition-all #{@is_current_month ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}" do %>
+          <span class="hidden sm:inline"><%= @current_budget&.name || @current_month %></span>
+          <span class="sm:hidden">Current</span>
+        <% end %>
+        
+        <%= link_to expenses_path(month: @next_month_str), 
+              class: "rounded-md px-4 py-2 text-sm font-medium transition-all #{@is_next_month ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}" do %>
+          <span class="hidden sm:inline"><%= @next_budget&.name || @next_month_str %></span>
+          <span class="sm:hidden">Next</span>
+        <% end %>
+      </div>
       
-      <!-- Month Navigation -->
-      <% if @all_months.length > 1 %>
-        <div class="flex items-center gap-3">
-          <% if @previous_month %>
-            <%= link_to expenses_path(month: @previous_month), 
-                  class: "flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors" do %>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-              </svg>
-              <% if @viewing_month == @current_month %>
-                <span>Previous Month</span>
+      <!-- Past Months Dropdown (if any exist) -->
+      <% if @past_months.any? %>
+        <div class="mt-3 sm:mt-0 sm:inline-block sm:ml-3">
+          <details class="relative">
+            <summary class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium cursor-pointer border border-gray-300 rounded-lg bg-white hover:bg-gray-50 inline-block">
+              Past months
+            </summary>
+            <div class="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
+              <% @past_months.each do |past_month| %>
+                <% past_month_name = Date.parse("#{past_month}-01").strftime("%B %Y") %>
+                <%= link_to past_month_name, expenses_path(month: past_month),
+                      class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
               <% end %>
-            <% end %>
-          <% end %>
-          
-          <% if @viewing_month != @current_month %>
-            <%= link_to "Back to Current Month", expenses_path, 
-                  class: "text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium px-3 py-1" %>
-          <% end %>
-          
-          <% if @next_month %>
-            <%= link_to expenses_path(month: @next_month), 
-                  class: "flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors" do %>
-              <% if @viewing_month == @current_month %>
-                <span>Next Month</span>
-              <% end %>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            <% end %>
-          <% end %>
+            </div>
+          </details>
         </div>
       <% end %>
     </div>
-    <%= link_to "← Dashboard", dashboard_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+    
+    <!-- View Mode Indicator -->
+    <% if @is_past_month %>
+      <div class="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <p class="text-sm text-gray-600">
+          <span class="font-medium">View only:</span> This is a past month. You can view expenses but cannot add payments or edit.
+        </p>
+      </div>
+    <% elsif @is_next_month %>
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p class="text-sm text-blue-700">
+          <span class="font-medium">Planning mode:</span> You can edit allotted amounts and plan ahead, but cannot add payments until this month arrives.
+        </p>
+      </div>
+    <% end %>
   </div>
 
   <!-- Top summary card -->
@@ -75,42 +92,13 @@
     </div>
   </div>
 
-  <!-- Start Next Month button -->
-  <% current_month = Time.current.strftime("%Y-%m") %>
-  <% if @budget.month_year == current_month %>
-    <% next_month = (Date.today + 1.month).strftime("%Y-%m") %>
-    <% next_month_exists = current_user.monthly_budgets.exists?(month_year: next_month) %>
-    <% unless next_month_exists %>
-      <% next_month_name = Date.parse("#{next_month}-01").strftime("%B %Y") %>
-      <% has_active_templates = current_user.expense_templates.active.auto_create.exists? %>
-      <div class="mb-6">
-        <%= button_to start_next_month_path, 
-              method: :post,
-              class: "w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed",
-              data: { 
-                turbo_confirm: has_active_templates ? nil : "You don't have any active expense templates set to auto-create. The budget will be created empty. Continue?"
-              } do %>
-          <span class="flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Start <%= next_month_name %>
-          </span>
-        <% end %>
-        <% unless has_active_templates %>
-          <p class="mt-2 text-sm text-gray-500 text-center">
-            💡 Create expense templates to auto-add expenses each month
-          </p>
-        <% end %>
-      </div>
-    <% end %>
+  <!-- Add payment button (only for current month) -->
+  <% if @is_current_month %>
+    <div class="mb-6">
+      <%= link_to "+ Add payment", new_payment_path(month: @viewing_month), 
+            class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
+    </div>
   <% end %>
-
-  <!-- Add payment button -->
-  <div class="mb-6">
-    <%= link_to "+ Add payment", new_payment_path(month: @viewing_month), 
-          class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
-  </div>
 
   <!-- Expenses list -->
   <% if @expenses.any? %>
@@ -150,8 +138,12 @@
                 <% end %>
               </p>
             </div>
-            <%= link_to "Add payment", new_payment_path(expense_id: expense.id, month: @viewing_month),
-                  class: "text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium" %>
+            <% if @is_current_month %>
+              <%= link_to "Add payment", new_payment_path(expense_id: expense.id, month: @viewing_month),
+                    class: "text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium" %>
+            <% else %>
+              <span class="text-sm text-gray-400">No payments in <%= @is_next_month ? "planning mode" : "past months" %></span>
+            <% end %>
           </div>
         </div>
       <% end %>
@@ -165,10 +157,12 @@
     </div>
   <% end %>
 
-  <!-- One-off expense -->
-  <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-    <%= link_to "+ Add one-off expense", new_expense_path(month: @viewing_month), 
-          class: "text-blue-600 hover:text-blue-800 hover:underline text-lg font-medium" %>
-  </div>
+  <!-- One-off expense (only for current and next month) -->
+  <% unless @is_past_month %>
+    <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+      <%= link_to "+ Add one-off expense", new_expense_path(month: @viewing_month), 
+            class: "text-blue-600 hover:text-blue-800 hover:underline text-lg font-medium" %>
+    </div>
+  <% end %>
 </div>
 

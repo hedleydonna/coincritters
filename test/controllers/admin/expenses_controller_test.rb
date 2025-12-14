@@ -87,11 +87,35 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
       post admin_expenses_path, params: {
         expense: {
           monthly_budget_id: nil,
-          expense_template_id: nil
+          expense_template_id: nil,
+          name: nil
         }
       }
     end
     assert_response :unprocessable_entity
+  end
+
+  test "should create one-off expense without template" do
+    sign_in @admin
+    monthly_budget = monthly_budgets(:one)
+    
+    assert_difference("Expense.count", 1) do
+      post admin_expenses_path, params: {
+        expense: {
+          monthly_budget_id: monthly_budget.id,
+          expense_template_id: nil,
+          name: "Birthday Gift",
+          allotted_amount: 50.00
+        }
+      }
+    end
+    
+    expense = Expense.last
+    assert_nil expense.expense_template_id
+    assert_equal "Birthday Gift", expense.name
+    assert_equal 50.00, expense.allotted_amount.to_f
+    assert_redirected_to admin_expense_path(expense)
+    assert_equal "Expense was successfully created.", flash[:notice]
   end
 
   # Test edit action

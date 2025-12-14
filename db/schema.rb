@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_15_000000) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_15_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -34,10 +34,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000000) do
     t.decimal "allotted_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "expense_template_id", null: false
+    t.bigint "expense_template_id"
     t.string "name"
     t.index ["expense_template_id"], name: "index_expenses_on_expense_template_id"
-    t.index ["monthly_budget_id", "expense_template_id"], name: "index_envelopes_on_budget_and_envelope_template", unique: true
+    t.index ["monthly_budget_id", "expense_template_id"], name: "index_expenses_on_budget_and_template_when_template_present", unique: true, where: "(expense_template_id IS NOT NULL)"
     t.index ["monthly_budget_id", "name"], name: "index_envelopes_on_budget_and_name_override"
     t.index ["monthly_budget_id"], name: "index_expenses_on_monthly_budget_id"
   end

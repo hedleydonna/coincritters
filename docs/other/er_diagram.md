@@ -73,9 +73,9 @@ erDiagram
     expense {
         bigint id PK
         bigint monthly_budget_id FK "NOT NULL"
-        bigint expense_template_id FK "NOT NULL"
+        bigint expense_template_id FK "nullable - null for one-off expenses"
         decimal allotted_amount "precision: 12, scale: 2, default: 0.0, NOT NULL"
-        string name "nullable, override field - uses template name if null"
+        string name "required for one-off expenses, optional override for template-based expenses"
         datetime created_at
         datetime updated_at
     }
@@ -137,11 +137,13 @@ erDiagram
    - Cascade delete: When a monthly budget is deleted, all its expense are deleted
    - Unique constraint: One expenseper template per budget (`monthly_budget_id`, `expense_template_id`), unless name override is used
 
-7. **expense_templates → expense** (1:N)
+7. **expense_templates → expense** (1:N, optional)
    - One expensetemplate can be used in many expense (across different monthly budgets)
    - Templates provide default values (name, frequency, due_date, default_amount)
-   - Expense can override template name on a per-month basis
-   - Cascade delete: When an expensetemplate is deleted, all related expense are deleted
+   - Expense can be template-based (has expense_template_id) or one-off (expense_template_id is null)
+   - Template-based expenses can override template name on a per-month basis
+   - One-off expenses require a name and don't use templates
+   - Cascade delete: When an expensetemplate is deleted, only template-based related expenses are deleted (one-off expenses are unaffected)
 
 8. **expense → payments** (1:N)
    - One expensecan have many payment records (tracking individual transactions)
@@ -154,24 +156,36 @@ erDiagram
 3. **incomes(user_id, name)** - Unique income name per user
 4. **monthly_budgets(user_id, month_year)** - One budget per user per month
 5. **expense_templates(user_id, name)** - Unique template name per user
-6. **expense(monthly_budget_id, expense_template_id)** - One expenseper template per budget (unless name override is used)
+6. **expense(monthly_budget_id, expense_template_id)** - Partial unique index: One expense per template per budget when expense_template_id IS NOT NULL (unless name override is used)
+7. **expense(monthly_budget_id, name)** - Unique name per budget (for one-off expenses and name overrides)
 7. **expense(monthly_budget_id, name)** - Unique name per budget when using name override
+
+## Expense Types
+
+Expenses can be either:
+- **Template-based**: Has an `expense_template_id`, inherits name/frequency/due_date from template (unless name is overridden)
+- **One-off**: `expense_template_id` is null, requires a `name`, uses default frequency ("monthly") and no due_date
 
 ## Override Fields
 
-Expense support override fields that allow customization per month:
+For template-based expenses:
 - **name** (nullable): If set, overrides the template name for this expense
+- When name is `NULL`, the expense uses the template's name
+- Frequency and due_date always come from the template and cannot be overridden
 
-When override fields are `NULL`, the expense uses the values from its associated `expense_template`. Frequency and due_date always come from the template and cannot be overridden.
+For one-off expenses:
+- **name** (required): Must be unique within the monthly budget
+- Frequency defaults to "monthly"
+- Due date is null
 
 ## Calculated Fields (Not in Database)
 
 These fields are calculated at the model level and are not stored in the database:
 
 - **expense.spent_amount** - Calculated as `payments.sum(:amount)` for that expense
-- **expense.name** - Uses override if present, otherwise delegates to `expense_template.name`
-- **expense.frequency** - Always delegates to `expense_template.frequency`
-- **expense.due_date** - Always delegates to `expense_template.due_date`
+- **expense.name** - For template-based: uses override if present, otherwise delegates to `expense_template.name`. For one-off: uses the stored `name` field.
+- **expense.frequency** - For template-based: delegates to `expense_template.frequency`. For one-off: defaults to "monthly"
+- **expense.due_date** - For template-based: delegates to `expense_template.due_date`. For one-off: nil
 
 ## Notes
 

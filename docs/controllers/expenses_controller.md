@@ -1,0 +1,176 @@
+# ExpensesController Documentation
+
+## Overview
+
+The `ExpensesController` provides the main user interface for viewing and managing expenses in the Money Map. It automatically creates current and next month budgets, provides tab navigation between months, and handles creating both template-based and one-off expenses.
+
+## Location
+
+`app/controllers/expenses_controller.rb`
+
+## Inheritance
+
+- Inherits from `ApplicationController`
+- Requires authentication (`before_action :authenticate_user!`)
+
+## Routes
+
+All routes are under `/expenses`:
+- **GET** `/expenses` - View Money Map (index)
+- **GET** `/expenses?month=YYYY-MM` - View specific month's Money Map
+- **GET** `/expenses/new` - Show new expense form
+- **GET** `/expenses/new?month=YYYY-MM` - Show new expense form for specific month
+- **POST** `/expenses` - Create a new expense
+- **POST** `/expenses/start_next_month` - Create next month's budget (deprecated - auto-created now)
+
+## Actions
+
+### `index`
+
+The main Money Map view. Automatically creates current and next month budgets if they don't exist.
+
+**Auto-Creation Behavior:**
+- Automatically creates current month budget if missing
+- Automatically creates next month budget if missing
+- Both budgets are created with expenses from active templates (auto_create: true)
+
+**Month Navigation:**
+- Supports `month` parameter to view specific months
+- Defaults to current month if no parameter provided
+- Redirects to current month if trying to view non-existent future month
+
+**Instance Variables:**
+- `@budget` - The monthly budget being viewed
+- `@expenses` - All expenses for the budget, ordered by name
+- `@total_income` - Total actual income for the month
+- `@total_spent` - Total spent across all expenses
+- `@remaining` - Remaining amount to assign
+- `@bank_match` - Whether bank balance matches expected balance
+- `@bank_difference` - Difference between bank balance and expected balance
+- `@current_month` - Current month string (YYYY-MM)
+- `@next_month_str` - Next month string (YYYY-MM)
+- `@viewing_month` - Month being viewed (YYYY-MM)
+- `@is_current_month` - Boolean: viewing current month
+- `@is_next_month` - Boolean: viewing next month
+- `@is_past_month` - Boolean: viewing past month
+- `@current_budget` - Current month's budget object
+- `@next_budget` - Next month's budget object
+- `@past_months` - Array of past month strings for dropdown
+
+**View Mode Indicators:**
+- Current month: Full editing, can add payments
+- Next month: Planning mode - can edit allotted amounts, cannot add payments
+- Past months: View-only - cannot edit or add payments
+
+### `new`
+
+Shows the form to create a new expense (one-off or template-based).
+
+**Instance Variables:**
+- `@budget` - The monthly budget to create expense in (from params or current)
+- `@expense` - New, unsaved Expense instance
+- `@expense_templates` - All active expense templates for user selection
+- `@viewing_month` - Month being viewed (for navigation)
+
+**Parameters:**
+- `month` (optional) - Month to create expense for (YYYY-MM format)
+
+### `create`
+
+Creates a new expense (template-based or one-off).
+
+**Success:**
+- Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense added!"
+
+**Failure:**
+- Re-renders the `new` template with `:unprocessable_entity` status
+- Re-sets `@expense_templates` and `@viewing_month` for the form
+
+**Parameters:**
+- `expense[month_year]` or `month` - Month to create expense for
+- `expense[expense_template_id]` - Template ID (optional for one-off expenses)
+- `expense[name]` - Expense name (required for one-off, optional for template-based)
+- `expense[allotted_amount]` - Amount to allocate
+
+### `start_next_month` (Deprecated)
+
+This action is kept for backward compatibility but is no longer needed since next month is automatically created when viewing the Money Map.
+
+## Strong Parameters
+
+### `expense_params`
+
+Permits the following parameters:
+
+- `expense_template_id` - The expense template this expense is based on (optional - can be null for one-off expenses)
+- `allotted_amount` - Amount allocated to this expense (decimal, default: 0.0)
+- `name` - Expense name (required for one-off expenses, optional override for template-based expenses)
+
+## Access Control
+
+- Requires user authentication (`before_action :authenticate_user!`)
+- Users can only view/manage their own budgets and expenses
+
+## Related Models
+
+- **Expense** - The model being managed (can be template-based or one-off)
+- **ExpenseTemplate** - Optional association for template-based expenses
+- **MonthlyBudget** - Required association - expense belongs to a budget
+- **Payment** - Expenses have many payments (only for current month)
+
+## Views
+
+- `app/views/expenses/index.html.erb` - Money Map view with tab navigation
+- `app/views/expenses/new.html.erb` - New expense form
+
+## Usage Examples
+
+### Creating a Template-Based Expense
+
+```ruby
+POST /expenses
+{
+  expense: {
+    monthly_budget_id: 1,
+    expense_template_id: 5,
+    allotted_amount: 500.00
+  }
+}
+```
+
+### Creating a One-Off Expense
+
+```ruby
+POST /expenses
+{
+  expense: {
+    monthly_budget_id: 1,
+    expense_template_id: null,  # or omit entirely
+    name: "Birthday Gift",
+    allotted_amount: 50.00
+  }
+}
+```
+
+### Viewing a Specific Month
+
+```ruby
+GET /expenses?month=2026-01
+```
+
+## Key Features
+
+1. **Auto-Creation**: Automatically creates current and next month budgets on first view
+2. **Tab Navigation**: Easy switching between current and next month
+3. **Month Restrictions**:
+   - Current month: Full access (edit expenses, add payments)
+   - Next month: Planning mode (edit allotted amounts, no payments)
+   - Past months: View-only
+4. **Two Expense Types**:
+   - Template-based: Created from expense templates (recurring)
+   - One-off: Created without template (unique, non-recurring)
+
+---
+
+**Last Updated**: December 2025
+

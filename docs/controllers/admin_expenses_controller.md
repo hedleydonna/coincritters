@@ -112,7 +112,7 @@ end
 Permits the following parameters:
 
 - `monthly_budget_id` - The monthly budget this expensebelongs to
-- `expense_template_id` - The expensetemplate this expenseis based on
+- `expense_template_id` - The expensetemplate this expenseis based on (optional - can be null for one-off expenses)
 - `allotted_amount` - The amount allocated to this expensefor the month
 - `name` - Optional override name (uses template name if not provided)
 
@@ -127,7 +127,7 @@ Permits the following parameters:
 
 - **Expense* - The model being managed
 - **MonthlyBudget** - Required association for expense
-- **ExpenseTemplate** - Required association for expense
+- **ExpenseTemplate** - Optional association for expense (nullable for one-off expenses)
 
 ## Views
 

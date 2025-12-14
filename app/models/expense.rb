@@ -1,7 +1,7 @@
 # app/models/expense.rb
 class Expense < ApplicationRecord
   belongs_to :monthly_budget
-  belongs_to :expense_template
+  belongs_to :expense_template, optional: true
   has_one :user, through: :monthly_budget
 
   has_many :payments, dependent: :destroy
@@ -12,14 +12,25 @@ class Expense < ApplicationRecord
   validates :allotted_amount,
             numericality: { greater_than_or_equal_to: 0 }
 
-  # Ensure only one expense per template per month (unless using name override)
-  # If name is overridden, we allow multiple expenses from same template
+  # Require name when no template is provided (one-off expenses)
+  validates :name,
+            presence: true,
+            if: -> { expense_template_id.nil? }
+
+  # Require template when name is not provided (unless it's a one-off)
+  validates :expense_template_id,
+            presence: true,
+            unless: -> { read_attribute(:name).present? }
+
+  # Ensure only one expense per template per month (unless using name override or one-off)
+  # If name is overridden or it's a one-off, we allow multiple expenses
   validates :expense_template_id,
             uniqueness: { scope: :monthly_budget_id, 
-                         message: "already has an expense for this template in this budget" },
-            unless: -> { read_attribute(:name).present? } # Allow duplicates if using name override
+                         message: "already has an expense for this template in this budget",
+                         allow_nil: true },
+            unless: -> { read_attribute(:name).present? || expense_template_id.nil? }
 
-  # If using name override, ensure unique name per budget
+  # If using name (either override or one-off), ensure unique name per budget
   validates :name,
             uniqueness: { scope: :monthly_budget_id, allow_nil: true },
             if: -> { read_attribute(:name).present? }
@@ -30,7 +41,7 @@ class Expense < ApplicationRecord
   # Quick scope for expenses that are over budget
   scope :over_budget, -> { where("(SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.expense_id = expenses.id) > allotted_amount") }
   
-  # Scope for expenses by frequency
+  # Scope for expenses by frequency (only applies to expenses with templates)
   scope :by_frequency, ->(freq) {
     joins(:expense_template).merge(ExpenseTemplate.by_frequency(freq))
   }

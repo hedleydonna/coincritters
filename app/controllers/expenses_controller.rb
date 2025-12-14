@@ -3,17 +3,33 @@ class ExpensesController < ApplicationController
   before_action :authenticate_user!
 
   def index
+    # Auto-create current and next month if they don't exist
+    current_month_str = Time.current.strftime("%Y-%m")
+    next_month_str = (Date.today + 1.month).strftime("%Y-%m")
+    
+    # Ensure current month exists
+    current_user.current_budget!
+    
+    # Ensure next month exists
+    unless current_user.monthly_budgets.exists?(month_year: next_month_str)
+      current_user.create_next_month_budget!
+    end
+    
     # Allow viewing a specific month via params, otherwise show current month
-    month_year = params[:month] || Time.current.strftime("%Y-%m")
+    month_year = params[:month] || current_month_str
     
     @budget = current_user.monthly_budgets.find_by(month_year: month_year)
-    # If viewing a specific month that doesn't exist, fall back to current month
-    @budget ||= current_user.current_budget! if month_year == Time.current.strftime("%Y-%m")
     
     unless @budget
-      month_name = Date.parse("#{month_year}-01").strftime("%B %Y") rescue month_year
-      redirect_to expenses_path, alert: "#{month_name}'s budget doesn't exist yet."
-      return
+      # If trying to view a past month that doesn't exist, redirect to current
+      if month_year < current_month_str
+        redirect_to expenses_path, alert: "That month's budget doesn't exist."
+        return
+      else
+        # For future months, just redirect to current
+        redirect_to expenses_path
+        return
+      end
     end
     
     @expenses = @budget.expenses.order(:name)
@@ -26,14 +42,21 @@ class ExpensesController < ApplicationController
     @bank_difference = @budget.bank_difference
 
     # Month navigation helpers
-    @current_month = Time.current.strftime("%Y-%m")
+    @current_month = current_month_str
+    @next_month_str = next_month_str
     @viewing_month = @budget.month_year
-    @all_months = current_user.monthly_budgets.pluck(:month_year).sort
     
-    # Calculate previous and next months
-    current_index = @all_months.index(@viewing_month)
-    @previous_month = current_index && current_index > 0 ? @all_months[current_index - 1] : nil
-    @next_month = current_index && current_index < @all_months.length - 1 ? @all_months[current_index + 1] : nil
+    # Determine if viewing current, next, or past month
+    @is_current_month = @viewing_month == @current_month
+    @is_next_month = @viewing_month == @next_month_str
+    @is_past_month = @viewing_month < @current_month
+    
+    # Get current and next month budgets for tab navigation
+    @current_budget = current_user.monthly_budgets.find_by(month_year: @current_month)
+    @next_budget = current_user.monthly_budgets.find_by(month_year: @next_month_str)
+    
+    # Get all past months for dropdown
+    @past_months = current_user.monthly_budgets.where("month_year < ?", @current_month).order(month_year: :desc).pluck(:month_year)
   end
 
   def new

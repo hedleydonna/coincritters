@@ -31,12 +31,36 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_includes expense.errors[:monthly_budget], "must exist"
   end
 
-  test "should require an expense_template" do
+  test "should require either expense_template or name for one-off expenses" do
+    # Without template or name - should be invalid
     expense = Expense.new(
       monthly_budget: @monthly_budget_one
     )
     assert_not expense.valid?
-    assert_includes expense.errors[:expense_template], "must exist"
+    # Should have validation errors - at least one of expense_template_id or name should have an error
+    assert expense.errors.full_messages.any?, "Should have validation errors: #{expense.errors.full_messages}"
+    
+    # With name but no template - should be valid (one-off expense)
+    one_off_expense = Expense.new(
+      monthly_budget: @monthly_budget_one,
+      name: "One-off Expense Unique Test",
+      allotted_amount: 100.00
+    )
+    assert one_off_expense.valid?, "One-off expense should be valid: #{one_off_expense.errors.full_messages}"
+    
+    # With template but no name - should be valid (template-based expense)
+    # Create a new template that doesn't have an expense yet in this budget
+    new_template = ExpenseTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "New Template for Test",
+      frequency: "monthly"
+    )
+    template_expense = Expense.new(
+      monthly_budget: @monthly_budget_one,
+      expense_template: new_template,
+      allotted_amount: 100.00
+    )
+    assert template_expense.valid?, "Template-based expense should be valid: #{template_expense.errors.full_messages}"
   end
 
   test "should enforce unique expense_template per monthly_budget" do
@@ -47,6 +71,58 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     assert_not duplicate_expense.valid?
     assert_includes duplicate_expense.errors[:expense_template_id], "already has an expense for this template in this budget"
+  end
+
+  test "should allow creating one-off expenses without templates" do
+    one_off = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      name: "Birthday Gift",
+      allotted_amount: 50.00
+    )
+    
+    assert_not_nil one_off.id
+    assert_nil one_off.expense_template_id
+    assert_equal "Birthday Gift", one_off.name
+    assert_equal 50.00, one_off.allotted_amount.to_f
+  end
+
+  test "should require unique name for one-off expenses per budget" do
+    # Create first one-off expense
+    Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      name: "One-off Test",
+      allotted_amount: 25.00
+    )
+    
+    # Try to create duplicate name in same budget - should fail
+    duplicate = Expense.new(
+      monthly_budget: @monthly_budget_one,
+      name: "One-off Test",
+      allotted_amount: 30.00
+    )
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:name], "has already been taken"
+    
+    # But same name in different budget should work
+    other_budget = monthly_budgets(:two)
+    different_budget_expense = Expense.new(
+      monthly_budget: other_budget,
+      name: "One-off Test",
+      allotted_amount: 30.00
+    )
+    assert different_budget_expense.valid?
+  end
+
+  test "one-off expenses should have default frequency when no template" do
+    one_off = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      name: "Test One-off",
+      allotted_amount: 100.00
+    )
+    
+    assert_equal "monthly", one_off.frequency
+    assert_equal "Monthly", one_off.frequency_text
+    assert_nil one_off.due_date
   end
 
   test "different monthly_budgets can have expenses with same expense_template" do

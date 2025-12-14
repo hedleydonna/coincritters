@@ -14,23 +14,23 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
 | `monthly_budget_id` | bigint | NOT NULL, Foreign Key | References the monthly budget this expensebelongs to |
-| `expense_template_id` | bigint | NOT NULL, Foreign Key | References the expensetemplate this expenseis based on |
+| `expense_template_id` | bigint | Nullable, Foreign Key | References the expensetemplate this expenseis based on (nullable for one-off expenses) |
 | `allotted_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | How much the user assigned to this expensethis month |
-| `name` | string | Nullable | Override field: Custom name for this expense(uses template name if null) |
+| `name` | string | Conditionally Required | Custom name for one-off expenses, or override name for template-based expenses (required if expense_template_id is null) |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
 ### Indexes
 
-- **Monthly Budget ID + ExpenseTemplate ID Index**: Unique composite index on `[monthly_budget_id, expense_template_id]` - ensures one expenseper template per budget (unless name override is used)
+- **Monthly Budget ID + ExpenseTemplate ID Index**: Partial unique index on `[monthly_budget_id, expense_template_id]` (only when expense_template_id IS NOT NULL) - ensures one expense per template per budget (unless name override is used)
 - **Monthly Budget ID Index**: Index on `monthly_budget_id` for fast budget lookups
 - **ExpenseTemplate ID Index**: Index on `expense_template_id` for fast template lookups
-- **Monthly Budget ID + Name Index**: Composite index on `[monthly_budget_id, name]` - for name override lookups
+- **Monthly Budget ID + Name Index**: Composite index on `[monthly_budget_id, name]` - ensures unique names per budget (used for one-off expenses and name overrides)
 
 ### Foreign Keys
 
 - `expense.monthly_budget_id` references `monthly_budgets.id` with `on_delete: :cascade`. If a monthly budget is deleted, all its expense are deleted.
-- `expense.expense_template_id` references `expense_templates.id` with `on_delete: :cascade`. If an expensetemplate is deleted, all its expense are deleted.
+- `expense.expense_template_id` references `expense_templates.id` with `on_delete: :cascade` (nullable - can be null for one-off expenses). If an expensetemplate is deleted, all its expense are deleted. One-off expenses (with null expense_template_id) are not affected.
 
 ## Model Location
 
@@ -45,9 +45,9 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
   expensemonthly_budget  # Returns the MonthlyBudget object
   ```
 
-- **ExpenseTemplate**: Each expensebelongs to exactly one expensetemplate
+- **ExpenseTemplate**: Each expensecan optionally belong to an expensetemplate (nullable association for one-off expenses)
   ```ruby
-  expenseexpense_template  # Returns the ExpenseTemplate object
+  expenseexpense_template  # Returns the ExpenseTemplate object, or nil for one-off expenses
   ```
 
 ### Has Many
@@ -73,24 +73,34 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 - `validates :allotted_amount, numericality: { greater_than_or_equal_to: 0 }`:
   - `allotted_amount` must be a number greater than or equal to 0.
 
+### Presence Validations
+
+- `validates :name, presence: true, if: -> { expense_template_id.nil? }`:
+  - Name is required when creating a one-off expense (no template).
+- `validates :expense_template_id, presence: true, unless: -> { name.present? }`:
+  - Template is required when name is not provided (must have either template or name).
+
 ### Uniqueness Validations
 
-- `validates :expense_template_id, uniqueness: { scope: :monthly_budget_id }`:
-  - A monthly budget can only have one expensefor each expensetemplate (unless name override is used).
+- `validates :expense_template_id, uniqueness: { scope: :monthly_budget_id, allow_nil: true }` (when template is present and no name override):
+  - A monthly budget can only have one expense for each expensetemplate (unless name override is used).
   - Prevents duplicate templates within the same budget.
-- `validates :name, uniqueness: { scope: :monthly_budget_id }` (if name override is used):
-  - If using a name override, the name must be unique within the monthly budget.
+  - Does not apply to one-off expenses (null expense_template_id).
+- `validates :name, uniqueness: { scope: :monthly_budget_id }` (when name is provided):
+  - If using a name (either for one-off or as override), the name must be unique within the monthly budget.
 
 ### Database Constraints
 
-- **Unique Constraint**: The database enforces uniqueness on `[monthly_budget_id, expense_template_id]` - a monthly budget can only have one expenseper template (unless name override is used).
+- **Partial Unique Index**: The database enforces uniqueness on `[monthly_budget_id, expense_template_id]` when `expense_template_id IS NOT NULL` - a monthly budget can only have one expense per template (unless name override is used).
+- **Name Unique Index**: The database enforces uniqueness on `[monthly_budget_id, name]` - ensures unique names per budget for one-off expenses and name overrides.
 
 ## Callbacks
 
-- `before_validation :set_default_allotted_amount, on: :create`:
-  - Automatically sets `allotted_amount` from the expensetemplate's `default_amount` when creating a new expense
-  - Only applies if `allotted_amount` is not explicitly set.
+- `before_validation :set_default_allotted_amount, on: :create, if: -> { expense_template_id.present? }`:
+  - Automatically sets `allotted_amount` from the expensetemplate's `default_amount` when creating a new expense with a template
+  - Only applies if expense has a template and `allotted_amount` is not explicitly set.
   - If template's `default_amount` is `nil`, defaults to `0.0`.
+  - Does not apply to one-off expenses (no template).
 
 ## Scopes
 
@@ -130,30 +140,42 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 
 ## Business Rules
 
-1. **One ExpensePer Payment Category Per Budget**: Each monthly budget can only have one expensefor a given payment category. Different budgets can use the same payment category.
+1. **Two Types of Expenses**:
+   - **Template-based expenses**: Created from an expense template (recurring expenses like "Rent", "Groceries")
+   - **One-off expenses**: Created without a template for unique, non-recurring expenses (e.g., "Birthday Gift", "Car Repair")
 
-2. **Name from Template**: The expense name can optionally be overridden on a per-expense basis. If the name override is not set, the template's name is used. Frequency and due date always come from the template.
+2. **One Expense Per Payment Category Per Budget**: 
+   - For template-based expenses: Each monthly budget can only have one expense for each expense template (unless name override is used)
+   - For one-off expenses: Each name must be unique within the monthly budget
 
-3. **Spent Amount is Calculated**: The `spent_amount` is calculated from the sum of all related payment records. It is not stored in the database and updates automatically as payment records are added or removed.
+3. **Name Requirements**:
+   - **One-off expenses**: `name` is required (expense_template_id must be null)
+   - **Template-based expenses**: `name` is optional (uses template name if not provided)
+   - If `name` is provided as an override, it must be unique within the budget
 
-4. **Non-Negative Allotted Amount**: `allotted_amount` cannot be negative (zero is allowed).
+4. **Template Association**:
+   - Template-based expenses: Must have an `expense_template_id`
+   - One-off expenses: `expense_template_id` is null
+   - Frequency and due_date come from the template (for template-based expenses) or default to "monthly" and nil (for one-off expenses)
 
-5. **Default Values**: 
-   - New expense automatically get `allotted_amount` from the expensetemplate's `default_amount` (if set).
-   - If template's `default_amount` is `nil` or not set, defaults to `0.0`.
-   - Explicitly set `allotted_amount` values are not overridden by the default.
+5. **Spent Amount is Calculated**: The `spent_amount` is calculated from the sum of all related payment records. It is not stored in the database and updates automatically as payment records are added or removed.
+
+6. **Non-Negative Allotted Amount**: `allotted_amount` cannot be negative (zero is allowed).
+
+7. **Default Values**: 
+   - Template-based expenses: Automatically get `allotted_amount` from the expense template's `default_amount` (if set, otherwise 0.0)
+   - One-off expenses: Default `allotted_amount` is 0.0 (must be explicitly set)
+   - Explicitly set `allotted_amount` values are not overridden by the default
    - `spent_amount` always starts at 0.0 (when there are no payment records)
-   - The `name` override field defaults to `nil` and uses the template name when not set.
-   - `frequency` and `due_date` always come from the template (not overrideable).
 
-6. **Cascade Deletion**: 
-   - Deleting a monthly budget will delete all its associated expense.
-   - Deleting an expensetemplate will delete all associated expense.
-   - Deleting an expensewill delete all its associated payment records.
+8. **Cascade Deletion**: 
+   - Deleting a monthly budget will delete all its associated expenses (both template-based and one-off)
+   - Deleting an expense template will delete all associated template-based expenses (one-off expenses are not affected)
+   - Deleting an expense will delete all its associated payment records
 
 ## Usage Examples
 
-### Creating an Expense
+### Creating a Template-Based Expense
 
 ```ruby
 budget = MonthlyBudget.first
@@ -188,6 +210,38 @@ custom_expense = budget.expenses.create(
 )
 custom_expense.name  # => "Custom Groceries" (override)
 custom_expense.frequency  # => "monthly" (from template - cannot override)
+```
+
+### Creating a One-Off Expense
+
+```ruby
+budget = MonthlyBudget.first
+
+# Create a one-off expense without a template
+one_off_expense = budget.expenses.create(
+  name: "Birthday Gift",
+  allotted_amount: 50.00
+)
+# => #<Expense id: 2, monthly_budget_id: 1, expense_template_id: nil, name: "Birthday Gift", allotted_amount: 50.00, ...>
+
+one_off_expense.name  # => "Birthday Gift"
+one_off_expense.expense_template  # => nil
+one_off_expense.frequency  # => "monthly" (default when no template)
+one_off_expense.due_date  # => nil
+
+# Create another one-off expense
+car_repair = budget.expenses.create(
+  name: "Car Repair",
+  allotted_amount: 300.00
+)
+# => #<Expense... expense_template_id: nil, name: "Car Repair" ...>
+
+# One-off expenses can have duplicate names across different budgets
+other_budget = MonthlyBudget.create!(user: budget.user, month_year: "2026-01")
+another_gift = other_budget.expenses.create(
+  name: "Birthday Gift",  # Same name, different budget - OK!
+  allotted_amount: 75.00
+)
 ```
 
 ### Creating an Expense with Due Date
