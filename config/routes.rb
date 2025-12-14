@@ -16,6 +16,10 @@ Rails.application.routes.draw do
         patch :reactivate
       end
     end
+    
+    get "expenses", to: "expenses#index"
+    resources :payments, only: [:new, :create]
+    resources :expenses, only: [:new, :create]
   end
 
   get "dashboard", to: "dashboard#index"

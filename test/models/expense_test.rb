@@ -49,7 +49,7 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_includes duplicate_expense.errors[:expense_template_id], "already has an expense for this template in this budget"
   end
 
-  test "different monthly_budgets can have envelopes with same expense_template" do
+  test "different monthly_budgets can have expenses with same expense_template" do
     # expense_one uses expense_template one in monthly_budget_one
     # Different budgets can use the same expense template
     assert_equal expense_templates(:one), expenses(:one).expense_template
@@ -263,7 +263,7 @@ class ExpenseTest < ActiveSupport::TestCase
     # expense_one: remaining 259.25
     assert_equal 259.25, @expense_one.available.to_f
     
-    # Create an envelope that's over budget
+    # Create an expense that's over budget
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Over Budget Test Template",
@@ -329,7 +329,7 @@ class ExpenseTest < ActiveSupport::TestCase
       frequency: "monthly"
     )
     
-    # Create envelope with allotted amount
+    # Create expense with allotted amount
     fixed_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: fixed_template,
@@ -435,7 +435,7 @@ class ExpenseTest < ActiveSupport::TestCase
     # expense_two: 2400.00 / 1200.00 = 200%, rounded to 200
     assert_equal 200, @expense_two.percent_used
     
-    # Empty envelope
+    # Empty expense
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Empty Percent Test",

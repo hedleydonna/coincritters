@@ -24,14 +24,14 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_user_session_path
   end
 
-  test "should allow admin users to access envelopes index" do
+  test "should allow admin users to access expenses index" do
     sign_in @admin
     get admin_expenses_path
     assert_response :success
   end
 
   # Test index action
-  test "should list all envelopes" do
+  test "should list all expenses" do
     sign_in @admin
     get admin_expenses_path
     assert_response :success
@@ -57,10 +57,10 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Test create action
-  test "should create envelope" do
+  test "should create expense" do
     sign_in @admin
     monthly_budget = monthly_budgets(:one)
-    # Create a unique envelope template for this budget
+    # Create a unique expense template for this budget
     expense_template = ExpenseTemplate.create!(
       user: monthly_budget.user,
       name: "Utilities Test",
@@ -81,7 +81,7 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Expense was successfully created.", flash[:notice]
   end
 
-  test "should not create envelope with invalid data" do
+  test "should not create expense with invalid data" do
     sign_in @admin
     assert_no_difference("Expense.count") do
       post admin_expenses_path, params: {
@@ -103,7 +103,7 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Test update action
-  test "should update envelope" do
+  test "should update expense" do
     sign_in @admin
     patch admin_expense_path(@expense), params: {
       expense: {
@@ -118,7 +118,7 @@ class Admin::ExpenseControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Test destroy action
-  test "should delete envelope" do
+  test "should delete expense" do
     sign_in @admin
     expense_to_delete = expenses(:five)
     assert_difference("Expense.count", -1) do

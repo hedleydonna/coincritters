@@ -23,6 +23,18 @@ class User < ApplicationRecord
   end
 
   # ------------------------------------------------------------------
+  # Ensure current month budget exists (creates if missing)
+  # ------------------------------------------------------------------
+  def current_budget!
+    budget = current_budget
+    return budget if budget
+
+    budget = monthly_budgets.create!(month_year: Time.current.strftime("%Y-%m"))
+    budget.auto_create_expenses
+    budget
+  end
+
+  # ------------------------------------------------------------------
   # Explicit next-month creation (user-triggered)
   # ------------------------------------------------------------------
   def create_next_month_budget!
@@ -30,7 +42,7 @@ class User < ApplicationRecord
     return if monthly_budgets.exists?(month_year: next_month)
 
     budget = monthly_budgets.create!(month_year: next_month)
-    budget.auto_create_envelopes
+    budget.auto_create_expenses
     budget
   end
 

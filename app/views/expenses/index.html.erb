@@ -1,0 +1,107 @@
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2"><%= @budget.name %></h1>
+    <%= link_to "← Dashboard", dashboard_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+  </div>
+
+  <!-- Top summary card -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-8 shadow-sm border border-blue-100">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Income this month</p>
+        <p class="text-2xl font-bold text-gray-900"><%= number_to_currency(@total_income) %></p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Spent so far</p>
+        <p class="text-2xl font-bold text-gray-900"><%= number_to_currency(@total_spent) %></p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Remaining</p>
+        <p class="text-2xl font-bold <%= @remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
+          <%= number_to_currency(@remaining) %>
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Bank match</p>
+        <p class="text-lg font-semibold">
+          <% if @bank_match %>
+            <span class="text-green-600">Close enough ✓</span>
+          <% elsif @bank_difference.present? %>
+            <span class="text-<%= @bank_difference.abs > 100 ? 'red' : 'yellow' %>-600">
+              Off by <%= number_to_currency(@bank_difference.abs) %>
+            </span>
+          <% else %>
+            <span class="text-gray-500">Not set</span>
+          <% end %>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add payment button -->
+  <div class="mb-6">
+    <%= link_to "+ Add payment", new_payment_path, 
+          class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
+  </div>
+
+  <!-- Expenses list -->
+  <% if @expenses.any? %>
+    <div class="space-y-4">
+      <% @expenses.each do |expense| %>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex-1">
+              <h3 class="text-xl font-semibold text-gray-900 mb-1"><%= expense.display_name %></h3>
+              <p class="text-gray-600 text-sm">
+                <%= number_to_currency(expense.allotted_amount) %> allotted
+              </p>
+            </div>
+            <div class="text-right ml-4">
+              <p class="text-2xl font-bold <%= expense.over_budget? ? 'text-red-600' : 'text-gray-900' %>">
+                <%= number_to_currency(expense.spent_amount) %>
+              </p>
+              <p class="text-sm text-gray-600">spent</p>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+            <% percentage = expense.spent_percentage %>
+            <% bar_color = expense.over_budget? ? 'bg-red-500' : (expense.paid? ? 'bg-green-500' : 'bg-blue-500') %>
+            <div class="<%= bar_color %> h-3 rounded-full transition-all duration-300" 
+                 style="width: <%= [percentage, 100].min %>%"></div>
+          </div>
+
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-lg font-medium <%= expense.remaining < 0 ? 'text-red-600' : 'text-gray-900' %>">
+                <%= number_to_currency(expense.remaining.abs) %> 
+                <%= expense.remaining < 0 ? 'over' : 'left' %>
+                <% if expense.paid? %>
+                  <span class="text-green-600 font-bold ml-2">Paid ✓</span>
+                <% end %>
+              </p>
+            </div>
+            <%= link_to "Add payment", new_payment_path(expense_id: expense.id),
+                  class: "text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+      <p class="text-gray-500 text-lg mb-2">No expenses yet for this month.</p>
+      <p class="text-gray-400 mb-6">Create expense templates to auto-generate expenses, or add a one-off expense below.</p>
+      <%= link_to "Build Your Branches", expense_templates_path,
+            class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-block" %>
+    </div>
+  <% end %>
+
+  <!-- One-off expense -->
+  <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+    <%= link_to "+ Add one-off expense", new_expense_path, 
+          class: "text-blue-600 hover:text-blue-800 hover:underline text-lg font-medium" %>
+  </div>
+</div>
+

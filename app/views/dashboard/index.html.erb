@@ -12,6 +12,9 @@
     </div>
 
     <div class="mt-10 space-y-4">
+      <%= button_to "View Money Map", expenses_path, method: :get,
+                    class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg w-full" %>
+      
       <%= button_to "Build Your Branches", expense_templates_path, method: :get,
                     class: "bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg w-full" %>
       

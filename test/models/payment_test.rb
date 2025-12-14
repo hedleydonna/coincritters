@@ -204,7 +204,7 @@ class PaymentTest < ActiveSupport::TestCase
     assert_match(/#{payment.spending_group_name}/, to_s_string)
   end
 
-  test "should access monthly_budget through envelope" do
+  test "should access monthly_budget through expense" do
     assert_equal @expense_one.monthly_budget, @payment_one.monthly_budget
   end
 

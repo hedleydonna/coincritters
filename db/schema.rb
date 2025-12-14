@@ -10,15 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_14_194309) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_15_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
   create_table "expense_templates", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "name", null: false
-    t.integer "group_type", default: 1, null: false
-    t.boolean "is_savings", default: false, null: false
     t.decimal "default_amount", precision: 12, scale: 2, default: "0.0"
     t.boolean "auto_create", default: true, null: false
     t.datetime "created_at", null: false
@@ -27,7 +25,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_14_194309) do
     t.string "frequency", default: "monthly"
     t.date "due_date"
     t.index ["is_active"], name: "index_expense_templates_on_is_active"
-    t.index ["user_id", "group_type"], name: "index_expense_templates_on_user_id_and_group_type"
     t.index ["user_id", "name"], name: "index_expense_templates_on_user_id_and_name", unique: true
     t.index ["user_id"], name: "index_expense_templates_on_user_id"
   end

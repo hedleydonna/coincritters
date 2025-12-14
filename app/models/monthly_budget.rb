@@ -77,7 +77,7 @@ class MonthlyBudget < ApplicationRecord
   # ------------------------------------------------------------------
   # Auto-create expenses from user's recurring templates
   # ------------------------------------------------------------------
-  def auto_create_envelopes
+  def auto_create_expenses
     user.expense_templates.active.auto_create.find_each do |template|
       # Skip if expense for this template already exists in this budget
       next if expenses.exists?(expense_template_id: template.id)
@@ -88,4 +88,7 @@ class MonthlyBudget < ApplicationRecord
       )
     end
   end
+
+  # Alias for backward compatibility
+  alias_method :auto_create_envelopes, :auto_create_expenses
 end

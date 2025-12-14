@@ -234,7 +234,7 @@ The `ExpenseTemplate` model serves as a template for creating `Expense records. 
 
 1. **Consistency**: Expense using the same template have consistent default type and savings status
 2. **Reusability**: A single template can be used across multiple monthly budgets
-3. **Flexibility**: Expense can override template values (name, group_type, is_savings) for specific months
+3. **Flexibility**: Expense can override template name for specific months
 4. **Centralized Management**: Changing a template's properties affects all expense using it (unless overridden)
 5. **Organization**: Users can define their expensetemplates once and reuse them
 

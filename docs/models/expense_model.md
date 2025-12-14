@@ -94,10 +94,7 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 
 ## Scopes
 
-- `scope :fixed`: Returns only expense that are fixed (delegates to template).
-- `scope :variable`: Returns only expense that are variable (delegates to template).
-- `scope :savings`: Returns only expense that are savings (delegates to template).
-- `scope :non_savings`: Returns only expense that are not savings (delegates to template).
+- `scope :by_frequency`: Returns expenses filtered by frequency (delegates to template).
 - `scope :over_budget`: Returns only expense where the sum of payment amounts exceeds the allotted amount. Uses a SQL subquery for efficient database-level filtering.
 
 ## Instance Methods
@@ -105,17 +102,13 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 ### Accessing Template Properties
 
 - `name`: Returns the override name if present, otherwise returns the template name.
-- `display_name`: Returns a friendly display name (includes "(Savings)" if applicable).
-- `payment_group_name`: Alias for `name` (for backward compatibility).
-- `group_type`: Returns the template's group_type (always from template).
-- `group_type_text`: Returns the text description of the group type ("Fixed bill" or "Variable payment").
+- `display_name`: Returns a friendly display name.
+- `frequency`: Returns the expense template's frequency (always from template).
+- `due_date`: Returns the expense template's due date (always from template).
+- `frequency_text`: Returns a human-readable text description of the frequency ("Monthly", "Weekly", etc.).
 
-### Type Checking
+### Name Override Checking
 
-- `fixed?`: Returns `true` if the expenseis fixed (always from template).
-- `variable?`: Returns `true` if the expenseis variable (always from template).
-- `savings?`: Returns `true` if the expenseis a savings expense(always from template).
-- `is_savings?`: Alias for `savings?` (for backward compatibility).
 - `has_overrides?`: Returns `true` if the expensehas a name override.
 - `name_overridden?`: Returns `true` if the name is overridden.
 
@@ -139,7 +132,7 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 
 1. **One ExpensePer Payment Category Per Budget**: Each monthly budget can only have one expensefor a given payment category. Different budgets can use the same payment category.
 
-2. **Name, Type, and Savings Status from Template**: The expenses group type (fixed/variable) and savings status always come from the associated expensetemplate. The expenses name can optionally be overridden on a per-expensebasis. If the name override is not set, the template's name is used.
+2. **Name from Template**: The expense name can optionally be overridden on a per-expense basis. If the name override is not set, the template's name is used. Frequency and due date always come from the template.
 
 3. **Spent Amount is Calculated**: The `spent_amount` is calculated from the sum of all related payment records. It is not stored in the database and updates automatically as payment records are added or removed.
 
@@ -151,7 +144,7 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
    - Explicitly set `allotted_amount` values are not overridden by the default.
    - `spent_amount` always starts at 0.0 (when there are no payment records)
    - The `name` override field defaults to `nil` and uses the template name when not set.
-   - `group_type` and `is_savings` always come from the template (not overrideable).
+   - `frequency` and `due_date` always come from the template (not overrideable).
 
 6. **Cascade Deletion**: 
    - Deleting a monthly budget will delete all its associated expense.
@@ -160,96 +153,79 @@ The Expensemodel represents payment categories within a monthly budget in the Wi
 
 ## Usage Examples
 
-### Creating an Envelope
+### Creating an Expense
 
 ```ruby
 budget = MonthlyBudget.first
 groceries_template = budget.user.expense_templates.find_or_create_by!(name: "Groceries") do |et|
-  et.group_type = :variable
-  et.is_savings = false
+  et.frequency = "monthly"
   et.default_amount = 500.00
 end
 
-# Create expense- allotted_amount will be auto-filled from template default_amount
-expense= budget.expense.create(
+# Create expense - allotted_amount will be auto-filled from template default_amount
+expense = budget.expenses.create(
   expense_template: groceries_template
 )
-# => #<Expenseid: 1, monthly_budget_id: 1, expense_template_id: 1, allotted_amount: 500.00, ...>
+# => #<Expense id: 1, monthly_budget_id: 1, expense_template_id: 1, allotted_amount: 500.00, ...>
 
 # Or explicitly set the amount (overrides default)
-expense= budget.expense.create(
+expense = budget.expenses.create(
   expense_template: groceries_template,
   allotted_amount: 600.00
 )
 # => #<Expense... allotted_amount: 600.00>
 
 # Access the name (from template, unless overridden)
-expensename  # => "Groceries"
-expensedisplay_name  # => "Groceries" (or "Groceries (Savings)" if savings)
-expensepayment_group_name  # => "Groceries" (alias for name)
+expense.name  # => "Groceries"
+expense.display_name  # => "Groceries"
+expense.frequency  # => "monthly" (from template)
 
-# Create expensewith name override
-custom_expense= budget.expense.create(
+# Create expense with name override
+custom_expense = budget.expenses.create(
   expense_template: groceries_template,
   name: "Custom Groceries",  # Override template name
   allotted_amount: 600.00
 )
-custom_expensename  # => "Custom Groceries" (override)
-custom_expensevariable?  # => true (from template - cannot override)
+custom_expense.name  # => "Custom Groceries" (override)
+custom_expense.frequency  # => "monthly" (from template - cannot override)
 ```
 
-### Creating a Fixed Expense Envelope
+### Creating an Expense with Due Date
 
 ```ruby
 budget = MonthlyBudget.first
 rent_template = budget.user.expense_templates.find_or_create_by!(name: "Rent") do |et|
-  et.group_type = :fixed
-  et.is_savings = false
+  et.frequency = "monthly"
+  et.due_date = Date.new(2025, 1, 1)
 end
 
-rent_expense= budget.expense.create(
+rent_expense = budget.expenses.create(
   expense_template: rent_template,
   allotted_amount: 1200.00
 )
 
+# Access frequency and due date from template
+rent_expense.frequency  # => "monthly"
+rent_expense.due_date   # => #<Date: 2025-01-01>
+
 # Add payment records
-rent_expensepayments.create!(amount: 1200.00, spent_on: Date.today)
-rent_expensespent_amount  # => 1200.00 (calculated)
+rent_expense.payments.create!(amount: 1200.00, spent_on: Date.today)
+rent_expense.spent_amount  # => 1200.00 (calculated)
 ```
 
-### Creating a Savings Envelope
-
-```ruby
-budget = MonthlyBudget.first
-emergency_template = budget.user.expense_templates.find_or_create_by!(name: "Emergency Fund") do |et|
-  et.group_type = :fixed
-  et.is_savings = true
-end
-
-emergency_fund = budget.expense.create(
-  expense_template: emergency_template,
-  allotted_amount: 300.00
-)
-# spent_amount starts at 0.0 (no payment records yet)
-emergency_fund.spent_amount  # => 0.0
-```
-
-### Retrieving Expense by Type
+### Retrieving Expenses by Frequency
 
 ```ruby
 budget = MonthlyBudget.first
 
-fixed_expense = budget.expense.fixed
-# => #<ActiveRecord::Relation [#<Expense... group_type: 0>, ...]>
+monthly_expenses = budget.expenses.by_frequency("monthly")
+# => #<ActiveRecord::Relation [#<Expense... frequency: "monthly">, ...]>
 
-variable_expense = budget.expense.variable
-# => #<ActiveRecord::Relation [#<Expense... group_type: 1>, ...]>
+weekly_expenses = budget.expenses.by_frequency("weekly")
+# => #<ActiveRecord::Relation [#<Expense... frequency: "weekly">, ...]>
 
-savings_expense = budget.expense.savings
-# => #<ActiveRecord::Relation [#<Expense... is_savings: true>, ...]>
-
-# Find expense that are over budget (efficient database query)
-over_budget_expense = budget.expense.over_budget
+# Find expenses that are over budget (efficient database query)
+over_budget_expenses = budget.expenses.over_budget
 # => #<ActiveRecord::Relation [#<Expense... spent > allotted>, ...]>
 ```
 
@@ -300,35 +276,35 @@ expensespent_percentage  # => 100.0 (capped at 100%)
 expensepercent_used  # => 100 (integer)
 ```
 
-### Checking if Fixed Bill is Paid
+### Checking if Expense is Paid
 
 ```ruby
 budget = MonthlyBudget.first
 rent_template = budget.user.expense_templates.find_or_create_by!(name: "Rent") do |et|
-  et.group_type = :fixed
+  et.frequency = "monthly"
   et.default_amount = 1200.00
 end
 
-rent_expense= budget.expense.create(expense_template: rent_template)
-rent_expenseallotted_amount  # => 1200.00 (from category default)
+rent_expense = budget.expenses.create(expense_template: rent_template)
+rent_expense.allotted_amount  # => 1200.00 (from template default)
 
 # Not paid yet
-rent_expensepaid?  # => false
+rent_expense.paid?  # => false
 
 # Add payment equal to allotted amount
-rent_expensepayments.create!(amount: 1200.00, spent_on: Date.today)
-rent_expensepaid?  # => true
+rent_expense.payments.create!(amount: 1200.00, spent_on: Date.today)
+rent_expense.paid?  # => true (spent >= allotted)
 
-# Variable expenses are never "paid"
+# Expense is considered paid when spent >= allotted
 groceries_template = budget.user.expense_templates.find_or_create_by!(name: "Groceries") do |et|
-  et.group_type = :variable
+  et.frequency = "monthly"
 end
-groceries_expense= budget.expense.create(
+groceries_expense = budget.expenses.create(
   expense_template: groceries_template,
   allotted_amount: 500.00
 )
-groceries_expensepayments.create!(amount: 500.00, spent_on: Date.today)
-groceries_expensepaid?  # => false (only fixed bills can be "paid")
+groceries_expense.payments.create!(amount: 500.00, spent_on: Date.today)
+groceries_expense.paid?  # => true (spent >= allotted)
 ```
 
 ### Display Methods
@@ -365,31 +341,15 @@ negative_amount = budget.expense.create(
 
 ## Key Concepts
 
-### Fixed vs Variable Expenses
+### Expense Frequency
 
-- **Fixed (0)**: Expenses that are consistent month-to-month and not easily changed:
-  - Rent/mortgage
-  - Subscription services (Netflix, Spotify)
-  - Insurance premiums
-  - Loan payments
-  
-- **Variable (1)**: Expenses that fluctuate and can be adjusted:
-  - Groceries
-  - Dining out
-  - Entertainment
-  - Gas/transportation
-  - Clothing
+Expenses can have different frequencies that indicate how often they occur:
+- **Monthly**: Recurring monthly expenses (e.g., rent, subscriptions)
+- **Weekly**: Recurring weekly expenses (e.g., groceries)
+- **Biweekly**: Recurring biweekly expenses (e.g., paychecks used for expenses)
+- **Yearly**: Recurring yearly expenses (e.g., insurance premiums, annual subscriptions)
 
-### Savings Expense
-
-Savings expense (`is_savings: true`) represent money set aside for future goals rather than current payment:
-- Emergency fund
-- Vacation savings
-- Down payment fund
-- Major purchase savings
-- Investment savings
-
-These expense typically have `spent_amount: 0.00` as the money is being accumulated, not spent.
+The frequency helps users understand the payment cadence and plan their budgets accordingly.
 
 ### ExpenseBudgeting Method
 
@@ -408,10 +368,10 @@ The expensemethod is a budgeting technique where income is divided into categori
 ## Admin Dashboard
 
 Expense can be managed through the admin dashboard:
-- **View All**: `/admin/expense`
-- **View Details**: `/admin/expense/:id`
-- **Edit**: `/admin/expense/:id/edit`
-- **Create**: `/admin/expense/new`
+- **View All**: `/admin/expenses`
+- **View Details**: `/admin/expenses/:id`
+- **Edit**: `/admin/expenses/:id/edit`
+- **Create**: `/admin/expenses/new`
 
 The admin dashboard displays:
 - Total count of expense

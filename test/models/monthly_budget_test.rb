@@ -487,8 +487,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_not budget.bank_match?
   end
 
-  # Test auto_create_envelopes method
-  test "auto_create_envelopes should create expenses for categories with auto_create true" do
+  # Test auto_create_expenses method
+  test "auto_create_expenses should create expenses for templates with auto_create true" do
     user = User.create!(email: "autotest@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -523,7 +523,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     )
     
     assert_difference("Expense.count", 2) do
-      budget.auto_create_envelopes
+      budget.auto_create_expenses
     end
     
     assert_equal 2, budget.expenses.count
@@ -538,7 +538,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal 1200.00, expense2.allotted_amount
   end
 
-  test "auto_create_envelopes should skip categories that already have envelopes" do
+  test "auto_create_expenses should skip templates that already have expenses" do
     user = User.create!(email: "skiptest@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -563,7 +563,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     
     # Should not create duplicate expense
     assert_no_difference("Expense.count") do
-      budget.auto_create_envelopes
+      budget.auto_create_expenses
     end
     
     # Should still have only one expense
@@ -572,7 +572,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal 600.00, budget.expenses.first.allotted_amount
   end
 
-  test "auto_create_envelopes should use default_amount of 0 if template default_amount is nil" do
+  test "auto_create_expenses should use default_amount of 0 if template default_amount is nil" do
     user = User.create!(email: "defaulttest@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -588,14 +588,14 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       auto_create: true
     )
     
-    budget.auto_create_envelopes
+    budget.auto_create_expenses
     
     expense = budget.expenses.find_by(expense_template: template)
     assert_not_nil expense
     assert_equal 0.0, expense.allotted_amount.to_f
   end
 
-  test "auto_create_envelopes should only create expenses for the budget's user's categories" do
+  test "auto_create_expenses should only create expenses for the budget's user's templates" do
     user1 = User.create!(email: "user1_categories@example.com", password: "password123")
     user2 = User.create!(email: "user2_categories@example.com", password: "password123")
     
@@ -622,7 +622,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       auto_create: true
     )
     
-    budget.auto_create_envelopes
+    budget.auto_create_expenses
     
     # Should only create expense for user1's template
     assert_equal 1, budget.expenses.count

@@ -116,7 +116,7 @@ Permits the following parameters:
 - `allotted_amount` - The amount allocated to this expensefor the month
 - `name` - Optional override name (uses template name if not provided)
 
-**Note:** `group_type` and `is_savings` are not permitted as they always come from the template.
+**Note:** `frequency` and `due_date` always come from the template and cannot be set directly on expenses.
 
 ## Access Control
 

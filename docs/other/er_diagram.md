@@ -61,8 +61,8 @@ erDiagram
         bigint id PK
         bigint user_id FK "NOT NULL"
         string name "NOT NULL"
-        integer group_type "default: 1, NOT NULL, enum: 0=fixed, 1=variable"
-        boolean is_savings "default: false, NOT NULL"
+        string frequency "default: 'monthly', NOT NULL"
+        date due_date "nullable"
         decimal default_amount "precision: 12, scale: 2, default: 0.0"
         boolean auto_create "default: true, NOT NULL"
         boolean is_active "default: true, NOT NULL, soft delete"
@@ -82,7 +82,7 @@ erDiagram
 
     payments {
         bigint id PK
-        bigint envelope_id FK "NOT NULL"
+        bigint expense_id FK "NOT NULL"
         decimal amount "precision: 12, scale: 2, default: 0.0, NOT NULL"
         date spent_on "NOT NULL"
         text notes
@@ -139,8 +139,8 @@ erDiagram
 
 7. **expense_templates → expense** (1:N)
    - One expensetemplate can be used in many expense (across different monthly budgets)
-   - Templates provide default values (name, group_type, is_savings, default_amount)
-   - Expense can override template values (name, group_type, is_savings) on a per-month basis
+   - Templates provide default values (name, frequency, due_date, default_amount)
+   - Expense can override template name on a per-month basis
    - Cascade delete: When an expensetemplate is deleted, all related expense are deleted
 
 8. **expense → payments** (1:N)
@@ -160,30 +160,27 @@ erDiagram
 ## Override Fields
 
 Expense support override fields that allow customization per month:
-- **name** (nullable): If set, overrides the template name for this envelope
-- **group_type** (nullable): If set, overrides the template group_type (fixed/variable) for this envelope
-- **is_savings** (nullable): If set, overrides the template is_savings flag for this envelope
+- **name** (nullable): If set, overrides the template name for this expense
 
-When override fields are `NULL`, the expenseuses the values from its associated `expense_template`.
+When override fields are `NULL`, the expense uses the values from its associated `expense_template`. Frequency and due_date always come from the template and cannot be overridden.
 
 ## Calculated Fields (Not in Database)
 
 These fields are calculated at the model level and are not stored in the database:
 
-- **expense.spent_amount** - Calculated as `payments.sum(:amount)` for that envelope
+- **expense.spent_amount** - Calculated as `payments.sum(:amount)` for that expense
 - **expense.name** - Uses override if present, otherwise delegates to `expense_template.name`
-- **expense.payment_group_name** - Alias for `name` (backward compatibility)
-- **expense.group_type** - Uses override if present, otherwise delegates to `expense_template.group_type`
-- **expense.is_savings** - Uses override if present, otherwise delegates to `expense_template.is_savings`
+- **expense.frequency** - Always delegates to `expense_template.frequency`
+- **expense.due_date** - Always delegates to `expense_template.due_date`
 
 ## Notes
 
 - All foreign keys use `on_delete: :cascade`, meaning child records are automatically deleted when parent records are deleted
 - All tables include `created_at` and `updated_at` timestamps (managed by Rails)
 - Decimal fields use `precision: 12, scale: 2` for currency values
-- The `group_type` field in both `expense_templates` and `expense` is an enum: `0 = fixed`, `1 = variable`
+- The `frequency` field in `expense_templates` can be: "monthly", "weekly", "biweekly", or "yearly"
 - Expensetemplates serve as reusable templates for creating expense across multiple monthly budgets
-- Expense can override template values to customize behavior for specific months
+- Expense can override template name to customize behavior for specific months
 
 ---
 

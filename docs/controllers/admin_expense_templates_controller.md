@@ -34,9 +34,6 @@ Lists all active expensetemplates with statistics.
 **Instance Variables:**
 - `@expense_templates` - All active templates, ordered by creation date (newest first), includes `user` association
 - `@total_templates` - Total count of all active templates
-- `@fixed_templates` - Count of active fixed templates
-- `@variable_templates` - Count of active variable templates
-- `@savings_templates` - Count of active savings templates
 
 **Query Optimization:**
 - Uses `includes(:user)` to eager load user associations and prevent N+1 queries
@@ -118,8 +115,8 @@ Permits the following parameters:
 
 - `user_id` - The user who owns this template
 - `name` - The template name (required, unique per user)
-- `group_type` - The group type (0=fixed, 1=variable, default: variable)
-- `is_savings` - Whether this is a savings template (boolean, default: false)
+- `frequency` - The expense frequency: "monthly", "weekly", "biweekly", or "yearly" (default: "monthly")
+- `due_date` - Optional due date for this expense (date)
 - `default_amount` - Default amount to use when creating expense from this template (decimal, default: 0.0)
 - `auto_create` - Whether to automatically create expense from this template when creating monthly budgets (boolean, default: true)
 - `is_active` - Whether the template is active (boolean, default: true). Inactive templates are soft-deleted (hidden but preserved).
@@ -152,15 +149,14 @@ POST /admin/expense_templates
   expense_template: {
     user_id: 1,
     name: "Groceries",
-    group_type: 1,  # variable
-    is_savings: false,
+    frequency: "monthly",
     default_amount: 500.00,
     auto_create: true
   }
 }
 ```
 
-### Creating a Fixed Bill Template
+### Creating a Monthly Template with Due Date
 
 ```ruby
 POST /admin/expense_templates
@@ -168,26 +164,25 @@ POST /admin/expense_templates
   expense_template: {
     user_id: 1,
     name: "Rent",
-    group_type: 0,  # fixed
-    is_savings: false,
+    frequency: "monthly",
+    due_date: "2025-01-01",
     default_amount: 1200.00,
     auto_create: true
   }
 }
 ```
 
-### Creating a Savings Template
+### Creating a Weekly Template
 
 ```ruby
 POST /admin/expense_templates
 {
   expense_template: {
     user_id: 1,
-    name: "Emergency Fund",
-    group_type: 0,  # fixed
-    is_savings: true,
-    default_amount: 300.00,
-    auto_create: false
+    name: "Gas",
+    frequency: "weekly",
+    default_amount: 50.00,
+    auto_create: true
   }
 }
 ```
