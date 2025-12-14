@@ -10,6 +10,12 @@ Rails.application.routes.draw do
   # THIS LINE IS THE ONLY THING THAT MATTERS
   authenticated :user do
     root "dashboard#index", as: :authenticated_root
+    
+    resources :envelope_templates, except: [:show] do
+      member do
+        patch :reactivate
+      end
+    end
   end
 
   get "dashboard", to: "dashboard#index"
