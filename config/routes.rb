@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     end
     
     get "expenses", to: "expenses#index"
+    post "expenses/start_next_month", to: "expenses#start_next_month", as: :start_next_month
     resources :payments, only: [:new, :create]
     resources :expenses, only: [:new, :create]
   end
