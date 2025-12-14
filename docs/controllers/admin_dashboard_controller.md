@@ -43,17 +43,17 @@ Displays the admin dashboard with comprehensive statistics and recent records.
    - `@monthly_budget_count` - Total number of monthly budgets
    - `@recent_monthly_budgets` - 5 most recently created monthly budgets (includes user)
 
-5. **Envelope Statistics:**
-   - `@envelope_count` - Total number of envelopes
-   - `@recent_envelopes` - 5 most recently created envelopes (includes monthly_budget and user)
+5. **ExpenseStatistics:**
+   - `@envelope_count` - Total number of expense
+   - `@recent_expense` - 5 most recently created expense (includes monthly_budget and user)
 
-6. **Spending Statistics:**
-   - `@spending_count` - Total number of spending records
-   - `@recent_spendings` - 5 most recent spending records (includes envelope, monthly_budget, and user)
+6. **Payment Statistics:**
+   - `@payment_count` - Total number of payment records
+   - `@recent_payments` - 5 most recent payment records (includes expense monthly_budget, and user)
 
-7. **Envelope Template Statistics:**
-   - `@envelope_template_count` - Total number of envelope templates
-   - `@recent_envelope_templates` - 5 most recently created envelope templates (includes user)
+7. **ExpenseTemplate Statistics:**
+   - `@expense_template_count` - Total number of expensetemplates
+   - `@recent_expense_templates` - 5 most recently created expensetemplates (includes user)
 
 **Query Optimizations:**
 - Uses `includes` to eager load associations and prevent N+1 queries

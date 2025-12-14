@@ -88,7 +88,7 @@ Updates an existing monthly budget from form parameters.
 Deletes a monthly budget.
 
 **Behavior:**
-- Destroys the budget (cascades to associated envelopes and spendings)
+- Destroys the budget (cascades to associated expense and payments)
 - Redirects to `admin_monthly_budgets_path` with success notice: "Monthly budget was successfully deleted."
 
 ## Callbacks
@@ -124,8 +124,8 @@ Permits the following parameters:
 
 - **MonthlyBudget** - The model being managed
 - **User** - Required association for budgets
-- **Envelope** - Budgets have many envelopes (cascade delete)
-- **Spending** - Budgets have many spendings through envelopes (cascade delete)
+- **Expense* - Budgets have many expense (cascade delete)
+- **Payment** - Budgets have many payments through expense (cascade delete)
 
 ## Views
 

@@ -70,7 +70,7 @@ end
 
 The dashboard typically displays:
 - User's monthly budgets
-- Recent envelopes and spending
+- Recent expense and payment
 - Financial overview and summaries
 - Quick actions and navigation
 - User-specific data and statistics

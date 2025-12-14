@@ -1,7 +1,7 @@
 # app/models/monthly_budget.rb
 class MonthlyBudget < ApplicationRecord
   belongs_to :user
-  has_many :envelopes, dependent: :destroy
+  has_many :expenses, dependent: :destroy
 
   # ------------------------------------------------------------------
   # Validations
@@ -44,11 +44,11 @@ class MonthlyBudget < ApplicationRecord
   # Calculated totals — no stored columns needed
   # ------------------------------------------------------------------
   def total_allotted
-    envelopes.sum(:allotted_amount)
+    expenses.sum(:allotted_amount)
   end
 
   def total_spent
-    envelopes.sum(&:spent_amount)
+    expenses.sum(&:spent_amount)
   end
 
   def remaining_to_assign
@@ -75,15 +75,15 @@ class MonthlyBudget < ApplicationRecord
   end
 
   # ------------------------------------------------------------------
-  # Auto-create envelopes from user's recurring templates
+  # Auto-create expenses from user's recurring templates
   # ------------------------------------------------------------------
   def auto_create_envelopes
-    user.envelope_templates.active.auto_create.find_each do |template|
-      # Skip if envelope for this template already exists in this budget
-      next if envelopes.exists?(envelope_template_id: template.id)
+    user.expense_templates.active.auto_create.find_each do |template|
+      # Skip if expense for this template already exists in this budget
+      next if expenses.exists?(expense_template_id: template.id)
 
-      envelopes.create!(
-        envelope_template: template,
+      expenses.create!(
+        expense_template: template,
         allotted_amount: template.default_amount || 0
       )
     end

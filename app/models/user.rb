@@ -5,8 +5,8 @@ class User < ApplicationRecord
   has_many :incomes, dependent: :destroy
   has_many :income_events, dependent: :destroy
   has_many :monthly_budgets, dependent: :destroy
-  has_many :envelopes, through: :monthly_budgets
-  has_many :envelope_templates, dependent: :destroy
+  has_many :expenses, through: :monthly_budgets
+  has_many :expense_templates, dependent: :destroy
 
   # ------------------------------------------------------------------
   # Admin helper
@@ -39,11 +39,11 @@ class User < ApplicationRecord
   # ------------------------------------------------------------------
   def total_actual_savings_this_month
     return 0 unless current_budget
-    current_budget.envelopes.savings.sum(&:spent_amount)
+    current_budget.expenses.savings.sum(&:spent_amount)
   end
 
   def total_actual_savings_all_time
-    envelopes.savings.sum(&:spent_amount)
+    expenses.savings.sum(&:spent_amount)
   end
 
   # Optional: shortcut for dashboard

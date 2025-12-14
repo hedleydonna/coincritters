@@ -70,9 +70,9 @@ Deletes a user account.
 - Incomes
 - Income Events
 - Monthly Budgets
-- Envelopes (through budgets)
-- Spendings (through envelopes)
-- Envelope Templates
+- Expense (through budgets)
+- Payments (through expense)
+- ExpenseTemplates
 
 ## Callbacks
 

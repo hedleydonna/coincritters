@@ -57,7 +57,7 @@ erDiagram
         datetime updated_at
     }
 
-    envelope_templates {
+    expense_templates {
         bigint id PK
         bigint user_id FK "NOT NULL"
         string name "NOT NULL"
@@ -70,17 +70,17 @@ erDiagram
         datetime updated_at
     }
 
-    envelopes {
+    expense {
         bigint id PK
         bigint monthly_budget_id FK "NOT NULL"
-        bigint envelope_template_id FK "NOT NULL"
+        bigint expense_template_id FK "NOT NULL"
         decimal allotted_amount "precision: 12, scale: 2, default: 0.0, NOT NULL"
         string name "nullable, override field - uses template name if null"
         datetime created_at
         datetime updated_at
     }
 
-    spendings {
+    payments {
         bigint id PK
         bigint envelope_id FK "NOT NULL"
         decimal amount "precision: 12, scale: 2, default: 0.0, NOT NULL"
@@ -94,15 +94,15 @@ erDiagram
     users ||--o{ incomes : "has many"
     users ||--o{ income_events : "has many"
     users ||--o{ monthly_budgets : "has many"
-    users ||--o{ envelope_templates : "has many"
+    users ||--o{ expense_templates : "has many"
 
     incomes ||--o{ income_events : "has many (optional)"
     
-    monthly_budgets ||--o{ envelopes : "has many"
+    monthly_budgets ||--o{ expense : "has many"
     
-    envelope_templates ||--o{ envelopes : "has many"
+    expense_templates ||--o{ expense : "has many"
     
-    envelopes ||--o{ spendings : "has many"
+    expense ||--o{ payments : "has many"
 ```
 
 ## Relationship Details
@@ -122,9 +122,9 @@ erDiagram
    - Cascade delete: When a user is deleted, all their monthly budgets are deleted
    - Unique constraint: One budget per user per month (`user_id`, `month_year`)
 
-4. **users → envelope_templates** (1:N)
-   - One user can have many envelope templates (reusable templates for creating envelopes)
-   - Cascade delete: When a user is deleted, all their envelope templates are deleted
+4. **users → expense_templates** (1:N)
+   - One user can have many expensetemplates (reusable templates for creating expense)
+   - Cascade delete: When a user is deleted, all their expensetemplates are deleted
    - Unique constraint: One template name per user (`user_id`, `name`)
 
 5. **incomes → income_events** (1:N, optional)
@@ -132,20 +132,20 @@ erDiagram
    - Optional relationship: Income events can exist without being linked to an income source
    - Cascade delete: When an income is deleted, all related income events are deleted
 
-6. **monthly_budgets → envelopes** (1:N)
-   - One monthly budget can have many envelopes (spending categories for that month)
-   - Cascade delete: When a monthly budget is deleted, all its envelopes are deleted
-   - Unique constraint: One envelope per template per budget (`monthly_budget_id`, `envelope_template_id`), unless name override is used
+6. **monthly_budgets → expense** (1:N)
+   - One monthly budget can have many expense (payment categories for that month)
+   - Cascade delete: When a monthly budget is deleted, all its expense are deleted
+   - Unique constraint: One expenseper template per budget (`monthly_budget_id`, `expense_template_id`), unless name override is used
 
-7. **envelope_templates → envelopes** (1:N)
-   - One envelope template can be used in many envelopes (across different monthly budgets)
+7. **expense_templates → expense** (1:N)
+   - One expensetemplate can be used in many expense (across different monthly budgets)
    - Templates provide default values (name, group_type, is_savings, default_amount)
-   - Envelopes can override template values (name, group_type, is_savings) on a per-month basis
-   - Cascade delete: When an envelope template is deleted, all related envelopes are deleted
+   - Expense can override template values (name, group_type, is_savings) on a per-month basis
+   - Cascade delete: When an expensetemplate is deleted, all related expense are deleted
 
-8. **envelopes → spendings** (1:N)
-   - One envelope can have many spending records (tracking individual transactions)
-   - Cascade delete: When an envelope is deleted, all its spending records are deleted
+8. **expense → payments** (1:N)
+   - One expensecan have many payment records (tracking individual transactions)
+   - Cascade delete: When an expenseis deleted, all its payment records are deleted
 
 ## Unique Constraints
 
@@ -153,37 +153,37 @@ erDiagram
 2. **users.reset_password_token** - Unique reset tokens
 3. **incomes(user_id, name)** - Unique income name per user
 4. **monthly_budgets(user_id, month_year)** - One budget per user per month
-5. **envelope_templates(user_id, name)** - Unique template name per user
-6. **envelopes(monthly_budget_id, envelope_template_id)** - One envelope per template per budget (unless name override is used)
-7. **envelopes(monthly_budget_id, name)** - Unique name per budget when using name override
+5. **expense_templates(user_id, name)** - Unique template name per user
+6. **expense(monthly_budget_id, expense_template_id)** - One expenseper template per budget (unless name override is used)
+7. **expense(monthly_budget_id, name)** - Unique name per budget when using name override
 
 ## Override Fields
 
-Envelopes support override fields that allow customization per month:
+Expense support override fields that allow customization per month:
 - **name** (nullable): If set, overrides the template name for this envelope
 - **group_type** (nullable): If set, overrides the template group_type (fixed/variable) for this envelope
 - **is_savings** (nullable): If set, overrides the template is_savings flag for this envelope
 
-When override fields are `NULL`, the envelope uses the values from its associated `envelope_template`.
+When override fields are `NULL`, the expenseuses the values from its associated `expense_template`.
 
 ## Calculated Fields (Not in Database)
 
 These fields are calculated at the model level and are not stored in the database:
 
-- **envelopes.spent_amount** - Calculated as `spendings.sum(:amount)` for that envelope
-- **envelopes.name** - Uses override if present, otherwise delegates to `envelope_template.name`
-- **envelopes.spending_group_name** - Alias for `name` (backward compatibility)
-- **envelopes.group_type** - Uses override if present, otherwise delegates to `envelope_template.group_type`
-- **envelopes.is_savings** - Uses override if present, otherwise delegates to `envelope_template.is_savings`
+- **expense.spent_amount** - Calculated as `payments.sum(:amount)` for that envelope
+- **expense.name** - Uses override if present, otherwise delegates to `expense_template.name`
+- **expense.payment_group_name** - Alias for `name` (backward compatibility)
+- **expense.group_type** - Uses override if present, otherwise delegates to `expense_template.group_type`
+- **expense.is_savings** - Uses override if present, otherwise delegates to `expense_template.is_savings`
 
 ## Notes
 
 - All foreign keys use `on_delete: :cascade`, meaning child records are automatically deleted when parent records are deleted
 - All tables include `created_at` and `updated_at` timestamps (managed by Rails)
 - Decimal fields use `precision: 12, scale: 2` for currency values
-- The `group_type` field in both `envelope_templates` and `envelopes` is an enum: `0 = fixed`, `1 = variable`
-- Envelope templates serve as reusable templates for creating envelopes across multiple monthly budgets
-- Envelopes can override template values to customize behavior for specific months
+- The `group_type` field in both `expense_templates` and `expense` is an enum: `0 = fixed`, `1 = variable`
+- Expensetemplates serve as reusable templates for creating expense across multiple monthly budgets
+- Expense can override template values to customize behavior for specific months
 
 ---
 

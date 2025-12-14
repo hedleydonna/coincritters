@@ -10,11 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_11_000003) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_11_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "envelope_templates", force: :cascade do |t|
+  create_table "expense_templates", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "name", null: false
     t.integer "group_type", default: 1, null: false
@@ -24,23 +24,23 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_11_000003) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "is_active", default: true, null: false
-    t.index ["is_active"], name: "index_envelope_templates_on_is_active"
-    t.index ["user_id", "group_type"], name: "index_envelope_templates_on_user_id_and_group_type"
-    t.index ["user_id", "name"], name: "index_envelope_templates_on_user_id_and_name", unique: true
-    t.index ["user_id"], name: "index_envelope_templates_on_user_id"
+    t.index ["is_active"], name: "index_expense_templates_on_is_active"
+    t.index ["user_id", "group_type"], name: "index_expense_templates_on_user_id_and_group_type"
+    t.index ["user_id", "name"], name: "index_expense_templates_on_user_id_and_name", unique: true
+    t.index ["user_id"], name: "index_expense_templates_on_user_id"
   end
 
-  create_table "envelopes", force: :cascade do |t|
+  create_table "expenses", force: :cascade do |t|
     t.bigint "monthly_budget_id", null: false
     t.decimal "allotted_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "envelope_template_id", null: false
+    t.bigint "expense_template_id", null: false
     t.string "name"
-    t.index ["envelope_template_id"], name: "index_envelopes_on_envelope_template_id"
-    t.index ["monthly_budget_id", "envelope_template_id"], name: "index_envelopes_on_budget_and_envelope_template", unique: true
+    t.index ["expense_template_id"], name: "index_expenses_on_expense_template_id"
+    t.index ["monthly_budget_id", "expense_template_id"], name: "index_envelopes_on_budget_and_envelope_template", unique: true
     t.index ["monthly_budget_id", "name"], name: "index_envelopes_on_budget_and_name_override"
-    t.index ["monthly_budget_id"], name: "index_envelopes_on_monthly_budget_id"
+    t.index ["monthly_budget_id"], name: "index_expenses_on_monthly_budget_id"
   end
 
   create_table "income_events", force: :cascade do |t|
@@ -88,15 +88,15 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_11_000003) do
     t.index ["user_id"], name: "index_monthly_budgets_on_user_id"
   end
 
-  create_table "spendings", force: :cascade do |t|
-    t.bigint "envelope_id", null: false
+  create_table "payments", force: :cascade do |t|
+    t.bigint "expense_id", null: false
     t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
     t.date "spent_on", null: false
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["envelope_id", "spent_on"], name: "index_spendings_on_envelope_id_and_spent_on"
-    t.index ["envelope_id"], name: "index_spendings_on_envelope_id"
+    t.index ["expense_id", "spent_on"], name: "index_payments_on_expense_id_and_spent_on"
+    t.index ["expense_id"], name: "index_payments_on_expense_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -113,12 +113,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_11_000003) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
-  add_foreign_key "envelope_templates", "users", on_delete: :cascade
-  add_foreign_key "envelopes", "envelope_templates", on_delete: :cascade
-  add_foreign_key "envelopes", "monthly_budgets", on_delete: :cascade
+  add_foreign_key "expense_templates", "users", on_delete: :cascade
+  add_foreign_key "expenses", "expense_templates", on_delete: :cascade
+  add_foreign_key "expenses", "monthly_budgets", on_delete: :cascade
   add_foreign_key "income_events", "incomes", on_delete: :cascade
   add_foreign_key "income_events", "users", on_delete: :cascade
   add_foreign_key "incomes", "users", on_delete: :cascade
   add_foreign_key "monthly_budgets", "users", on_delete: :cascade
-  add_foreign_key "spendings", "envelopes", on_delete: :cascade
+  add_foreign_key "payments", "expenses", on_delete: :cascade
 end

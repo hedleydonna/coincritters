@@ -119,7 +119,7 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 0, user.total_actual_savings_this_month
   end
 
-  test "total_actual_savings_this_month should sum spent_amount from savings envelopes in current budget" do
+  test "total_actual_savings_this_month should sum spent_amount from savings expenses in current budget" do
     user = User.create!(email: "savings_current@example.com", password: "password123")
     current_month = Time.current.strftime("%Y-%m")
     budget = MonthlyBudget.create!(
@@ -128,8 +128,8 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    # Create a savings envelope template
-    savings_template = EnvelopeTemplate.create!(
+    # Create a savings expense template
+    savings_template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -138,21 +138,21 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    # Create envelope with savings template
-    envelope = Envelope.create!(
+    # Create expense with savings template
+    expense = Expense.create!(
       monthly_budget: budget,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    # Create spending records
-    Spending.create!(envelope: envelope, amount: 150.00, spent_on: Date.today)
-    Spending.create!(envelope: envelope, amount: 50.00, spent_on: Date.today)
+    # Create payment records
+    Payment.create!(expense: expense, amount: 150.00, spent_on: Date.today)
+    Payment.create!(expense: expense, amount: 50.00, spent_on: Date.today)
     
     assert_equal 200.00, user.total_actual_savings_this_month
   end
 
-  test "total_actual_savings_this_month should only include savings envelopes from current budget" do
+  test "total_actual_savings_this_month should only include savings expenses from current budget" do
     user = User.create!(email: "savings_multimonth@example.com", password: "password123")
     current_month = Time.current.strftime("%Y-%m")
     old_month = (Date.today - 1.month).strftime("%Y-%m")
@@ -171,7 +171,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 4500.00
     )
     
-    savings_template = EnvelopeTemplate.create!(
+    savings_template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -180,27 +180,27 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    current_envelope = Envelope.create!(
+    current_expense = Expense.create!(
       monthly_budget: current_budget,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    old_envelope = Envelope.create!(
+    old_expense = Expense.create!(
       monthly_budget: old_budget,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    Spending.create!(envelope: current_envelope, amount: 100.00, spent_on: Date.today)
-    Spending.create!(envelope: old_envelope, amount: 200.00, spent_on: Date.today - 1.month)
+    Payment.create!(expense: current_expense, amount: 100.00, spent_on: Date.today)
+    Payment.create!(expense: old_expense, amount: 200.00, spent_on: Date.today - 1.month)
     
     # Should only include current month's savings
     assert_equal 100.00, user.total_actual_savings_this_month
   end
 
   # Test total_actual_savings_all_time method
-  test "total_actual_savings_all_time should sum spent_amount from all savings envelopes across all months" do
+  test "total_actual_savings_all_time should sum spent_amount from all savings expenses across all months" do
     user = User.create!(email: "total_savings_all@example.com", password: "password123")
     
     # Create budgets for different months
@@ -216,7 +216,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 4500.00
     )
     
-    savings_template = EnvelopeTemplate.create!(
+    savings_template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -225,21 +225,21 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    envelope1 = Envelope.create!(
+    expense1 = Expense.create!(
       monthly_budget: budget1,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    envelope2 = Envelope.create!(
+    expense2 = Expense.create!(
       monthly_budget: budget2,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    Spending.create!(envelope: envelope1, amount: 150.00, spent_on: Date.today)
-    Spending.create!(envelope: envelope1, amount: 50.00, spent_on: Date.today)
-    Spending.create!(envelope: envelope2, amount: 100.00, spent_on: Date.today - 1.month)
+    Payment.create!(expense: expense1, amount: 150.00, spent_on: Date.today)
+    Payment.create!(expense: expense1, amount: 50.00, spent_on: Date.today)
+    Payment.create!(expense: expense2, amount: 100.00, spent_on: Date.today - 1.month)
     
     assert_equal 300.00, user.total_actual_savings_all_time
     assert_equal 300.00, user.total_savings  # Alias should work
@@ -250,8 +250,8 @@ class UserTest < ActiveSupport::TestCase
     user = User.create!(email: "next_month_budget@example.com", password: "password123")
     next_month = (Date.today + 1.month).strftime("%Y-%m")
     
-    # Create envelope template with auto_create: true
-    template = EnvelopeTemplate.create!(
+    # Create expense template with auto_create: true
+    template = ExpenseTemplate.create!(
       user: user,
       name: "Next Month Groceries",
       group_type: :variable,
@@ -264,8 +264,8 @@ class UserTest < ActiveSupport::TestCase
     
     assert_not_nil budget
     assert_equal next_month, budget.month_year
-    assert_equal 1, budget.envelopes.count
-    assert_equal template.id, budget.envelopes.first.envelope_template_id
+    assert_equal 1, budget.expenses.count
+    assert_equal template.id, budget.expenses.first.expense_template_id
   end
 
   test "create_next_month_budget! should return nil if budget already exists" do
@@ -284,7 +284,7 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 1, MonthlyBudget.where(user: user, month_year: next_month).count
   end
 
-  test "total_actual_savings_all_time should only include savings envelopes" do
+  test "total_actual_savings_all_time should only include savings expenses" do
     user = User.create!(email: "total_savings_only@example.com", password: "password123")
     
     budget = MonthlyBudget.create!(
@@ -293,7 +293,7 @@ class UserTest < ActiveSupport::TestCase
       total_actual_income: 5000.00
     )
     
-    savings_template = EnvelopeTemplate.create!(
+    savings_template = ExpenseTemplate.create!(
       user: user,
       name: "Emergency Fund",
       group_type: :fixed,
@@ -302,7 +302,7 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    non_savings_template = EnvelopeTemplate.create!(
+    non_savings_template = ExpenseTemplate.create!(
       user: user,
       name: "Groceries",
       group_type: :variable,
@@ -311,22 +311,22 @@ class UserTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    savings_envelope = Envelope.create!(
+    savings_expense = Expense.create!(
       monthly_budget: budget,
-      envelope_template: savings_template,
+      expense_template: savings_template,
       allotted_amount: 300.00
     )
     
-    non_savings_envelope = Envelope.create!(
+    non_savings_expense = Expense.create!(
       monthly_budget: budget,
-      envelope_template: non_savings_template,
+      expense_template: non_savings_template,
       allotted_amount: 500.00
     )
     
-    Spending.create!(envelope: savings_envelope, amount: 200.00, spent_on: Date.today)
-    Spending.create!(envelope: non_savings_envelope, amount: 300.00, spent_on: Date.today)
+    Payment.create!(expense: savings_expense, amount: 200.00, spent_on: Date.today)
+    Payment.create!(expense: non_savings_expense, amount: 300.00, spent_on: Date.today)
     
-    # Should only include savings envelope spending
+    # Should only include savings envelope payment
     assert_equal 200.00, user.total_actual_savings_all_time
     assert_equal 200.00, user.total_savings  # Alias should work
   end

@@ -88,11 +88,11 @@ The User model includes the following Devise authentication modules:
 
 #### Budget Methods
 - `current_budget` - Returns the monthly budget for the current month (read-only, returns `nil` if no budget exists)
-- `create_next_month_budget!` - Creates next month's budget (if it doesn't exist) and auto-creates envelopes, returns the budget or `nil` if already exists
+- `create_next_month_budget!` - Creates next month's budget (if it doesn't exist) and auto-creates expense, returns the budget or `nil` if already exists
 
 #### Savings Methods
-- `total_actual_savings_this_month` - Returns the total amount saved this month across all savings envelopes in the current budget (returns `0` if no current budget)
-- `total_actual_savings_all_time` - Returns the total savings across all months and all budgets by summing `spent_amount` from all savings envelopes
+- `total_actual_savings_this_month` - Returns the total amount saved this month across all savings expense in the current budget (returns `0` if no current budget)
+- `total_actual_savings_all_time` - Returns the total savings across all months and all budgets by summing `spent_amount` from all savings expense
 - `total_savings` - Alias for `total_actual_savings_all_time` (shortcut for dashboard)
 
 ### Relationships
@@ -103,9 +103,9 @@ The User model includes the following Devise authentication modules:
   - When a user is deleted, all associated income events are also deleted (dependent: :destroy)
 - `has_many :monthly_budgets` - A user can have multiple monthly budgets (one per month)
   - When a user is deleted, all associated monthly budgets are also deleted (dependent: :destroy)
-- `has_many :envelopes, through: :monthly_budgets` - A user can access all envelopes through their monthly budgets
-- `has_many :spending_categories` - A user can have multiple spending categories
-  - When a user is deleted, all associated spending categories are also deleted (dependent: :destroy)
+- `has_many :expense, through: :monthly_budgets` - A user can access all expense through their monthly budgets
+- `has_many :payment_categories` - A user can have multiple payment categories
+  - When a user is deleted, all associated payment categories are also deleted (dependent: :destroy)
 
 **Note**: Income types are global/shared resources and do not belong to individual users. All users share the same set of income types for categorizing their income events.
 
@@ -189,19 +189,19 @@ user = User.first
 current = user.current_budget
 # => #<MonthlyBudget ... month_year: "2025-12"> or nil
 
-# Create next month's budget with auto-created envelopes
+# Create next month's budget with auto-created expense
 next_budget = user.create_next_month_budget!
 # => #<MonthlyBudget ... month_year: "2026-01">
 # Returns nil if budget already exists
-# Automatically creates envelopes for spending categories with auto_create: true
+# Automatically creates expense for payment categories with auto_create: true
 
 # Get total savings for current month
 monthly_savings = user.total_actual_savings_this_month
-# => 300.00 (sum of spent_amount from savings envelopes this month)
+# => 300.00 (sum of spent_amount from savings expense this month)
 
 # Get total savings across all months
 lifetime_savings = user.total_actual_savings_all_time
-# => 1500.00 (sum of spent_amount from all savings envelopes ever)
+# => 1500.00 (sum of spent_amount from all savings expense ever)
 
 # Shortcut alias (same as total_actual_savings_all_time)
 total = user.total_savings
@@ -231,39 +231,39 @@ The Monthly Budget model represents monthly budget tracking for users. Key featu
 - Tracks total actual income, flex fund, and optional bank balance
 - Validates month_year format (YYYY-MM)
 - Supports cascade deletion when user is deleted
-- Has many envelopes for spending categories
+- Has many expense for payment categories
 - Provides scopes for finding budgets (`current`, `for_month`, `by_month`, `for_user`)
 - Calculates remaining income to assign and unassigned amounts
 - Supports bank balance reconciliation with tolerance checking
-- Auto-creates envelopes from spending categories with `auto_create: true`
+- Auto-creates expense from payment categories with `auto_create: true`
 
 ---
 
-## Spending Category Model
+## Payment Category Model
 
-For detailed documentation about the Spending Category model, see [Spending Category Model Documentation](./spending_category_model.md).
+For detailed documentation about the Payment Category model, see [Payment Category Model Documentation](./payment_category_model.md).
 
-The Spending Category model represents user-defined spending categories that can be reused across monthly budgets. Key features:
+The Payment Category model represents user-defined payment categories that can be reused across monthly budgets. Key features:
 - Each category belongs to a user
 - Defines group type (fixed vs variable) and savings status
 - Supports default amounts and auto-creation settings
 - Enforces unique category names per user
 - Supports cascade deletion when user is deleted
-- Has many envelopes that reference it
+- Has many expense that reference it
 
 ---
 
-## Envelope Model
+## ExpenseModel
 
-For detailed documentation about the Envelope model, see [Envelope Model Documentation](./envelope_model.md).
+For detailed documentation about the Expensemodel, see [ExpenseModel Documentation](./envelope_model.md).
 
-The Envelope model represents spending categories within monthly budgets. Key features:
-- Each envelope belongs to a monthly budget and a spending category
-- Tracks allotted amount; spent amount is calculated from related spending records
-- Auto-fills `allotted_amount` from spending category's `default_amount` when creating
-- Inherits name, group type, and savings status from spending category
-- Enforces unique spending_category per budget
-- Supports cascade deletion when monthly budget or spending category is deleted
+The Expensemodel represents payment categories within monthly budgets. Key features:
+- Each expensebelongs to a monthly budget and a payment category
+- Tracks allotted amount; spent amount is calculated from related payment records
+- Auto-fills `allotted_amount` from payment category's `default_amount` when creating
+- Inherits name, group type, and savings status from payment category
+- Enforces unique payment_category per budget
+- Supports cascade deletion when monthly budget or payment category is deleted
 - Provides scopes for filtering by type (`fixed`, `variable`, `savings`, `non_savings`, `over_budget`)
 - Calculates remaining, available, and spent percentages
 - Tracks if fixed bills are paid (`paid?` method)
@@ -316,18 +316,18 @@ As the application grows, additional models may be added:
 
 ---
 
-## Spending Model
+## Payment Model
 
-For detailed documentation about the Spending model, see [Spending Model Documentation](./spending_model.md).
+For detailed documentation about the Payment model, see [Payment Model Documentation](./payment_model.md).
 
-The Spending model represents individual spending transactions within an envelope. This unified model consolidates all spending records (both fixed bills and variable expenses). Key features:
-- Each spending record belongs to an envelope
+The Payment model represents individual payment transactions within an expense This unified model consolidates all payment records (both fixed bills and variable expenses). Key features:
+- Each payment record belongs to an envelope
 - Tracks `amount`, `spent_on`, and optional `notes`
 - `amount` must be greater than 0
 - Provides scopes for querying by date, date range, and envelope
-- Delegates `spending_group_name` to the associated envelope's name (which comes from spending_category)
+- Delegates `payment_group_name` to the associated expenses name (which comes from payment_category)
 - Provides helper methods for date-based checks (`today?`, `this_week?`, `this_month?`)
-- Supports cascade deletion when envelope is deleted
+- Supports cascade deletion when expenseis deleted
 
 ---
 

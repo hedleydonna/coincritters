@@ -11,7 +11,7 @@ Rails.application.routes.draw do
   authenticated :user do
     root "dashboard#index", as: :authenticated_root
     
-    resources :envelope_templates, except: [:show] do
+    resources :expense_templates, except: [:show] do
       member do
         patch :reactivate
       end
@@ -30,8 +30,8 @@ Rails.application.routes.draw do
     resources :incomes
     resources :income_events
     resources :monthly_budgets
-    resources :envelope_templates
-    resources :envelopes
-    resources :spendings
+    resources :expense_templates
+    resources :expenses
+    resources :payments
   end
 end

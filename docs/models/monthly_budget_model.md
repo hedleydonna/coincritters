@@ -116,12 +116,12 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
 
 ### Calculation Methods
 
-- `total_allotted` - Returns the sum of `allotted_amount` from all associated envelopes
+- `total_allotted` - Returns the sum of `allotted_amount` from all associated expense
   ```ruby
   budget.total_allotted  # => 2000.00
   ```
 
-- `total_spent` - Returns the sum of `spent_amount` (calculated from spendings) across all envelopes
+- `total_spent` - Returns the sum of `spent_amount` (calculated from payments) across all expense
   ```ruby
   budget.total_spent  # => 1500.00
   ```
@@ -130,7 +130,7 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
   ```ruby
   budget.remaining_to_assign  # => 3000.00 (if total_actual_income is 5000.00 and total_allotted is 2000.00)
   ```
-  - This represents how much income is left to assign to envelopes.
+  - This represents how much income is left to assign to expense.
   - Can be negative if more has been allotted than actual income.
 
 - `unassigned` - Returns the remaining amount, but never negative (clamped to 0)
@@ -150,14 +150,14 @@ The Monthly Budget model represents monthly budget tracking for users in the Wil
   budget.bank_match?  # => true or false
   ```
 
-### Envelope Management Methods
+### ExpenseManagement Methods
 
-- `auto_create_envelopes` - Automatically creates envelopes for all spending categories with `auto_create: true` that don't already have an envelope in this budget
+- `auto_create_expense` - Automatically creates expense for all payment categories with `auto_create: true` that don't already have an expensein this budget
   ```ruby
-  budget.auto_create_envelopes
-  # Creates envelopes for each spending category with auto_create: true
-  # Uses category.default_amount for the envelope's allotted_amount
-  # Skips categories that already have an envelope in this budget
+  budget.auto_create_expense
+  # Creates expense for each payment category with auto_create: true
+  # Uses category.default_amount for the expenses allotted_amount
+  # Skips categories that already have an expensein this budget
   ```
 
 ## Business Rules
@@ -222,7 +222,7 @@ december_budget = user.monthly_budgets.find_by(month_year: "2025-12")
 # => #<MonthlyBudget ... month_year: "2025-12">
 ```
 
-### Auto-Creating Envelopes
+### Auto-Creating Expense
 
 ```ruby
 budget = MonthlyBudget.create!(
@@ -231,10 +231,10 @@ budget = MonthlyBudget.create!(
   total_actual_income: 5000.00
 )
 
-# Auto-create envelopes for spending categories with auto_create: true
-budget.auto_create_envelopes
-# => Creates envelopes for categories like "Groceries", "Rent", "Emergency Fund"
-# Each envelope gets the category's default_amount as its allotted_amount
+# Auto-create expense for payment categories with auto_create: true
+budget.auto_create_expense
+# => Creates expense for categories like "Groceries", "Rent", "Emergency Fund"
+# Each expensegets the category's default_amount as its allotted_amount
 ```
 
 ### Updating a Monthly Budget
@@ -283,7 +283,7 @@ The `total_actual_income` field represents the total amount of actual income tha
 
 ### Flex Fund
 
-The `flex_fund` represents leftover or unassigned money that the user has available for discretionary spending. This is money that hasn't been allocated to specific categories or expenses.
+The `flex_fund` represents leftover or unassigned money that the user has available for discretionary payment. This is money that hasn't been allocated to specific categories or expenses.
 
 ### Bank Balance
 
@@ -323,8 +323,8 @@ The admin dashboard displays:
 ## Future Enhancements
 
 - **Automatic Calculation**: Automatically calculate `total_actual_income` from associated income events
-- **Budget Categories**: Add support for budget categories/envelopes within a monthly budget
-- **Spending Tracking**: Track actual spending against budgeted amounts
+- **Budget Categories**: Add support for budget categories/expense within a monthly budget
+- **Payment Tracking**: Track actual payment against budgeted amounts
 - **Carryover**: Automatically carry over unused flex fund to next month
 - **Reports**: Generate monthly/quarterly/annual budget reports
 - **Forecasting**: Predict future budgets based on historical data

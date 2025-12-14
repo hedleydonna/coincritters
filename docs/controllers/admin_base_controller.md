@@ -60,10 +60,10 @@ end
 All controllers in the `Admin` namespace inherit from this controller:
 
 - `Admin::DashboardController`
-- `Admin::EnvelopesController`
-- `Admin::EnvelopeTemplatesController`
+- `Admin::ExpenseController`
+- `Admin::ExpenseTemplatesController`
 - `Admin::MonthlyBudgetsController`
-- `Admin::SpendingsController`
+- `Admin::PaymentsController`
 - `Admin::IncomesController`
 - `Admin::IncomeEventsController`
 - `Admin::UsersController`
@@ -79,9 +79,9 @@ namespace :admin do
   resources :incomes
   resources :income_events
   resources :monthly_budgets
-  resources :envelope_templates
-  resources :envelopes
-  resources :spendings
+  resources :expense_templates
+  resources :expense
+  resources :payments
 end
 ```
 
@@ -95,7 +95,7 @@ end
 ## Usage Example
 
 ```ruby
-class Admin::EnvelopesController < Admin::BaseController
+class Admin::ExpenseController < Admin::BaseController
   # Automatically has authentication and admin check
   # No need to add before_action :authenticate_user! or :ensure_admin
 end
