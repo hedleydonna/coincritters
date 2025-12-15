@@ -1,11 +1,11 @@
 class IncomeEvent < ApplicationRecord
   belongs_to :user
-  belongs_to :income, optional: true
+  belongs_to :income_template, optional: true
 
   validates :month_year, presence: true
   validates :received_on, presence: true
   validates :actual_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :custom_label, presence: true, if: -> { income_id.nil? }
+  validates :custom_label, presence: true, if: -> { income_template_id.nil? }
   
   # Validate month_year format (YYYY-MM)
   validates :month_year, format: { with: /\A\d{4}-\d{2}\z/, message: "must be in YYYY-MM format" }
@@ -14,9 +14,9 @@ class IncomeEvent < ApplicationRecord
   after_save :update_monthly_budget_income
   after_destroy :update_monthly_budget_income
 
-  # Display name logic: use income.name if linked, otherwise custom_label
+  # Display name logic: use income_template.name if linked, otherwise custom_label
   def display_name
-    income&.name || custom_label
+    income_template&.name || custom_label
   end
 
   # Helper to get the month this income counts toward

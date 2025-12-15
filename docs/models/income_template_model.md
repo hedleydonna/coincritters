@@ -1,19 +1,19 @@
-# Income Model Documentation
+# Income Template Model Documentation
 
 ## Overview
 
-The Income model represents income sources for users in the Willow application. Each income source tracks a named income stream (e.g., "Salary", "Freelance Work") with its estimated amount, frequency, and active status.
+The IncomeTemplate model represents income sources for users in the CoinCritters application. Each income source tracks a named income stream (e.g., "Salary", "Freelance Work") with its estimated amount, frequency, and active status. Income templates are similar to expense templates in that they define recurring patterns, while income events represent actual money received.
 
 ## Database Table
 
-**Table Name:** `incomes`
+**Table Name:** `income_templates`
 
 ### Schema
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `user_id` | bigint | NOT NULL | References the user who owns this income (referential integrity enforced at model level) |
+| `user_id` | bigint | NOT NULL | References the user who owns this income template (referential integrity enforced at model level) |
 | `name` | string | NOT NULL | Name of the income source (e.g., "Salary", "Freelance") |
 | `frequency` | string | NOT NULL, Default: "monthly" | How often this income is received |
 | `estimated_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | Estimated amount of income |
@@ -28,34 +28,42 @@ The Income model represents income sources for users in the Willow application. 
 
 - **User ID Index**: Index on `user_id` for fast user lookups
 - **User ID + Name Index**: Unique composite index on `[user_id, name]` - prevents duplicate income names per user
-- **User ID + Active Index**: Composite index on `[user_id, active]` - optimized for filtering active incomes
+- **User ID + Active Index**: Composite index on `[user_id, active]` - optimized for filtering active income templates
 
 ### Referential Integrity
 
 **Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
 
-- **User**: `belongs_to :user` - enforced via model validation. When a user is deleted, all their incomes are deleted via `dependent: :destroy` in the `User` model association.
+- **User**: `belongs_to :user` - enforced via model validation. When a user is deleted, all their income templates are deleted via `dependent: :destroy` in the `User` model association.
 
 Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
 ## Model Location
 
-`app/models/income.rb`
+`app/models/income_template.rb`
 
 ## Associations
 
 ### Belongs To
 
-- **User**: Each income belongs to exactly one user
+- **User**: Each income template belongs to exactly one user
   ```ruby
-  income.user  # Returns the User object
+  income_template.user  # Returns the User object
   ```
+
+### Has Many
+
+- **Income Events**: An income template can have many income events
+  ```ruby
+  income_template.income_events  # Returns collection of IncomeEvent objects
+  ```
+  - **Dependent Behavior**: `destroy` - when an income template is deleted, all associated events are deleted
 
 ### Has Many (from User)
 
-- **User has_many :incomes**: A user can have multiple income sources
+- **User has_many :income_templates**: A user can have multiple income sources
   ```ruby
-  user.incomes  # Returns collection of Income objects
+  user.income_templates  # Returns collection of IncomeTemplate objects
   ```
 
 ## Validations
@@ -63,15 +71,15 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 ### Name
 
 - **Presence**: Name must be present
-- **Uniqueness**: Name must be unique per user (different users can have incomes with the same name)
+- **Uniqueness**: Name must be unique per user (different users can have income templates with the same name)
   ```ruby
   # Valid - same name, different users
-  user1.incomes.create(name: "Salary", ...)
-  user2.incomes.create(name: "Salary", ...)
+  user1.income_templates.create(name: "Salary", ...)
+  user2.income_templates.create(name: "Salary", ...)
   
   # Invalid - same name, same user
-  user1.incomes.create(name: "Salary", ...)
-  user1.incomes.create(name: "Salary", ...)  # Error: name has already been taken
+  user1.income_templates.create(name: "Salary", ...)
+  user1.income_templates.create(name: "Salary", ...)  # Error: name has already been taken
   ```
 
 ### Estimated Amount
@@ -114,26 +122,26 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 Returns only active income sources for efficient querying:
 
 ```ruby
-user.incomes.active  # Returns only incomes where active: true
+user.income_templates.active  # Returns only income templates where active: true
 ```
 
 **Usage:**
 - Filter active income sources
 - Calculate current income totals
-- Display only relevant incomes to users
+- Display only relevant income templates to users
 
 ### Auto Create Scope
 
-Returns only incomes that are configured for automatic event creation:
+Returns only income templates that are configured for automatic event creation:
 
 ```ruby
-user.incomes.auto_create  # Returns only incomes where auto_create: true
+user.income_templates.auto_create  # Returns only income templates where auto_create: true
 ```
 
 **Usage:**
-- Find incomes that need automatic event generation
+- Find income templates that need automatic event generation
 - Process scheduled income events
-- Display auto-configured incomes in UI
+- Display auto-configured income templates in UI
 
 ## Constants
 
@@ -141,7 +149,7 @@ user.incomes.auto_create  # Returns only incomes where auto_create: true
 
 Array of valid frequency values:
 ```ruby
-Income::FREQUENCIES
+IncomeTemplate::FREQUENCIES
 # => ["weekly", "bi_weekly", "monthly", "irregular"]
 ```
 
@@ -154,18 +162,18 @@ Income::FREQUENCIES
 
 - **frequency**: `"monthly"` - Most common income frequency
 - **estimated_amount**: `0.0` - Safe default until user enters amount
-- **active**: `true` - New incomes are active by default
+- **active**: `true` - New income templates are active by default
 - **auto_create**: `false` - Manual event creation by default (user must acknowledge income)
 - **due_date**: `nil` - No automatic date specified by default (required when auto_create is true)
 - **last_payment_to_next_month**: `false` - All payments count in month received by default
 
 ## Usage Examples
 
-### Creating an Income
+### Creating an Income Template
 
 ```ruby
 # Basic creation (manual event creation)
-income = Income.create!(
+income_template = IncomeTemplate.create!(
   user: current_user,
   name: "Salary",
   frequency: "monthly",
@@ -173,7 +181,7 @@ income = Income.create!(
 )
 
 # With all options (manual event creation)
-income = Income.create!(
+income_template = IncomeTemplate.create!(
   user: current_user,
   name: "Freelance Work",
   frequency: "irregular",
@@ -181,8 +189,8 @@ income = Income.create!(
   active: true
 )
 
-# Auto-create income (automatically creates events monthly on the 1st)
-income = Income.create!(
+# Auto-create income template (automatically creates events monthly on the 1st)
+income_template = IncomeTemplate.create!(
   user: current_user,
   name: "Regular Salary",
   frequency: "monthly",
@@ -192,8 +200,8 @@ income = Income.create!(
   last_payment_to_next_month: false
 )
 
-# Auto-create bi-weekly income with last payment deferred
-income = Income.create!(
+# Auto-create bi-weekly income template with last payment deferred
+income_template = IncomeTemplate.create!(
   user: current_user,
   name: "Bi-weekly Salary",
   frequency: "bi_weekly",
@@ -204,51 +212,51 @@ income = Income.create!(
 )
 ```
 
-### Querying Incomes
+### Querying Income Templates
 
 ```ruby
-# All incomes for a user
-user.incomes
+# All income templates for a user
+user.income_templates
 
-# Only active incomes
-user.incomes.active
+# Only active income templates
+user.income_templates.active
 
-# Find specific income
-income = user.incomes.find_by(name: "Salary")
+# Find specific income template
+income_template = user.income_templates.find_by(name: "Salary")
 
-# Check if income exists
-user.incomes.exists?(name: "Salary")
+# Check if income template exists
+user.income_templates.exists?(name: "Salary")
 ```
 
-### Updating Income
+### Updating Income Template
 
 ```ruby
 # Update amount
-income.update(estimated_amount: 5500.00)
+income_template.update(estimated_amount: 5500.00)
 
-# Deactivate income
-income.update(active: false)
+# Deactivate income template
+income_template.update(active: false)
 
 # Change frequency
-income.update(frequency: "bi_weekly")
+income_template.update(frequency: "bi_weekly")
 ```
 
-### Deleting Income
+### Deleting Income Template
 
 ```ruby
-# Delete single income
-income.destroy
+# Delete single income template
+income_template.destroy
 
-# Delete all incomes for user (when user is deleted, cascade handles this)
-user.destroy  # Automatically deletes all associated incomes
+# Delete all income templates for user (when user is deleted, cascade handles this)
+user.destroy  # Automatically deletes all associated income templates
 ```
 
 ## Business Rules
 
 1. **Unique Names Per User**: Users cannot have duplicate income source names (prevents confusion)
-2. **Different Users, Same Names**: Multiple users can have incomes with the same name (e.g., both users can have "Salary")
-3. **Active Status**: Inactive incomes are retained but hidden from active calculations
-4. **Cascade Delete**: Deleting a user automatically deletes all their incomes
+2. **Different Users, Same Names**: Multiple users can have income templates with the same name (e.g., both users can have "Salary")
+3. **Active Status**: Inactive income templates are retained but hidden from active calculations
+4. **Cascade Delete**: Deleting a user automatically deletes all their income templates
 5. **Non-Negative Amounts**: Income amounts cannot be negative (for expenses, use a separate model)
 6. **Auto Create Requirements**: 
    - When `auto_create` is `true`, `due_date` must be provided
@@ -271,9 +279,9 @@ user.destroy  # Automatically deletes all associated incomes
 
 ### Concept
 
-The auto-create feature allows users to configure income sources that automatically generate `IncomeEvent` records without manual intervention. This addresses two different use cases:
+The auto-create feature allows users to configure income templates that automatically generate `IncomeEvent` records without manual intervention. This addresses two different use cases:
 
-- **Predictable, Consistent Income** (`auto_create: true`): For income where the amount is always the same (e.g., fixed monthly salary). The system automatically creates an income event on the specified day, using the income's `estimated_amount` as the event's `actual_amount`. No manual entry needed.
+- **Predictable, Consistent Income** (`auto_create: true`): For income where the amount is always the same (e.g., fixed monthly salary). The system automatically creates an income event on the specified day, using the income template's `estimated_amount` as the event's `actual_amount`. No manual entry needed.
   
 - **Variable Income** (`auto_create: false`): For income where the amount varies month-to-month (e.g., variable paychecks, commissions). The user must manually create income events and enter the `actual_amount` received, which may differ from the `estimated_amount`.
 
@@ -324,7 +332,7 @@ The auto-create feature allows users to configure income sources that automatica
 ### Implementation Notes
 
 - Auto-creation happens when user visits Money Map or Income This Month page
-- System checks for incomes where `auto_create: true` and `active: true`
+- System checks for income templates where `auto_create: true` and `active: true`
 - Creates events for current and next month if not already created
 - Handles edge cases (end of month, leap years, different month lengths)
 - Events are only created from today forward for current month (not past dates)
@@ -344,7 +352,7 @@ Calculates all income event dates for a given month based on frequency and due_d
 
 **Examples:**
 ```ruby
-income = Income.create!(
+income_template = IncomeTemplate.create!(
   user: user,
   name: "Bi-weekly Salary",
   frequency: "bi_weekly",
@@ -353,7 +361,7 @@ income = Income.create!(
 )
 
 # Get events for December 2025
-dates = income.events_for_month("2025-12")
+dates = income_template.events_for_month("2025-12")
 # => [2025-12-01, 2025-12-15, 2025-12-29]
 ```
 
@@ -369,7 +377,7 @@ Calculates the total expected income for a given month.
 
 **Examples:**
 ```ruby
-income = Income.create!(
+income_template = IncomeTemplate.create!(
   user: user,
   name: "Bi-weekly Salary",
   frequency: "bi_weekly",
@@ -379,7 +387,7 @@ income = Income.create!(
 )
 
 # Calculate expected for December (3 pays)
-expected = income.expected_amount_for_month("2025-12")
+expected = income_template.expected_amount_for_month("2025-12")
 # => 7800.00 (3 × 2600.00)
 ```
 
@@ -392,7 +400,7 @@ Returns whether the last payment of each month should be deferred to next month.
 
 ## Future Enhancements
 
-Potential additions to the Income model:
+Potential additions to the IncomeTemplate model:
 
 - **Notes/Description**: Additional details about the income source
 - **Start Date / End Date**: Track when income starts and ends
@@ -402,11 +410,10 @@ Potential additions to the Income model:
 
 ## Related Models
 
-- **User**: Parent model - each income belongs to a user
-- Future models may include:
-  - **Expense**: Track expenses separately from income
-  - **Budget**: Create budgets based on income
-  - **Transaction**: Record actual income transactions
+- **User**: Parent model - each income template belongs to a user
+- **IncomeEvent**: Child model - income templates can have many income events
+- **ExpenseTemplate**: Similar template model for expenses
+- **MonthlyBudget**: Uses income templates to calculate expected income
 
 ## Database Constraints
 

@@ -1,6 +1,6 @@
 one:
   user: one
-  income: one
+  income_template: one
   custom_label: "Paycheck"
   month_year: "2025-12"
   apply_to_next_month: false
@@ -10,7 +10,7 @@ one:
 
 two:
   user: one
-  income: two
+  income_template: two
   custom_label: "Freelance"
   month_year: "2025-12"
   apply_to_next_month: false
@@ -20,7 +20,7 @@ two:
 
 three:
   user: two
-  income: three
+  income_template: three
   custom_label: "Investment"
   month_year: "2025-11"
   apply_to_next_month: false
@@ -29,7 +29,7 @@ three:
 
 four:
   user: two
-  income: four
+  income_template: four
   custom_label: "Rental"
   month_year: "2025-12"
   apply_to_next_month: true

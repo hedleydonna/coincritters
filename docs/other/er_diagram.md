@@ -19,7 +19,7 @@ erDiagram
         datetime updated_at
     }
 
-    incomes {
+    income_templates {
         bigint id PK
         bigint user_id FK "NOT NULL"
         string name "NOT NULL"
@@ -92,12 +92,12 @@ erDiagram
     }
 
     %% Relationships
-    users ||--o{ incomes : "has many"
+    users ||--o{ income_templates : "has many"
     users ||--o{ income_events : "has many"
     users ||--o{ monthly_budgets : "has many"
     users ||--o{ expense_templates : "has many"
 
-    incomes ||--o{ income_events : "has many (optional)"
+    income_templates ||--o{ income_events : "has many (optional)"
     
     monthly_budgets ||--o{ expense : "has many"
     
@@ -110,9 +110,9 @@ erDiagram
 
 ### One-to-Many Relationships
 
-1. **users → incomes** (1:N)
+1. **users → income_templates** (1:N)
    - One user can have many income sources
-   - Delete behavior: When a user is deleted, all their incomes are deleted via `dependent: :destroy` in the User model
+   - Delete behavior: When a user is deleted, all their income templates are deleted via `dependent: :destroy` in the User model
 
 2. **users → income_events** (1:N)
    - One user can have many income events
@@ -128,10 +128,10 @@ erDiagram
    - Delete behavior: When a user is deleted, all their expensetemplates are deleted via `dependent: :destroy` in the User model
    - Unique constraint: One template name per user (`user_id`, `name`)
 
-5. **incomes → income_events** (1:N, optional)
-   - One income source can have many income events (tracking actual payments)
-   - Optional relationship: Income events can exist without being linked to an income source
-   - Delete behavior: When an income is deleted, all related income events are deleted via `dependent: :destroy` in the Income model
+5. **income_templates → income_events** (1:N, optional)
+   - One income template can have many income events (tracking actual payments)
+   - Optional relationship: Income events can exist without being linked to an income template
+   - Delete behavior: When an income template is deleted, all related income events are deleted via `dependent: :destroy` in the IncomeTemplate model
 
 6. **monthly_budgets → expense** (1:N)
    - One monthly budget can have many expense (payment categories for that month)
@@ -154,7 +154,7 @@ erDiagram
 
 1. **users.email** - Unique email addresses
 2. **users.reset_password_token** - Unique reset tokens
-3. **incomes(user_id, name)** - Unique income name per user
+3. **income_templates(user_id, name)** - Unique income template name per user
 4. **monthly_budgets(user_id, month_year)** - One budget per user per month
 5. **expense_templates(user_id, name)** - Unique template name per user
 6. **expense(monthly_budget_id, expense_template_id)** - Partial unique index: One expense per template per budget when expense_template_id IS NOT NULL (unless name override is used)

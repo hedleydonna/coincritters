@@ -1,4 +1,4 @@
-class Income < ApplicationRecord
+class IncomeTemplate < ApplicationRecord
   belongs_to :user
   has_many :income_events, dependent: :destroy
 

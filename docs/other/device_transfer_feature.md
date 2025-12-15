@@ -254,7 +254,7 @@ class DataExportService {
       monthly_budgets: await this.exportMonthlyBudgets(),
       expenses: await this.exportExpenses(),
       expense_templates: await this.exportExpenseTemplates(),
-      incomes: await this.exportIncomes(),
+      income_templates: await this.exportIncomeTemplates(),
       income_events: await this.exportIncomeEvents(),
       payments: await this.exportPayments(),
       user_preferences: await this.exportUserPreferences()
@@ -299,7 +299,7 @@ class DataImportService {
         await this.importMonthlyBudgets(data.monthly_budgets);
         await this.importExpenses(data.expenses);
         await this.importExpenseTemplates(data.expense_templates);
-        await this.importIncomes(data.incomes);
+        await this.importIncomeTemplates(data.income_templates);
         await this.importIncomeEvents(data.income_events);
         await this.importPayments(data.payments);
         await this.importUserPreferences(data.user_preferences);
@@ -506,7 +506,7 @@ class EncryptionService {
       "expense_template_id": 1
     }
   ],
-  "incomes": [
+  "income_templates": [
     {
       "name": "Salary",
       "frequency": "monthly",

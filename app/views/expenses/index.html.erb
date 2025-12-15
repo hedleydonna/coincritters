@@ -130,8 +130,8 @@
               <p class="font-medium text-gray-900"><%= event.display_name %></p>
               <p class="text-sm text-gray-600">
                 <%= event.received_on.strftime("%B %d") %>
-                <% if event.income %>
-                  • Expected: <%= number_to_currency(event.income.estimated_amount) %>
+                <% if event.income_template %>
+                  • Expected: <%= number_to_currency(event.income_template.estimated_amount) %>
                 <% end %>
               </p>
             </div>

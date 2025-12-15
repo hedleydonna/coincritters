@@ -4,14 +4,14 @@ class IncomeEventTest < ActiveSupport::TestCase
   setup do
     @user_one = users(:one)
     @user_two = users(:two)
-    @income_one = incomes(:one)
+    @income_template_one = income_templates(:one)
     @income_event_one = income_events(:one)
   end
 
   test "should be valid with valid attributes" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      income: @income_one,
+      income_template: @income_template_one,
       custom_label: "Paycheck",
       month_year: "2025-12",
       received_on: Date.today,
@@ -22,7 +22,7 @@ class IncomeEventTest < ActiveSupport::TestCase
 
   test "should require a user" do
     income_event = IncomeEvent.new(
-      income: @income_one,
+      income_template: @income_template_one,
       custom_label: "Paycheck",
       month_year: "2025-12",
       received_on: Date.today
@@ -31,10 +31,10 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_includes income_event.errors[:user], "must exist"
   end
 
-  test "should require custom_label if income_id is nil" do
+  test "should require custom_label if income_template_id is nil" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      income: nil,  # No income, so custom_label is required
+      income_template: nil,  # No income_template, so custom_label is required
       month_year: "2025-12",
       received_on: Date.today,
       custom_label: nil  # Explicitly set to nil to test validation
@@ -43,10 +43,10 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_includes income_event.errors[:custom_label], "can't be blank"
   end
 
-  test "should not require custom_label if income_id is present" do
+  test "should not require custom_label if income_template_id is present" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      income: @income_one,  # Income present, so custom_label is optional
+      income_template: @income_template_one,  # Income present, so custom_label is optional
       month_year: "2025-12",
       received_on: Date.today,
       custom_label: nil  # Can be nil when income is present
@@ -189,7 +189,7 @@ class IncomeEventTest < ActiveSupport::TestCase
 
   test "should destroy when income is destroyed" do
     # Create a new income for this test to avoid fixture interference
-    new_income = Income.create!(
+    new_income_template = IncomeTemplate.create!(
       user: @user_one,
       name: "Test Income",
       frequency: "monthly",
@@ -197,14 +197,14 @@ class IncomeEventTest < ActiveSupport::TestCase
     )
     income_event = IncomeEvent.create!(
       user: @user_one,
-      income: new_income,
+      income_template: new_income_template,
       custom_label: "Paycheck",
       month_year: "2025-12",
       received_on: Date.today
     )
     
     assert_difference("IncomeEvent.count", -1) do
-      new_income.destroy
+      new_income_template.destroy
     end
   end
 
@@ -221,15 +221,15 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_equal "Custom Type Name", income_event.custom_label
   end
 
-  test "display_name returns income name if income is present" do
-    income_event = income_events(:one) # Has income_id and custom_label
-    assert_equal income_event.income.name, income_event.display_name
+  test "display_name returns income_template name if income_template is present" do
+    income_event = income_events(:one) # Has income_template_id and custom_label
+    assert_equal income_event.income_template.name, income_event.display_name
   end
 
-  test "display_name returns custom_label if income is nil" do
+  test "display_name returns custom_label if income_template is nil" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      income: nil,
+      income_template: nil,
       custom_label: "Birthday Gift",
       month_year: "2025-12",
       received_on: Date.today,
@@ -238,10 +238,10 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_equal "Birthday Gift", income_event.display_name
   end
 
-  test "display_name returns nil if both income and custom_label are nil" do
+  test "display_name returns nil if both income_template and custom_label are nil" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      income: nil,
+      income_template: nil,
       custom_label: nil,
       month_year: "2025-12",
       received_on: Date.today,

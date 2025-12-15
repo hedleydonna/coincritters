@@ -4,7 +4,7 @@ This document describes the data models used in the Willow application.
 
 ## Overview
 
-Willow currently uses four models: **User**, **Income**, **IncomeType**, and **IncomeEvent**. The application is built with Ruby on Rails and uses Devise for authentication.
+CoinCritters currently uses several models: **User**, **IncomeTemplate**, **IncomeEvent**, **ExpenseTemplate**, **Expense**, **Payment**, and **MonthlyBudget**. The application is built with Ruby on Rails and uses Devise for authentication.
 
 ---
 
@@ -97,8 +97,8 @@ The User model includes the following Devise authentication modules:
 
 ### Relationships
 
-- `has_many :incomes` - A user can have multiple income sources
-  - When a user is deleted, all associated incomes are also deleted (dependent: :destroy)
+- `has_many :income_templates` - A user can have multiple income sources
+  - When a user is deleted, all associated income templates are also deleted (dependent: :destroy)
 - `has_many :income_events` - A user can have multiple income events
   - When a user is deleted, all associated income events are also deleted (dependent: :destroy)
 - `has_many :monthly_budgets` - A user can have multiple monthly budgets (one per month)
@@ -132,7 +132,7 @@ The User model includes the following Devise authentication modules:
 - Boolean field (default: false)
 - Grants administrative privileges when set to true
 - Admin users can access the admin dashboard
-- Admin users can manage users and incomes
+- Admin users can manage users and income templates
 - Only existing admins can grant admin privileges to other users
 
 ### Security Features
@@ -210,11 +210,11 @@ total = user.total_savings
 
 ---
 
-## Income Model
+## Income Template Model
 
-For detailed documentation about the Income model, see [Income Model Documentation](./income_model.md).
+For detailed documentation about the IncomeTemplate model, see [Income Template Model Documentation](./income_template_model.md).
 
-The Income model represents income sources for users. Key features:
+The IncomeTemplate model represents income sources for users. Key features:
 - Each income belongs to a user
 - Tracks estimated amount, frequency, and active status
 - Supports auto-create functionality for automatic income event generation (`auto_create`, `due_date`, `last_payment_to_next_month`)

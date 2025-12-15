@@ -98,7 +98,7 @@
         <%= form_with url: admin_users_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Users", class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
-        <%= form_with url: admin_incomes_path, method: :get, local: true, class: "inline" do |f| %>
+        <%= form_with url: admin_income_templates_path, method: :get, local: true, class: "inline" do |f| %>
           <%= f.submit "Manage Incomes", class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl cursor-pointer border-0" %>
         <% end %>
         <%= form_with url: admin_income_events_path, method: :get, local: true, class: "inline" do |f| %>
@@ -188,7 +188,7 @@
                       $<%= number_with_delimiter(income.estimated_amount, delimiter: ",") %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <%= link_to "View", admin_income_path(income), class: "text-purple-600 hover:text-purple-800 font-semibold transition duration-150" %>
+                      <%= link_to "View", admin_income_template_path(income), class: "text-purple-600 hover:text-purple-800 font-semibold transition duration-150" %>
                     </td>
                   </tr>
                 <% end %>

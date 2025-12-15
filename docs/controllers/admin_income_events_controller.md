@@ -51,7 +51,7 @@ Shows the form to create a new income event.
 **Instance Variables:**
 - `@income_event` - A new, unsaved `IncomeEvent` instance
 - `@users` - All users (for user selection dropdown)
-- `@incomes` - All incomes (for income selection dropdown)
+- `@income_templates` - All income templates (for income template selection dropdown)
 
 ### `create`
 
@@ -62,7 +62,7 @@ Creates a new income event from form parameters.
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
-- Re-sets `@users` and `@incomes` for the form
+- Re-sets `@users` and `@income_templates` for the form
 
 ### `edit`
 
@@ -71,7 +71,7 @@ Shows the form to edit an existing income event.
 **Instance Variables:**
 - `@income_event` - The income event to edit (set by `before_action :set_income_event`)
 - `@users` - All users (for user selection dropdown)
-- `@incomes` - All incomes (for income selection dropdown)
+- `@income_templates` - All income templates (for income template selection dropdown)
 
 ### `update`
 
@@ -82,7 +82,7 @@ Updates an existing income event from form parameters.
 
 **Failure:**
 - Re-renders the `edit` template with `:unprocessable_entity` status
-- Re-sets `@users` and `@incomes` for the form
+- Re-sets `@users` and `@income_templates` for the form
 
 ### `destroy`
 
@@ -128,7 +128,7 @@ Permits the following parameters:
 
 - **IncomeEvent** - The model being managed
 - **User** - Required association for income events
-- **Income** - Optional association for income events
+- **IncomeTemplate** - Optional association for income events
 
 ## Views
 
@@ -157,7 +157,7 @@ POST /admin/income_events
 }
 ```
 
-### Creating a Standalone Income Event (No Income Source)
+### Creating a Standalone Income Event (No Income Template)
 
 ```ruby
 POST /admin/income_events

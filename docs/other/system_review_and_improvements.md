@@ -1,15 +1,53 @@
 # System Review and Future Improvements
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Part 1: Renaming `incomes` to `income_templates`](#part-1-renaming-incomes-to-income_templates)
+   - [Current State](#current-state)
+   - [Proposal](#proposal)
+   - [Pros of `income_templates`](#pros-of-income_templates)
+   - [Cons of `income_templates`](#cons-of-income_templates)
+   - [Recommendation](#recommendation)
+   - [Migration Strategy](#migration-strategy)
+3. [Part 2: System Review and Improvements](#part-2-system-review-and-improvements)
+   - [What's Working Well](#whats-working-well)
+   - [Potential Improvements](#potential-improvements)
+     - [Data Integrity and Edge Cases](#1-data-integrity-and-edge-cases)
+     - [Mobile Optimization](#2-mobile-optimization)
+     - [User Experience Enhancements](#3-user-experience-enhancements)
+     - [Reporting and Insights](#4-reporting-and-insights)
+     - [Smart Defaults and Automation](#5-smart-defaults-and-automation)
+     - [Performance Optimization](#6-performance-optimization)
+     - [Safety Features](#7-safety-features)
+     - [Future Feature Considerations](#8-future-feature-considerations)
+4. [Part 3: Data Storage Strategy - Local-Only vs Cloud Sync](#part-3-data-storage-strategy---local-only-vs-cloud-sync)
+   - [Overview](#overview-1)
+   - [Analysis](#analysis)
+   - [Recommendation: Hybrid with Optional Cloud Sync](#recommendation-hybrid-with-optional-cloud-sync)
+   - [Why This Approach Works](#why-this-approach-works)
+   - [Technical Approach](#technical-approach)
+   - [Cost Analysis](#cost-analysis)
+   - [User Experience Considerations](#user-experience-considerations)
+   - [Decision Framework](#decision-framework)
+   - [Bottom Line](#bottom-line)
+5. [Top Recommendations](#top-recommendations)
+6. [Biggest Wins to Keep](#biggest-wins-to-keep)
+7. [Implementation Priority Matrix](#implementation-priority-matrix)
+8. [Conclusion](#conclusion)
+
+---
+
 ## Overview
 
-This document captures discussions about potential improvements to the CoinCritters application, including a proposed renaming of the `incomes` table to `income_sources` and a comprehensive review of the current system with recommendations for enhancements.
+This document captures discussions about potential improvements to the CoinCritters application, including a proposed renaming of the `incomes` table to `income_templates` (for consistency with `expense_templates`) and a comprehensive review of the current system with recommendations for enhancements.
 
 **Date**: December 2025  
 **Status**: Planning/Consideration
 
 ---
 
-## Part 1: Renaming `incomes` to `income_sources`
+## Part 1: Renaming `incomes` to `income_templates`
 
 ### Current State
 
@@ -17,57 +55,65 @@ The application currently uses `incomes` to represent income templates (sources 
 
 ### Proposal
 
-Rename the `incomes` table and `Income` model to `income_sources` and `IncomeSource` respectively.
+Rename the `incomes` table and `Income` model to `income_templates` and `IncomeTemplate` respectively.
 
-### Pros of `income_sources`
+### Pros of `income_templates`
 
-1. **Semantic Clarity**: "Income Sources" clearly indicates templates/blueprints, not actual money received. This makes the distinction between templates and events more obvious.
+1. **Perfect Consistency**: Matches `expense_templates` exactly, creating a clear parallel pattern:
+   - `expense_templates` → `expenses`
+   - `income_templates` → `income_events`
+   - Both follow the same template → event pattern
 
-2. **Matches UI Language**: The dashboard already uses "Set Up Income Sources" as button text, creating consistency between the UI and the underlying data model.
+2. **Developer Clarity**: Same terminology across the codebase makes it easier to understand the pattern and reduces cognitive load when working with the code.
 
-3. **Better Distinction**: Provides clearer separation from `income_events` (actual money received). The naming pattern becomes:
-   - `income_sources` = templates (where money comes from)
-   - `income_events` = actual money received
+3. **Conceptual Alignment**: Both are templates that generate events:
+   - `ExpenseTemplate` generates `Expense` instances
+   - `IncomeTemplate` generates `IncomeEvent` instances
+   - The naming clearly indicates this relationship
 
-4. **User Mental Model**: Users naturally think "I have income sources like Salary, Pension" rather than "I have incomes." The terminology aligns with how users conceptualize their finances.
-
-5. **Consistency**: Mirrors the `expense_templates` and `expenses` pattern conceptually:
-   - `expense_templates` = templates for expenses
-   - `expenses` = actual expenses
-   - `income_sources` = templates for income
+4. **Better Distinction**: Provides clearer separation from `income_events` (actual money received). The naming pattern becomes:
+   - `income_templates` = templates (blueprints for income)
    - `income_events` = actual income received
 
-### Cons of `income_sources`
+5. **Maintainability**: Easier for new developers to understand - the pattern is immediately obvious when they see both `expense_templates` and `income_templates`.
+
+### Cons of `income_templates`
 
 1. **Breaking Change**: Requires comprehensive refactoring:
    - Database migration (rename table)
-   - Model rename (`Income` → `IncomeSource`)
+   - Model rename (`Income` → `IncomeTemplate`)
    - Update all references (controllers, views, associations, routes)
-   - Update routes (`incomes_path` → `income_sources_path`)
+   - Update routes (`incomes_path` → `income_templates_path`)
    - Update documentation and tests
 
-2. **More Verbose**: `income_sources` is longer than `incomes`, though still readable and clear.
+2. **More Technical Term**: "Template" is more of a developer term, though it's consistent with `expense_templates`.
 
-3. **Rails Convention**: Model name becomes `IncomeSource` instead of `Income` (acceptable, follows Rails conventions).
+3. **UI Language Mismatch**: Dashboard currently says "Set Up Income Sources" - can keep this user-friendly language in UI while using `income_templates` in code (hybrid approach).
 
 ### Recommendation
 
-**Yes, rename to `income_sources`.** The benefits outweigh the costs:
+**Yes, rename to `income_templates`.** The benefits significantly outweigh the costs:
 
-- Clearer semantic meaning
-- Better alignment with UI language
-- Improved consistency with expense templates
-- Better user mental model alignment
+- Perfect consistency with `expense_templates`
+- Clear parallel pattern that's immediately obvious
+- Better for code maintainability and developer understanding
+- Conceptual alignment (templates generate events)
+
+**Hybrid Approach for UI**: Keep user-friendly language in the UI ("Set Up Income Sources") while using `income_templates` in the code. This gives you:
+- Code consistency: `expense_templates` ↔ `income_templates`
+- User-friendly UI: Natural language that users understand
+- Best of both worlds
 
 The refactor is straightforward but requires careful execution:
 
-1. Rename model: `Income` → `IncomeSource`
-2. Rename table: `incomes` → `income_sources`
-3. Update associations: `has_many :incomes` → `has_many :income_sources`
-4. Update routes: `resources :incomes` → `resources :income_sources`
+1. Rename model: `Income` → `IncomeTemplate`
+2. Rename table: `incomes` → `income_templates`
+3. Update associations: `has_many :incomes` → `has_many :income_templates`
+4. Update routes: `resources :incomes` → `resources :income_templates`
 5. Update all references in controllers/views/admin views
 6. Update documentation and tests
 7. Update fixtures
+8. Keep UI labels as "Income Sources" (user-friendly) while code uses `income_templates`
 
 ### Migration Strategy
 
@@ -286,7 +332,7 @@ These core strengths should be preserved as the system evolves:
 
 | Feature | Priority | Effort | Impact | Timeline |
 |---------|---------|--------|--------|----------|
-| Rename to income_sources | Medium | Medium | Medium | 1-2 days |
+| Rename to income_templates | Medium | Medium | High | 1-2 days |
 | Mobile-first polish | High | Medium-High | High | 2-3 weeks |
 | Month-end summary | Medium | Medium | High | 1-2 weeks |
 | Undo functionality | Medium | Low-Medium | Medium | 3-5 days |
@@ -453,9 +499,9 @@ The main areas for improvement are:
 2. **Insights**: Adding value through reporting and summaries
 3. **Resilience**: Safety features and error prevention
 
-The proposed renaming to `income_sources` would improve clarity and consistency, though it requires a careful refactoring effort.
+The proposed renaming to `income_templates` would create perfect consistency with `expense_templates` and improve code maintainability, though it requires a careful refactoring effort.
 
-**Recommendation**: Focus on mobile-first polish first (if mobile app is the goal), then add month-end summaries and undo functionality. Consider the `income_sources` rename when doing a larger refactoring pass.
+**Recommendation**: Focus on mobile-first polish first (if mobile app is the goal), then add month-end summaries and undo functionality. Consider the `income_templates` rename when doing a larger refactoring pass. The UI can continue using user-friendly language like "Income Sources" while the code uses the consistent `income_templates` naming.
 
 ---
 

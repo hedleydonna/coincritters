@@ -96,7 +96,7 @@ class MonthlyBudget < ApplicationRecord
   # Auto-create income events from user's recurring income templates
   # ------------------------------------------------------------------
   def auto_create_income_events
-    user.incomes.active.auto_create.find_each do |income|
+    user.income_templates.active.auto_create.find_each do |income|
       # Get all event dates for this month based on frequency and due_date
       event_dates = income.events_for_month(month_year)
       
@@ -111,9 +111,9 @@ class MonthlyBudget < ApplicationRecord
       last_event_date = event_dates.last
       
       event_dates.each do |event_date|
-        # Skip if income event for this income and date already exists
+        # Skip if income event for this income_template and date already exists
         next if user.income_events.exists?(
-          income_id: income.id,
+          income_template_id: income.id,
           received_on: event_date,
           month_year: event_date.strftime("%Y-%m")
         )
@@ -133,7 +133,7 @@ class MonthlyBudget < ApplicationRecord
         end
         
         user.income_events.create!(
-          income: income,
+          income_template: income,
           received_on: event_date,
           month_year: event_date.strftime("%Y-%m"),
           apply_to_next_month: apply_to_next,
@@ -149,18 +149,18 @@ class MonthlyBudget < ApplicationRecord
   # ------------------------------------------------------------------
   def expected_income
     # Income from events assigned to this month (not deferred)
-    current_month_expected = user.incomes.active.auto_create.sum do |income|
-      income.expected_amount_for_month(month_year)
+    current_month_expected = user.income_templates.active.auto_create.sum do |income_template|
+      income_template.expected_amount_for_month(month_year)
     end
     
     # Also include income deferred from previous month
     prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-    deferred_expected = user.incomes.active.auto_create.select do |income|
-      income.last_payment_to_next_month?
-    end.sum do |income|
+    deferred_expected = user.income_templates.active.auto_create.select do |income_template|
+      income_template.last_payment_to_next_month?
+    end.sum do |income_template|
       # Get last payment amount from previous month
-      prev_month_events = income.events_for_month(prev_month)
-      prev_month_events.any? ? income.estimated_amount : 0
+      prev_month_events = income_template.events_for_month(prev_month)
+      prev_month_events.any? ? income_template.estimated_amount : 0
     end
     
     current_month_expected + deferred_expected

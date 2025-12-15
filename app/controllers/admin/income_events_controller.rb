@@ -4,7 +4,7 @@ class Admin::IncomeEventsController < Admin::BaseController
   before_action :set_income_event, only: [:show, :edit, :update, :destroy]
 
   def index
-    @income_events = IncomeEvent.includes(:user, :income).order(created_at: :desc)
+    @income_events = IncomeEvent.includes(:user, :income_template).order(created_at: :desc)
   end
 
   def show
@@ -13,7 +13,7 @@ class Admin::IncomeEventsController < Admin::BaseController
   def new
     @income_event = IncomeEvent.new
     @users = User.all # For dropdown to assign income event to a user
-    @incomes = Income.all # For dropdown to assign income event to an income
+    @income_templates = IncomeTemplate.all # For dropdown to assign income event to an income template
   end
 
   def create
@@ -22,14 +22,14 @@ class Admin::IncomeEventsController < Admin::BaseController
       redirect_to admin_income_event_path(@income_event), notice: "Income event was successfully created."
     else
       @users = User.all # Re-fetch for rendering new form on error
-      @incomes = Income.all
+      @income_templates = IncomeTemplate.all
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
     @users = User.all # For dropdown to assign income event to a user
-    @incomes = Income.all # For dropdown to assign income event to an income
+    @income_templates = IncomeTemplate.all # For dropdown to assign income event to an income template
   end
 
   def update
@@ -37,7 +37,7 @@ class Admin::IncomeEventsController < Admin::BaseController
       redirect_to admin_income_event_path(@income_event), notice: "Income event was successfully updated."
     else
       @users = User.all # Re-fetch for rendering edit form on error
-      @incomes = Income.all
+      @income_templates = IncomeTemplate.all
       render :edit, status: :unprocessable_entity
     end
   end
@@ -54,7 +54,7 @@ class Admin::IncomeEventsController < Admin::BaseController
   end
 
   def income_event_params
-    params.require(:income_event).permit(:user_id, :income_id, :custom_label, :month_year, :apply_to_next_month, :received_on, :actual_amount, :notes)
+    params.require(:income_event).permit(:user_id, :income_template_id, :custom_label, :month_year, :apply_to_next_month, :received_on, :actual_amount, :notes)
   end
 end
 

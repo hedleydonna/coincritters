@@ -104,14 +104,14 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       email: "with_income@example.com",
       password: "password123"
     )
-    income = Income.create!(
+    income_template = IncomeTemplate.create!(
       user: user_with_income,
       name: "Salary",
       frequency: "monthly",
       estimated_amount: 5000.00
     )
     
-    assert_difference("Income.count", -1) do
+    assert_difference("IncomeTemplate.count", -1) do
       assert_difference("User.count", -1) do
         delete admin_user_path(user_with_income)
       end

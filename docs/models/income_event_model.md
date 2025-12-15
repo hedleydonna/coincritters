@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Income Event model represents actual income received events in the Willow application. Each income event records a specific instance of income received, including the amount, when it was received, and which month it should be attributed to. Income events are typically linked to an income source (from the `incomes` table), and the event's display name comes from the linked income's `name` field. For one-off or custom income events that don't correspond to a regular income source (such as a birthday present or unexpected windfall), the `custom_label` field provides a manual label when no income record is linked.
+The Income Event model represents actual income received events in the CoinCritters application. Each income event records a specific instance of income received, including the amount, when it was received, and which month it should be attributed to. Income events are typically linked to an income template (from the `income_templates` table), and the event's display name comes from the linked income template's `name` field. For one-off or custom income events that don't correspond to a regular income template (such as a birthday present or unexpected windfall), the `custom_label` field provides a manual label when no income template is linked.
 
 ## Database Table
 
@@ -14,7 +14,7 @@ The Income Event model represents actual income received events in the Willow ap
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
 | `user_id` | bigint | NOT NULL | References the user who received this income (referential integrity enforced at model level) |
-| `income_id` | bigint | Nullable | Optionally references the income source this event came from (referential integrity enforced at model level). When present, the event's display name comes from `incomes.name`. |
+| `income_template_id` | bigint | Nullable | Optionally references the income template this event came from (referential integrity enforced at model level). When present, the event's display name comes from `income_templates.name`. |
 | `custom_label` | string | Nullable| Manual label for one-off income events that don't correspond to an income record (e.g., "Birthday Gift", "One-time Bonus"). Only used when `income_id` is null. When `income_id` is present, this field is typically `nil`. |
 | `month_year` | string | NOT NULL | Month/year the income was actually received (format: YYYY-MM) |
 | `apply_to_next_month` | boolean | NOT NULL, Default: false | If `true`, this income counts toward next month's budget instead of the month received |
@@ -28,15 +28,15 @@ The Income Event model represents actual income received events in the Willow ap
 
 - **User ID + Month Year Index**: Composite index on `[user_id, month_year]` - optimized for finding events by user and month
 - **User ID + Apply to Next Month Index**: Composite index on `[user_id, apply_to_next_month]` - for finding deferred events
-- **Income ID + Month Year Index**: Composite index on `[income_id, month_year]` - for finding events by income source and month
-- **Income ID Index**: Index on `income_id` for fast lookups by income source
+- **Income Template ID + Month Year Index**: Composite index on `[income_template_id, month_year]` - for finding events by income template and month
+- **Income Template ID Index**: Index on `income_template_id` for fast lookups by income template
 
 ### Referential Integrity
 
 **Note:** This codebase does not use database-level foreign key constraints. Referential integrity is enforced at the model level via `belongs_to` validations in Rails 5+.
 
 - **User**: `belongs_to :user` - enforced via model validation. When a user is deleted, all their income events are deleted via `dependent: :destroy` in the `User` model association.
-- **Income**: `belongs_to :income, optional: true` - enforced via model validation. When an income source is deleted, associated events are deleted via `dependent: :destroy` in the `Income` model association.
+- **IncomeTemplate**: `belongs_to :income_template, optional: true` - enforced via model validation. When an income template is deleted, associated events are deleted via `dependent: :destroy` in the `IncomeTemplate` model association.
 
 Cascade deletion is handled via `dependent: :destroy` in model associations, not database-level foreign keys.
 
@@ -53,13 +53,13 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   income_event.user  # Returns the User object
   ```
 
-- **Income** (optional): An income event can optionally be linked to an income source
+- **IncomeTemplate** (optional): An income event can optionally be linked to an income template
   ```ruby
-  income_event.income  # Returns Income object or nil
-  income_event.income&.name  # Returns the income name if linked, or nil
+  income_event.income_template  # Returns IncomeTemplate object or nil
+  income_event.income_template&.name  # Returns the income template name if linked, or nil
   ```
   
-  When an income event is linked to an income source, the event's display name should come from the income's `name` field (`income.name`). The `custom_label` field is only used when there is no linked income record (for one-off or custom events).
+  When an income event is linked to an income template, the event's display name should come from the income template's `name` field (`income_template.name`). The `custom_label` field is only used when there is no linked income template (for one-off or custom events).
 
 ### Has Many (from User)
 
@@ -69,13 +69,13 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   ```
   - **Dependent Behavior**: `destroy` - when a user is deleted, all their income events are deleted
 
-### Has Many (from Income)
+### Has Many (from IncomeTemplate)
 
-- **Income has_many :income_events**: An income source can have multiple events
+- **IncomeTemplate has_many :income_events**: An income template can have multiple events
   ```ruby
-  income.income_events  # Returns collection of IncomeEvent objects
+  income_template.income_events  # Returns collection of IncomeEvent objects
   ```
-  - **Dependent Behavior**: `destroy` - when an income is deleted, all associated events are deleted
+  - **Dependent Behavior**: `destroy` - when an income template is deleted, all associated events are deleted
 
 ## Validations
 
@@ -87,9 +87,9 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 - `validates :received_on, presence: true`:
   - The `received_on` field must be present.
 
-- `validates :custom_label, presence: true, if: -> { income_id.nil? }`:
-  - The `custom_label` field must be present **only when** `income_id` is null (i.e., for custom/one-off events).
-  - When an event is linked to an income source (`income_id` is present), `custom_label` can be `nil` since the display name comes from the income's name field.
+- `validates :custom_label, presence: true, if: -> { income_template_id.nil? }`:
+  - The `custom_label` field must be present **only when** `income_template_id` is null (i.e., for custom/one-off events).
+  - When an event is linked to an income template (`income_template_id` is present), `custom_label` can be `nil` since the display name comes from the income template's name field.
 
 ### Format Validations
 
@@ -108,7 +108,7 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 ### Association Validations
 
 - Requires `user` (validated by `belongs_to :user`)
-- `income` is optional (validated by `belongs_to :income, optional: true`)
+- `income_template` is optional (validated by `belongs_to :income_template, optional: true`)
 
 ## Instance Methods
 
@@ -117,15 +117,15 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 Returns the display name for the income event.
 
 **Logic:**
-- If the income event is linked to an income source (`income_id` is present), returns `income.name`.
-- If the income event is not linked to an income source (`income_id` is `nil`), returns `custom_label`.
-- Returns `nil` only if both `income` and `custom_label` are `nil` (though this should be prevented by validation).
+- If the income event is linked to an income template (`income_template_id` is present), returns `income_template.name`.
+- If the income event is not linked to an income template (`income_template_id` is `nil`), returns `custom_label`.
+- Returns `nil` only if both `income_template` and `custom_label` are `nil` (though this should be prevented by validation).
 
 **Example:**
 ```ruby
-# When linked to an income source
-income = Income.create!(user: user, name: "Monthly Salary", frequency: "monthly", estimated_amount: 5000.00)
-event = IncomeEvent.create!(user: user, income: income, month_year: "2025-12", received_on: Date.today)
+# When linked to an income template
+income_template = IncomeTemplate.create!(user: user, name: "Monthly Salary", frequency: "monthly", estimated_amount: 5000.00)
+event = IncomeEvent.create!(user: user, income_template: income_template, month_year: "2025-12", received_on: Date.today)
 event.display_name # => "Monthly Salary"
 
 # When using custom label
@@ -154,15 +154,15 @@ event.assigned_month # => "2026-01"
 
 ## Business Rules
 
-1. **Required Associations**: Every income event must have a user. The income source is optional.
+1. **Required Associations**: Every income event must have a user. The income template is optional.
 
 2. **Display Name Logic**: 
-   - When an income event is linked to an income source (`income_id` is present), the event's display name comes from the linked income's `name` field (`income.name`). In this case, `custom_label` can be `nil`.
-   - When an income event is NOT linked to an income source (`income_id` is null), the `custom_label` field is required and provides the display name.
-   - `custom_label` is nullable in the database but required when there's no linked income record.
+   - When an income event is linked to an income template (`income_template_id` is present), the event's display name comes from the linked income template's `name` field (`income_template.name`). In this case, `custom_label` can be `nil`.
+   - When an income event is NOT linked to an income template (`income_template_id` is null), the `custom_label` field is required and provides the display name.
+   - `custom_label` is nullable in the database but required when there's no linked income template.
    - Use the `display_name` instance method to get the appropriate display name (see Instance Methods section above).
 
-3. **Custom Events**: One-off income events (like birthday presents, unexpected bonuses, tax refunds, etc.) that don't correspond to regular income sources can be created without linking to an `incomes` record. These events require the `custom_label` field for their display name.
+3. **Custom Events**: One-off income events (like birthday presents, unexpected bonuses, tax refunds, etc.) that don't correspond to regular income templates can be created without linking to an `income_templates` record. These events require the `custom_label` field for their display name.
 
 4. **Date Formatting**: `month_year` must be in `YYYY-MM` format.
 
@@ -175,7 +175,7 @@ event.assigned_month # => "2026-01"
 
 6. **Cascade Deletion**: 
    - Deleting a user deletes all their income events
-   - Deleting an income source deletes all associated income events
+   - Deleting an income template deletes all associated income events
 
 7. **Default Values**: 
    - New income events default to `actual_amount: 0.0` if not specified
@@ -189,30 +189,30 @@ event.assigned_month # => "2026-01"
 
 ```ruby
 user = User.first
-income = user.incomes.first  # e.g., "Monthly Salary"
+income_template = user.income_templates.first  # e.g., "Monthly Salary"
 
-# When linked to an income, the event's display name comes from income.name
+# When linked to an income template, the event's display name comes from income_template.name
 # custom_label can be nil for linked events
 income_event = user.income_events.create(
-  income_id: income,
+  income_template_id: income_template,
   month_year: "2025-12",
   received_on: Date.today,
   actual_amount: 4500.00,
-  custom_label: nil  # Optional - can be nil when income is present
+  custom_label: nil  # Optional - can be nil when income_template is present
 )
-# The display name for this event would be income.name (e.g., "Monthly Salary")
-# custom_label is not required when income_id is present
+# The display name for this event would be income_template.name (e.g., "Monthly Salary")
+# custom_label is not required when income_template_id is present
 ```
 
 ### Creating a Custom One-Off Income Event
 
 ```ruby
-# For events that don't correspond to a regular income source
+# For events that don't correspond to a regular income template
 # (e.g., birthday gifts, unexpected bonuses, tax refunds)
-# custom_label is REQUIRED when income is nil
+# custom_label is REQUIRED when income_template is nil
 income_event = user.income_events.create(
-  income_id: nil,  # No linked income record
-  custom_label: "Birthday Gift",  # Required when income_id is nil
+  income_template_id: nil,  # No linked income template
+  custom_label: "Birthday Gift",  # Required when income_template_id is nil
   month_year: "2025-12",
   received_on: Date.today,
   actual_amount: 500.00,
@@ -222,7 +222,7 @@ income_event = user.income_events.create(
 
 # If custom_label is not provided, it defaults to "Other"
 income_event_with_default = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   month_year: "2025-12",
   received_on: Date.today,
   actual_amount: 300.00
@@ -234,7 +234,7 @@ income_event_with_default = user.income_events.create(
 
 ```ruby
 income_event = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   custom_label: "Tax Refund",
   month_year: "2025-12",
   received_on: Date.today,
@@ -246,17 +246,17 @@ income_event = user.income_events.create(
 ### Creating with Deferral to Next Month
 
 ```ruby
-income = user.incomes.first  # e.g., "Monthly Salary"
+income_template = user.income_templates.first  # e.g., "Monthly Salary"
 
 income_event = user.income_events.create(
-  income_id: income,
+  income_template_id: income_template,
   month_year: "2025-12",        # Received in December
   apply_to_next_month: true,    # But count toward January
   received_on: Date.parse("2025-12-28"),
   actual_amount: 4500.00,
   notes: "Salary received late, applying to January"
 )
-# Display name comes from income.name via display_name method
+# Display name comes from income_template.name via display_name method
 income_event.display_name  # => "Monthly Salary"
 income_event.assigned_month # => "2026-01"
 ```
@@ -264,10 +264,10 @@ income_event.assigned_month # => "2026-01"
 ### Getting Display Name
 
 ```ruby
-# When linked to an income source, display_name returns income.name
-income = user.incomes.first  # e.g., "Monthly Salary"
+# When linked to an income template, display_name returns income_template.name
+income_template = user.income_templates.first  # e.g., "Monthly Salary"
 income_event = user.income_events.create(
-  income: income,
+  income_template: income_template,
   month_year: "2025-12",
   received_on: Date.today,
   actual_amount: 4500.00
@@ -296,19 +296,19 @@ december_events = user.income_events.where(month_year: "2025-12")
 
 ```ruby
 user = User.first
-custom_events = user.income_events.where(income_id: nil)
+custom_events = user.income_events.where(income_template_id: nil)
 # => #<ActiveRecord::Relation [#<IncomeEvent ... custom_label: "Birthday Gift">, ...]>
 
 # Or by custom_label
 birthday_events = user.income_events.where(custom_label: "Birthday Gift")
 ```
 
-### Retrieving Events by Linked Income
+### Retrieving Events by Linked Income Template
 
 ```ruby
-income = user.incomes.first
-income_events = income.income_events
-# => #<ActiveRecord::Relation [#<IncomeEvent ... income_id: 1>, ...]>
+income_template = user.income_templates.first
+income_events = income_template.income_events
+# => #<ActiveRecord::Relation [#<IncomeEvent ... income_template_id: 1>, ...]>
 ```
 
 ### Calculating Total for a Month
@@ -328,7 +328,7 @@ user = User.first
 
 # Invalid month_year format
 invalid_event = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   custom_label: "Paycheck",
   month_year: "December 2025",
   received_on: Date.today
@@ -337,7 +337,7 @@ invalid_event = user.income_events.create(
 
 # Negative amount
 invalid_amount = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   custom_label: "Paycheck",
   month_year: "2025-12",
   received_on: Date.today,
@@ -345,17 +345,17 @@ invalid_amount = user.income_events.create(
 )
 # => #<IncomeEvent ... errors: {:actual_amount=>["must be greater than or equal to 0"]}>
 
-# Missing custom_label when income is nil
+# Missing custom_label when income_template is nil
 missing_custom_label = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   month_year: "2025-12",
   received_on: Date.today
 )
 # custom_label defaults to "Other", so this is valid
 
-# Missing custom_label when income is nil and explicitly set to nil (invalid)
+# Missing custom_label when income_template is nil and explicitly set to nil (invalid)
 missing_custom_label_invalid = user.income_events.create(
-  income_id: nil,
+  income_template_id: nil,
   custom_label: nil,
   month_year: "2025-12",
   received_on: Date.today
@@ -386,23 +386,23 @@ When `apply_to_next_month` is `true`, the income counts toward next month's budg
 
 The display name for an income event is determined by the `display_name` instance method (see Instance Methods section above):
 
-- **If `income_id` is present**: Display name comes from the linked income's `name` field (`income.name`). In this case, `custom_label` can be `nil` and is not required.
-- **If `income_id` is null**: Display name comes from the `custom_label` field, which is required and cannot be `nil`.
+- **If `income_template_id` is present**: Display name comes from the linked income template's `name` field (`income_template.name`). In this case, `custom_label` can be `nil` and is not required.
+- **If `income_template_id` is null**: Display name comes from the `custom_label` field, which is required and cannot be `nil`.
 
 This design allows for two types of income events:
-1. **Regular income events**: Linked to an income source from the `incomes` table. These represent actual occurrences of planned/recurring income (e.g., monthly salary, weekly freelance payments). The name is automatically derived from the income source via the `display_name` method. For these events, `custom_label` is optional and typically `nil`.
+1. **Regular income events**: Linked to an income template from the `income_templates` table. These represent actual occurrences of planned/recurring income (e.g., monthly salary, weekly freelance payments). The name is automatically derived from the income template via the `display_name` method. For these events, `custom_label` is optional and typically `nil`.
 
-2. **Custom/one-off events**: Not linked to any income source. These represent unexpected or one-time income (e.g., birthday gifts, tax refunds, one-time bonuses). These events **require** a `custom_label` to provide a display name since there's no linked income record to reference. The `display_name` method will return the `custom_label` value.
+2. **Custom/one-off events**: Not linked to any income template. These represent unexpected or one-time income (e.g., birthday gifts, tax refunds, one-time bonuses). These events **require** a `custom_label` to provide a display name since there's no linked income template to reference. The `display_name` method will return the `custom_label` value.
 
-### Relationship to Income Sources
+### Relationship to Income Templates
 
-Most income events should be linked to an income source (`income`) representing the planned/recurring income. This allows:
-- Automatic naming from the income source
-- Tracking which events came from which planned income sources
+Most income events should be linked to an income template (`income_template`) representing the planned/recurring income. This allows:
+- Automatic naming from the income template
+- Tracking which events came from which planned income templates
 - Analyzing actual vs. estimated income
 - Generating recurring events based on income frequency
 
-Custom events (without linked income) are for special cases where the income doesn't fit into regular income categories and doesn't warrant creating a permanent income record.
+Custom events (without linked income template) are for special cases where the income doesn't fit into regular income categories and doesn't warrant creating a permanent income template.
 
 ## Admin Dashboard
 

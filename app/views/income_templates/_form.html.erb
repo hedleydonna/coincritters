@@ -1,11 +1,11 @@
-<%= form_with model: @income, local: true, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
-  <% if @income.errors.any? %>
+<%= form_with model: @income_template, local: true, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
+  <% if @income_template.errors.any? %>
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
       <h3 class="text-red-800 font-semibold mb-2">
-        <%= pluralize(@income.errors.count, "error") %> prevented this income source from being saved:
+        <%= pluralize(@income_template.errors.count, "error") %> prevented this income source from being saved:
       </h3>
       <ul class="list-disc list-inside text-red-700 space-y-1">
-        <% @income.errors.full_messages.each do |message| %>
+        <% @income_template.errors.full_messages.each do |message| %>
           <li><%= message %></li>
         <% end %>
       </ul>
@@ -28,7 +28,7 @@
             ["Bi-weekly", "bi_weekly"],
             ["Weekly", "weekly"],
             ["Irregular", "irregular"]
-          ], @income.frequency || "monthly"),
+          ], @income_template.frequency || "monthly"),
           {}, 
           class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
     <p class="mt-1 text-sm text-gray-500">How often you receive this income</p>
@@ -60,7 +60,7 @@
   <div class="space-y-4">
     <div class="flex items-start gap-3">
       <%= f.check_box :auto_create, 
-            { checked: @income.new_record? ? false : @income.auto_create? },
+            { checked: @income_template.new_record? ? true : @income_template.auto_create? },
             class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
       <div>
         <%= f.label :auto_create, "Automatically create income events", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
@@ -70,7 +70,7 @@
     
     <div class="flex items-start gap-3">
       <%= f.check_box :last_payment_to_next_month, 
-            { checked: @income.last_payment_to_next_month? },
+            { checked: @income_template.last_payment_to_next_month? },
             class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
       <div>
         <%= f.label :last_payment_to_next_month, "Defer last payment to next month", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
@@ -80,9 +80,9 @@
   </div>
 
   <div class="flex gap-4 pt-4">
-    <%= f.submit @income.new_record? ? "Create Income Source" : "Update Income Source", 
+    <%= f.submit @income_template.new_record? ? "Create Income Source" : "Update Income Source", 
           class: "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium cursor-pointer" %>
-    <%= link_to "Cancel", incomes_path, 
+    <%= link_to "Cancel", income_templates_path, 
           class: "bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium" %>
   </div>
 <% end %>

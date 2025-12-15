@@ -2,16 +2,16 @@
   <div class="max-w-2xl mx-auto">
     <div class="mb-8 flex justify-between items-center">
       <h1 class="text-5xl font-bold text-white mb-2">Edit Income</h1>
-      <%= link_to "← Back to Incomes", admin_incomes_path, class: "text-white hover:text-purple-200 font-medium" %>
+      <%= link_to "← Back to Income Templates", admin_income_templates_path, class: "text-white hover:text-purple-200 font-medium" %>
     </div>
 
     <div class="bg-white rounded-2xl shadow-2xl p-8">
-      <%= form_with model: [:admin, @income], local: true do |f| %>
-        <% if @income.errors.any? %>
+      <%= form_with model: [:admin, @income_template], local: true do |f| %>
+        <% if @income_template.errors.any? %>
           <div class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            <h3 class="font-bold mb-2"><%= pluralize(@income.errors.count, "error") %> prohibited this income from being saved:</h3>
+            <h3 class="font-bold mb-2"><%= pluralize(@income_template.errors.count, "error") %> prohibited this income template from being saved:</h3>
             <ul class="list-disc list-inside">
-              <% @income.errors.full_messages.each do |message| %>
+              <% @income_template.errors.full_messages.each do |message| %>
                 <li><%= message %></li>
               <% end %>
             </ul>
@@ -32,7 +32,7 @@
 
           <div>
             <%= f.label :frequency, class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= f.select :frequency, Income::FREQUENCIES.map { |freq| [freq.humanize, freq] }, {},
+            <%= f.select :frequency, IncomeTemplate::FREQUENCIES.map { |freq| [freq.humanize, freq] }, {},
                 { class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" } %>
           </div>
 
@@ -57,7 +57,7 @@
                 <%= f.check_box :auto_create, 
                     { 
                       class: "h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded", 
-                      id: "income_auto_create",
+                      id: "income_template_auto_create",
                       onclick: "document.getElementById('due_date_field').style.display = this.checked ? 'block' : 'none'; document.getElementById('last_payment_field').style.display = this.checked ? 'block' : 'none';"
                     } %>
                 <%= f.label :auto_create, "Enable Auto-Create", class: "ml-2 block text-sm text-gray-700" %>
@@ -69,18 +69,18 @@
               </p>
             </div>
 
-            <div id="due_date_field" style="<%= 'display: none;' unless @income.auto_create? %>">
+            <div id="due_date_field" style="<%= 'display: none;' unless @income_template.auto_create? %>">
               <%= f.label :due_date, "Due Date", class: "block text-sm font-medium text-gray-700 mb-2" %>
-              <%= f.date_field :due_date, value: @income.due_date, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+              <%= f.date_field :due_date, value: @income_template.due_date, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
               <p class="mt-1 text-sm text-gray-500">
                 Date when income is typically received. Used with frequency to calculate all occurrences in a month.
               </p>
             </div>
             
-            <div id="last_payment_field" style="<%= 'display: none;' unless @income.auto_create? %>">
+            <div id="last_payment_field" style="<%= 'display: none;' unless @income_template.auto_create? %>">
               <div class="flex items-start gap-3 mt-4">
                 <%= f.check_box :last_payment_to_next_month, 
-                      { checked: @income.last_payment_to_next_month? },
+                      { checked: @income_template.last_payment_to_next_month? },
                       class: "mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" %>
                 <div>
                   <%= f.label :last_payment_to_next_month, "Defer last payment to next month", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
@@ -93,7 +93,7 @@
 
         <div class="mt-8 flex gap-4">
           <%= f.submit "Update Income", class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
-          <%= link_to "Cancel", admin_income_path(@income), class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
+          <%= link_to "Cancel", admin_income_template_path(@income_template), class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg hover:shadow-xl" %>
         </div>
       <% end %>
     </div>
@@ -116,7 +116,7 @@
   
   // Also handle Turbo page loads
   document.addEventListener('turbo:load', function() {
-    const checkbox = document.getElementById('income_auto_create');
+    const checkbox = document.getElementById('income_template_auto_create');
     const field = document.getElementById('due_date_field');
     const lastPaymentField = document.getElementById('last_payment_field');
     if (checkbox && field) {

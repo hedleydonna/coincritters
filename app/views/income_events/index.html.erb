@@ -58,8 +58,8 @@
               <h3 class="text-xl font-semibold text-gray-900 mb-1"><%= event.display_name %></h3>
               <p class="text-gray-600 text-sm">
                 <%= event.received_on.strftime("%B %d, %Y") %>
-                <% if event.income %>
-                  • Expected: <%= number_to_currency(event.income.estimated_amount) %>
+                <% if event.income_template %>
+                  • Expected: <%= number_to_currency(event.income_template.estimated_amount) %>
                 <% end %>
               </p>
             </div>
@@ -79,8 +79,8 @@
           </div>
 
           <!-- Comparison bar -->
-          <% if event.income && event.income.estimated_amount > 0 %>
-            <% expected = event.income.estimated_amount %>
+          <% if event.income_template && event.income_template.estimated_amount > 0 %>
+            <% expected = event.income_template.estimated_amount %>
             <% actual = event.actual_amount %>
             <% if actual > 0 %>
               <% percentage = expected > 0 ? [(actual / expected * 100).round, 200].min : 0 %>
@@ -117,9 +117,9 @@
 
           <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
             <div>
-              <% if event.income %>
+              <% if event.income_template %>
                 <p class="text-sm text-gray-500">
-                  Source: <%= event.income.name %> • <%= event.income.frequency.humanize %>
+                  Source: <%= event.income_template.name %> • <%= event.income_template.frequency.humanize %>
                   <% if event.apply_to_next_month? %>
                     <span class="text-orange-600 font-medium">• Deferred to next month</span>
                   <% end %>
@@ -134,10 +134,10 @@
               <% end %>
             </div>
             <div class="flex gap-2 items-center flex-wrap">
-              <% if event.actual_amount == 0 && event.income && event.income.estimated_amount > 0 %>
+              <% if event.actual_amount == 0 && event.income_template && event.income_template.estimated_amount > 0 %>
                 <%= button_to "Received", mark_received_income_event_path(event), method: :patch,
                       class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors text-xs",
-                      data: { confirm: "Mark as received with expected amount of #{number_to_currency(event.income.estimated_amount)}?" } %>
+                      data: { confirm: "Mark as received with expected amount of #{number_to_currency(event.income_template.estimated_amount)}?" } %>
               <% end %>
               <%= button_to event.apply_to_next_month? ? "Count this month" : "Defer to next", 
                     toggle_defer_income_event_path(event), method: :patch,
@@ -158,7 +158,7 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
       <p class="text-gray-500 text-lg mb-2">No income events yet for this month.</p>
       <p class="text-gray-400 mb-6">Create income sources with auto-create enabled to generate events automatically, or log one-off income manually.</p>
-      <%= link_to "Income Sources", incomes_path,
+      <%= link_to "Income Sources", income_templates_path,
             class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg inline-block mr-3" %>
       <%= link_to "Log one-off income", new_income_event_path,
             class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-block" %>

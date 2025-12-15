@@ -2,7 +2,7 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
-  has_many :incomes, dependent: :destroy
+  has_many :income_templates, dependent: :destroy
   has_many :income_events, dependent: :destroy
   has_many :monthly_budgets, dependent: :destroy
   has_many :expenses, through: :monthly_budgets

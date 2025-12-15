@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_15_000005) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_15_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -44,7 +44,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000005) do
 
   create_table "income_events", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.bigint "income_id"
+    t.bigint "income_template_id"
     t.string "custom_label"
     t.string "month_year", null: false
     t.date "received_on", null: false
@@ -53,14 +53,14 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000005) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "apply_to_next_month", default: false, null: false
-    t.index ["income_id", "month_year"], name: "index_income_events_on_income_id_and_month_year"
-    t.index ["income_id"], name: "index_income_events_on_income_id"
+    t.index ["income_template_id", "month_year"], name: "index_income_events_on_income_template_id_and_month_year"
+    t.index ["income_template_id"], name: "index_income_events_on_income_template_id"
     t.index ["user_id", "apply_to_next_month"], name: "index_income_events_on_apply_to_next_month"
     t.index ["user_id", "month_year"], name: "index_income_events_on_user_id_and_month_year"
     t.index ["user_id"], name: "index_income_events_on_user_id"
   end
 
-  create_table "incomes", force: :cascade do |t|
+  create_table "income_templates", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "name", null: false
     t.string "frequency", default: "monthly", null: false
@@ -71,9 +71,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000005) do
     t.boolean "auto_create", default: false, null: false
     t.date "due_date"
     t.boolean "last_payment_to_next_month", default: false, null: false
-    t.index ["user_id", "active"], name: "index_incomes_on_user_id_and_active"
-    t.index ["user_id", "name"], name: "index_incomes_on_user_id_and_name", unique: true
-    t.index ["user_id"], name: "index_incomes_on_user_id"
+    t.index ["user_id", "active"], name: "index_income_templates_on_user_id_and_active"
+    t.index ["user_id", "name"], name: "index_income_templates_on_user_id_and_name", unique: true
+    t.index ["user_id"], name: "index_income_templates_on_user_id"
   end
 
   create_table "monthly_budgets", force: :cascade do |t|

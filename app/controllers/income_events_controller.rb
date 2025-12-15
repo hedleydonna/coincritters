@@ -81,14 +81,14 @@ class IncomeEventsController < ApplicationController
   end
 
   def edit
-    @incomes = current_user.incomes.active.order(:name)
-    @income_data = @incomes.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
+    @income_templates = current_user.income_templates.active.order(:name)
+    @income_data = @income_templates.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
   end
 
   def create
     @income_event = current_user.income_events.new(income_event_params)
-    # Ensure income_id is nil for one-off events
-    @income_event.income_id = nil
+    # Ensure income_template_id is nil for one-off events
+    @income_event.income_template_id = nil
     # One-off income always counts in the month received (not deferred)
     @income_event.apply_to_next_month = false
     
@@ -103,7 +103,7 @@ class IncomeEventsController < ApplicationController
   end
 
   def update
-    @incomes = current_user.incomes.active.order(:name)
+    @income_templates = current_user.income_templates.active.order(:name)
     
     # Update month_year if received_on changed
     new_month_year = @income_event.received_on.strftime("%Y-%m")
@@ -114,8 +114,8 @@ class IncomeEventsController < ApplicationController
     if @income_event.update(income_event_params.merge(month_year: new_month_year))
       redirect_to income_events_path, notice: "Income updated! #{helpers.number_to_currency(@income_event.actual_amount)}"
     else
-      @incomes = current_user.incomes.active.order(:name)
-      @income_data = @incomes.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
+      @income_templates = current_user.income_templates.active.order(:name)
+      @income_data = @income_templates.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
       render :edit, status: :unprocessable_entity
     end
   end
@@ -134,8 +134,8 @@ class IncomeEventsController < ApplicationController
 
   def mark_received
     # Set actual_amount to estimated_amount from the income template
-    if @income_event.income && @income_event.income.estimated_amount > 0
-      @income_event.update(actual_amount: @income_event.income.estimated_amount)
+    if @income_event.income_template && @income_event.income_template.estimated_amount > 0
+      @income_event.update(actual_amount: @income_event.income_template.estimated_amount)
       redirect_to income_events_path, notice: "Marked as received! #{helpers.number_to_currency(@income_event.actual_amount)}"
     else
       redirect_to income_events_path, alert: "Cannot mark as received - no expected amount set for this income source."
@@ -149,12 +149,12 @@ class IncomeEventsController < ApplicationController
   end
 
   def income_event_params
-    # For new one-off events, don't allow income_id or apply_to_next_month
+    # For new one-off events, don't allow income_template_id or apply_to_next_month
     # For editing existing events (which might be linked to templates), allow it
     if action_name == 'create'
       params.require(:income_event).permit(:custom_label, :received_on, :actual_amount, :notes)
     else
-      params.require(:income_event).permit(:income_id, :custom_label, :received_on, :actual_amount, :notes, :apply_to_next_month)
+      params.require(:income_event).permit(:income_template_id, :custom_label, :received_on, :actual_amount, :notes, :apply_to_next_month)
     end
   end
 end

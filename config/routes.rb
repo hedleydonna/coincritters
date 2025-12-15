@@ -17,7 +17,7 @@ Rails.application.routes.draw do
       end
     end
     
-    resources :incomes, except: [:show] do
+    resources :income_templates, except: [:show] do
       member do
         patch :reactivate
       end
@@ -47,7 +47,7 @@ Rails.application.routes.draw do
   namespace :admin do
     root "dashboard#index"
     resources :users
-    resources :incomes
+    resources :income_templates
     resources :income_events
     resources :monthly_budgets
     resources :expense_templates
