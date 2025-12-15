@@ -91,4 +91,78 @@ class MonthlyBudget < ApplicationRecord
 
   # Alias for backward compatibility
   alias_method :auto_create_envelopes, :auto_create_expenses
+
+  # ------------------------------------------------------------------
+  # Auto-create income events from user's recurring income templates
+  # ------------------------------------------------------------------
+  def auto_create_income_events
+    user.incomes.active.auto_create.find_each do |income|
+      # Get all event dates for this month based on frequency and due_date
+      event_dates = income.events_for_month(month_year)
+      
+      # For current month, only create events from today forward
+      # For future months, create all events
+      current_month_str = Time.current.strftime("%Y-%m")
+      if month_year == current_month_str
+        event_dates = event_dates.select { |date| date >= Date.today }
+      end
+      
+      # Determine if this is the last payment of the month (for deferral logic)
+      last_event_date = event_dates.last
+      
+      event_dates.each do |event_date|
+        # Skip if income event for this income and date already exists
+        next if user.income_events.exists?(
+          income_id: income.id,
+          received_on: event_date,
+          month_year: event_date.strftime("%Y-%m")
+        )
+        
+        # Determine if this event should be deferred to next month
+        # Only defer if: it's the last payment of the month AND template has last_payment_to_next_month enabled
+        apply_to_next = income.last_payment_to_next_month? && event_date == last_event_date
+        
+        # Create the income event with actual_amount set to 0 initially
+        # User will update it when they confirm receipt, or it can be auto-filled on due date
+        actual_amount = if event_date == Date.today
+          # If it's the due date (today), pre-fill with estimated amount
+          income.estimated_amount
+        else
+          # If due date is in the future or past, leave it at 0 until user acknowledges receipt
+          0
+        end
+        
+        user.income_events.create!(
+          income: income,
+          received_on: event_date,
+          month_year: event_date.strftime("%Y-%m"),
+          apply_to_next_month: apply_to_next,
+          actual_amount: actual_amount
+        )
+      end
+    end
+  end
+
+  # ------------------------------------------------------------------
+  # Calculate expected income for this month
+  # Note: This includes income that might be deferred from previous month
+  # ------------------------------------------------------------------
+  def expected_income
+    # Income from events assigned to this month (not deferred)
+    current_month_expected = user.incomes.active.auto_create.sum do |income|
+      income.expected_amount_for_month(month_year)
+    end
+    
+    # Also include income deferred from previous month
+    prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
+    deferred_expected = user.incomes.active.auto_create.select do |income|
+      income.last_payment_to_next_month?
+    end.sum do |income|
+      # Get last payment amount from previous month
+      prev_month_events = income.events_for_month(prev_month)
+      prev_month_events.any? ? income.estimated_amount : 0
+    end
+    
+    current_month_expected + deferred_expected
+  end
 end

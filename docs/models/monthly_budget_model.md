@@ -283,7 +283,9 @@ invalid_amount = user.monthly_budgets.create(
 
 ### Total Actual Income
 
-The `total_actual_income` field represents the total amount of actual income that has been assigned to this month from income events. This is typically calculated from `IncomeEvent` records where `assigned_month_year` matches the budget's `month_year`.
+The `total_actual_income` field represents the total amount of actual income that has been assigned to this month from income events. This is calculated from `IncomeEvent` records where:
+- `month_year` matches the budget's `month_year` AND `apply_to_next_month` is `false`, OR
+- `month_year` is the previous month AND `apply_to_next_month` is `true` (deferred from previous month)
 
 ### Flex Fund
 
@@ -299,12 +301,13 @@ The `month_year` field uses the format `YYYY-MM` (e.g., "2025-12" for December 2
 - Is easy to sort chronologically as a string
 - Allows for efficient database queries
 - Is human-readable
-- Matches the format used in `IncomeEvent.month_year` and `IncomeEvent.assigned_month_year`
+- Matches the format used in `IncomeEvent.month_year`
 
 ## Relationship to Income Events
 
-Monthly budgets are related to income events through the `assigned_month_year` field:
-- An `IncomeEvent` can have an `assigned_month_year` that matches a `MonthlyBudget.month_year`
+Monthly budgets are related to income events through the `apply_to_next_month` field:
+- An `IncomeEvent` with `apply_to_next_month: false` counts in its `month_year`
+- An `IncomeEvent` with `apply_to_next_month: true` counts in the next month from its `month_year`
 - The `total_actual_income` in a monthly budget should ideally match the sum of `actual_amount` from income events assigned to that month
 
 ## Admin Dashboard

@@ -1,0 +1,65 @@
+<div class="max-w-2xl mx-auto py-8 px-4">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Edit Expense</h1>
+    <%= link_to "← Back to Expenses", expenses_path(month: @viewing_month), class: "text-gray-600 hover:text-gray-900 font-medium" %>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+    <%= form_with model: @expense, url: expense_path(@expense), method: :patch, class: "space-y-6" do |f| %>
+      <%= hidden_field_tag :month, @viewing_month if @viewing_month %>
+      <% if @expense.errors.any? %>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <h3 class="text-red-800 font-semibold mb-2">
+            <%= pluralize(@expense.errors.count, "error") %> prevented this expense from being saved:
+          </h3>
+          <ul class="list-disc list-inside text-red-700 space-y-1">
+            <% @expense.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div>
+        <%= f.label :expense_template_id, "Template (optional)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= f.collection_select :expense_template_id, @expense_templates, :id, :name, 
+              { prompt: "None - one-off expense", include_blank: true, selected: @expense.expense_template_id }, 
+              { class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" } %>
+        <p class="mt-1 text-sm text-gray-500">
+          Optionally link this expense to a template, or leave blank for a one-off expense
+        </p>
+      </div>
+
+      <div>
+        <%= f.label :name, "Expense Name", class: "block text-sm font-medium text-gray-700 mb-2" do %>
+          Expense Name <span class="text-red-500">*</span>
+        <% end %>
+        <%= f.text_field :name, 
+              placeholder: "e.g. Birthday gift, Car repair, etc.",
+              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+        <p class="mt-1 text-sm text-gray-500">Required for one-off expenses. Optional if using a template (will use template name if blank).</p>
+      </div>
+
+      <div>
+        <%= f.label :allotted_amount, "Allotted Amount", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <div class="relative">
+          <span class="absolute left-3 top-2 text-gray-500">$</span>
+          <%= f.number_field :allotted_amount, 
+                step: "0.01", 
+                min: "0",
+                placeholder: "0.00",
+                class: "w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+        </div>
+        <p class="mt-1 text-sm text-gray-500">Current spent: <%= number_to_currency(@expense.spent_amount) %></p>
+      </div>
+
+      <div class="flex gap-4 pt-4">
+        <%= f.submit "Update Expense", 
+              class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors cursor-pointer" %>
+        <%= link_to "Cancel", expenses_path(month: @viewing_month), 
+              class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg transition-colors" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+

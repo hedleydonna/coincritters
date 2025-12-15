@@ -97,19 +97,20 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert income_event.valid?
   end
 
-  test "should validate assigned_month_year format when present" do
+  test "should allow apply_to_next_month to be true" do
     income_event = IncomeEvent.new(
       user: @user_one,
       custom_label: "Paycheck",
       month_year: "2025-12",
-      assigned_month_year: "invalid",
-      received_on: Date.today
+      received_on: Date.today,
+      apply_to_next_month: true,
+      actual_amount: 1000.00
     )
-    assert_not income_event.valid?
-    assert_includes income_event.errors[:assigned_month_year], "must be in YYYY-MM format"
+    assert income_event.valid?
+    assert income_event.apply_to_next_month?
   end
 
-  test "should allow assigned_month_year to be blank" do
+  test "should default apply_to_next_month to false" do
     income_event = IncomeEvent.new(
       user: @user_one,
       custom_label: "Paycheck",
@@ -118,6 +119,7 @@ class IncomeEventTest < ActiveSupport::TestCase
       actual_amount: 1000.00
     )
     assert income_event.valid?
+    assert_not income_event.apply_to_next_month?
   end
 
   test "should require received_on" do
@@ -140,6 +142,17 @@ class IncomeEventTest < ActiveSupport::TestCase
     )
     assert_not income_event.valid?
     assert_includes income_event.errors[:actual_amount], "must be greater than or equal to 0"
+  end
+
+  test "should allow actual_amount to be nil" do
+    income_event = IncomeEvent.new(
+      user: @user_one,
+      custom_label: "Paycheck",
+      month_year: "2025-12",
+      received_on: Date.today,
+      actual_amount: nil
+    )
+    assert income_event.valid?
   end
 
   test "should have default actual_amount of 0.0" do
@@ -236,5 +249,29 @@ class IncomeEventTest < ActiveSupport::TestCase
     )
     # This scenario should be prevented by validation, but testing the method's behavior
     assert_nil income_event.display_name
+  end
+
+  test "assigned_month returns next month when apply_to_next_month is true" do
+    income_event = IncomeEvent.create!(
+      user: @user_one,
+      custom_label: "Late Paycheck",
+      month_year: "2025-12",
+      received_on: Date.parse("2025-12-28"),
+      apply_to_next_month: true,
+      actual_amount: 5000.00
+    )
+    assert_equal "2026-01", income_event.assigned_month
+  end
+
+  test "assigned_month returns month_year when apply_to_next_month is false" do
+    income_event = IncomeEvent.create!(
+      user: @user_one,
+      custom_label: "Paycheck",
+      month_year: "2025-12",
+      received_on: Date.today,
+      apply_to_next_month: false,
+      actual_amount: 5000.00
+    )
+    assert_equal "2025-12", income_event.assigned_month
   end
 end

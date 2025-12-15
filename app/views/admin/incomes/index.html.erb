@@ -92,7 +92,11 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <% if income.auto_create? %>
                       <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                        Day <%= income.auto_day_of_month %>
+                        <% if income.due_date.present? %>
+                          <%= income.due_date.strftime("%b %d") %>
+                        <% else %>
+                          Auto-create
+                        <% end %>
                       </span>
                     <% else %>
                       <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-500 border border-gray-200">Manual</span>

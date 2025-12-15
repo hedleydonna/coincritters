@@ -17,10 +17,25 @@ Rails.application.routes.draw do
       end
     end
     
+    resources :incomes, except: [:show] do
+      member do
+        patch :reactivate
+      end
+    end
+    
     get "expenses", to: "expenses#index"
     post "expenses/start_next_month", to: "expenses#start_next_month", as: :start_next_month
+    post "expenses/:expense_id/sweep_to_savings", to: "expenses#sweep_to_savings", as: :sweep_to_savings
+    post "expenses/:id/mark_paid", to: "expenses#mark_paid", as: :mark_expense_paid
     resources :payments, only: [:new, :create]
-    resources :expenses, only: [:new, :create]
+    resources :expenses, only: [:new, :create, :edit, :update]
+    get "income_events", to: "income_events#index"
+    resources :income_events, only: [:new, :create, :edit, :update, :destroy] do
+      member do
+        patch :mark_received
+        patch :toggle_defer
+      end
+    end
   end
 
   get "dashboard", to: "dashboard#index"

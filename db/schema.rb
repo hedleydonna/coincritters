@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_15_000002) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_15_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -47,15 +47,15 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000002) do
     t.bigint "income_id"
     t.string "custom_label"
     t.string "month_year", null: false
-    t.string "assigned_month_year"
     t.date "received_on", null: false
     t.decimal "actual_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "apply_to_next_month", default: false, null: false
     t.index ["income_id", "month_year"], name: "index_income_events_on_income_id_and_month_year"
     t.index ["income_id"], name: "index_income_events_on_income_id"
-    t.index ["user_id", "assigned_month_year"], name: "index_income_events_on_assigned_month"
+    t.index ["user_id", "apply_to_next_month"], name: "index_income_events_on_apply_to_next_month"
     t.index ["user_id", "month_year"], name: "index_income_events_on_user_id_and_month_year"
     t.index ["user_id"], name: "index_income_events_on_user_id"
   end
@@ -69,7 +69,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "auto_create", default: false, null: false
-    t.integer "auto_day_of_month"
+    t.date "due_date"
+    t.boolean "last_payment_to_next_month", default: false, null: false
     t.index ["user_id", "active"], name: "index_incomes_on_user_id_and_active"
     t.index ["user_id", "name"], name: "index_incomes_on_user_id_and_name", unique: true
     t.index ["user_id"], name: "index_incomes_on_user_id"

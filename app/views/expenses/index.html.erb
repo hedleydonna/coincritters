@@ -60,10 +60,18 @@
 
   <!-- Top summary card -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-8 shadow-sm border border-blue-100">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-4">
       <div>
         <p class="text-sm text-gray-600 mb-1">Income this month</p>
         <p class="text-2xl font-bold text-gray-900"><%= number_to_currency(@total_income) %></p>
+        <% if @expected_income > 0 %>
+          <p class="text-xs text-gray-500 mt-1">
+            Expected: <%= number_to_currency(@expected_income) %>
+          </p>
+        <% end %>
+        <% if @is_current_month %>
+          <%= link_to "Log income", new_income_event_path, class: "text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 inline-block" %>
+        <% end %>
       </div>
       <div>
         <p class="text-sm text-gray-600 mb-1">Spent so far</p>
@@ -90,11 +98,66 @@
         </p>
       </div>
     </div>
+    
+    <!-- Flex Fund Display -->
+    <% flex_fund = @budget.remaining_to_assign %>
+    <% if flex_fund != 0 %>
+      <div class="mt-4 pt-4 border-t border-blue-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 mb-1">Flex Fund</p>
+            <p class="text-xl font-bold <%= flex_fund >= 0 ? 'text-green-600' : 'text-orange-600' %>">
+              <% if flex_fund >= 0 %>
+                <%= number_to_currency(flex_fund) %> left to assign
+              <% else %>
+                Short by <%= number_to_currency(flex_fund.abs) %>
+              <% end %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
   </div>
 
-  <!-- Add payment button (only for current month) -->
+  <!-- Income Events List (only for current and next month) -->
+  <% if @income_events.any? && !@is_past_month %>
+    <div class="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Expected Income</h2>
+      <div class="space-y-2">
+        <% @income_events.each do |event| %>
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div class="flex-1">
+              <p class="font-medium text-gray-900"><%= event.display_name %></p>
+              <p class="text-sm text-gray-600">
+                <%= event.received_on.strftime("%B %d") %>
+                <% if event.income %>
+                  • Expected: <%= number_to_currency(event.income.estimated_amount) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="text-right">
+                <p class="font-semibold text-gray-900">
+                  <%= number_to_currency(event.actual_amount) %>
+                </p>
+                <p class="text-xs text-gray-500">received</p>
+              </div>
+              <% if @is_current_month %>
+                <%= link_to "Edit", edit_income_event_path(event), 
+                      class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors text-sm" %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Action buttons (only for current month) -->
   <% if @is_current_month %>
-    <div class="mb-6">
+    <div class="mb-6 flex gap-3 flex-wrap">
+      <%= link_to "+ Log income", new_income_event_path, 
+            class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
       <%= link_to "+ Add payment", new_payment_path(month: @viewing_month), 
             class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
     </div>
@@ -138,12 +201,63 @@
                 <% end %>
               </p>
             </div>
-            <% if @is_current_month %>
-              <%= link_to "Add payment", new_payment_path(expense_id: expense.id, month: @viewing_month),
-                    class: "text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium" %>
-            <% else %>
-              <span class="text-sm text-gray-400">No payments in <%= @is_next_month ? "planning mode" : "past months" %></span>
-            <% end %>
+            <div class="flex gap-2 items-center flex-wrap">
+              <% if @is_current_month %>
+                <% is_savings = expense.name.downcase.include?("savings") || expense.name.downcase.include?("emergency") %>
+                <% flex_fund = [@budget.remaining_to_assign, 0].max %>
+                
+                <% if is_savings && flex_fund > 0 %>
+                  <!-- Sweep to Savings Form -->
+                  <details class="relative">
+                    <summary class="text-green-600 hover:text-green-800 hover:underline text-sm font-medium cursor-pointer">
+                      Sweep to savings
+                    </summary>
+                    <div class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10">
+                      <%= form_with url: sweep_to_savings_path(expense.id), method: :post, local: true, class: "space-y-3" do |f| %>
+                        <%= hidden_field_tag :month, @viewing_month %>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">How much?</label>
+                          <div class="relative">
+                            <span class="absolute left-2 top-2 text-gray-500">$</span>
+                            <%= number_field_tag :amount, flex_fund, 
+                                  step: "0.01", 
+                                  min: "0.01",
+                                  max: flex_fund,
+                                  class: "w-full px-4 py-2 pl-6 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
+                          </div>
+                          <p class="mt-1 text-xs text-gray-500">Available: <%= number_to_currency(flex_fund) %></p>
+                        </div>
+                        <div class="flex gap-2">
+                          <%= f.submit "Sweep", 
+                                class: "flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer text-sm" %>
+                          <button type="button" onclick="this.closest('details').removeAttribute('open')" 
+                                  class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors text-sm">
+                            Cancel
+                          </button>
+                        </div>
+                      <% end %>
+                    </div>
+                  </details>
+                <% end %>
+                
+                <% unless expense.paid? %>
+                  <%= button_to "Paid", mark_expense_paid_path(expense.id), method: :post,
+                        class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm",
+                        data: { confirm: "Mark as paid? This will add a payment of #{number_to_currency(expense.allotted_amount - expense.spent_amount)}." } %>
+                <% end %>
+                
+                <%= link_to "Add payment", new_payment_path(expense_id: expense.id, month: @viewing_month),
+                      class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm" %>
+                
+                <%= link_to "Edit", edit_expense_path(expense.id, month: @viewing_month),
+                      class: "bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm" %>
+              <% elsif @is_next_month %>
+                <%= link_to "Edit", edit_expense_path(expense.id, month: @viewing_month),
+                      class: "bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm" %>
+              <% else %>
+                <span class="text-sm text-gray-400">View only</span>
+              <% end %>
+            </div>
           </div>
         </div>
       <% end %>
@@ -152,7 +266,7 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
       <p class="text-gray-500 text-lg mb-2">No expenses yet for this month.</p>
       <p class="text-gray-400 mb-6">Create expense templates to auto-generate expenses, or add a one-off expense below.</p>
-      <%= link_to "Build Your Branches", expense_templates_path,
+      <%= link_to "Set Up Expenses", expense_templates_path,
             class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-block" %>
     </div>
   <% end %>

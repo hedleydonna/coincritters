@@ -30,7 +30,9 @@
         </div>
         <div>
           <p class="text-sm font-medium text-gray-500">Assigned Month/Year</p>
-          <p class="mt-1 text-lg text-gray-900"><%= @income_event.assigned_month_year || "—" %></p>
+          <p class="mt-1 text-lg text-gray-900">
+            <%= @income_event.apply_to_next_month? ? "Deferred to next month" : "Counts in this month" %>
+          </p>
         </div>
         <div>
           <p class="text-sm font-medium text-gray-500">Actual Amount</p>

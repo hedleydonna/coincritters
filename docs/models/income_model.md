@@ -18,8 +18,9 @@ The Income model represents income sources for users in the Willow application. 
 | `frequency` | string | NOT NULL, Default: "monthly" | How often this income is received |
 | `estimated_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | Estimated amount of income |
 | `active` | boolean | NOT NULL, Default: true | Whether this income source is currently active |
-| `auto_create` | boolean | NOT NULL, Default: false | If `true`, automatically creates income events on the specified day of month |
-| `auto_day_of_month` | integer | Nullable, Range: 1-31 | Day of month when automatic income events should be created (required if `auto_create` is `true`) |
+| `auto_create` | boolean | NOT NULL, Default: false | If `true`, automatically creates income events based on frequency and due_date |
+| `due_date` | date | Nullable | Date when income is typically received (required if `auto_create` is `true`). Used to calculate event dates based on frequency. |
+| `last_payment_to_next_month` | boolean | NOT NULL, Default: false | If `true`, the last payment of each month will automatically be deferred to next month's budget |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
@@ -92,14 +93,19 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 - **auto_create**: Boolean flag indicating if income events should be automatically created
   - Default: `false` - User must manually create income events
-  - When `true`: System will automatically create income events on the specified day of month
-  - **Requires `auto_day_of_month`** when set to `true`
+  - When `true`: System will automatically create income events based on frequency and due_date
+  - **Requires `due_date`** when set to `true`
 
-- **auto_day_of_month**: Day of the month when automatic income events should be created
-  - Range: 1-31 (day of month)
+- **due_date**: Date when income is typically received (used to calculate event dates)
+  - Format: Date (YYYY-MM-DD)
   - `nil` allowed when `auto_create` is `false`
   - **Required** when `auto_create` is `true`
-  - Note: For months with fewer days (e.g., February 30th doesn't exist), the system will use the last day of the month
+  - Used with `frequency` to calculate all occurrences in a month (e.g., bi-weekly starting on due_date)
+
+- **last_payment_to_next_month**: Boolean flag indicating if the last payment of each month should be deferred
+  - Default: `false` - All payments count in the month received
+  - When `true`: The last payment of each month automatically gets `apply_to_next_month: true` on the income event
+  - Useful for late-month paychecks you want to hold for next month's expenses
 
 ## Scopes
 
@@ -150,7 +156,8 @@ Income::FREQUENCIES
 - **estimated_amount**: `0.0` - Safe default until user enters amount
 - **active**: `true` - New incomes are active by default
 - **auto_create**: `false` - Manual event creation by default (user must acknowledge income)
-- **auto_day_of_month**: `nil` - No automatic date specified by default
+- **due_date**: `nil` - No automatic date specified by default (required when auto_create is true)
+- **last_payment_to_next_month**: `false` - All payments count in month received by default
 
 ## Usage Examples
 
@@ -174,14 +181,26 @@ income = Income.create!(
   active: true
 )
 
-# Auto-create income (automatically creates events on the 1st of each month)
+# Auto-create income (automatically creates events monthly on the 1st)
 income = Income.create!(
   user: current_user,
   name: "Regular Salary",
   frequency: "monthly",
   estimated_amount: 5000.00,
   auto_create: true,
-  auto_day_of_month: 1
+  due_date: Date.parse("2025-12-01"),
+  last_payment_to_next_month: false
+)
+
+# Auto-create bi-weekly income with last payment deferred
+income = Income.create!(
+  user: current_user,
+  name: "Bi-weekly Salary",
+  frequency: "bi_weekly",
+  estimated_amount: 2600.00,
+  auto_create: true,
+  due_date: Date.parse("2025-12-01"),
+  last_payment_to_next_month: true  # Last pay of month goes to next month
 )
 ```
 
@@ -232,15 +251,21 @@ user.destroy  # Automatically deletes all associated incomes
 4. **Cascade Delete**: Deleting a user automatically deletes all their incomes
 5. **Non-Negative Amounts**: Income amounts cannot be negative (for expenses, use a separate model)
 6. **Auto Create Requirements**: 
-   - When `auto_create` is `true`, `auto_day_of_month` must be provided (1-31)
-   - When `auto_create` is `false`, `auto_day_of_month` can be `nil`
+   - When `auto_create` is `true`, `due_date` must be provided
+   - When `auto_create` is `false`, `due_date` can be `nil`
    - Auto-create is intended for predictable income where `estimated_amount` consistently matches the actual amount received
    - Manual entry (`auto_create: false`) is for variable income where actual amounts may differ from estimates
-7. **Auto Create Behavior** (Future Implementation):
-   - When `auto_create` is enabled, the system will automatically create `IncomeEvent` records on the specified day of each month
-   - The event's `actual_amount` will be set to the income's `estimated_amount` (assuming they match)
-   - This reduces manual work for users with consistent, predictable income
-   - For variable income, users manually create events and specify the `actual_amount` received
+7. **Auto Create Behavior**:
+   - When `auto_create` is enabled, the system automatically creates `IncomeEvent` records based on `frequency` and `due_date`
+   - For monthly: Creates one event per month on the due_date day
+   - For bi-weekly: Creates 2-3 events per month (every 14 days from due_date)
+   - For weekly: Creates 4-5 events per month (every 7 days from due_date)
+   - Events are created with `actual_amount: 0` initially (unless due_date is today, then pre-filled with estimated_amount)
+   - User can then mark as "Received" or edit the amount when money arrives
+8. **Last Payment Deferral**:
+   - When `last_payment_to_next_month` is `true`, the last payment of each month automatically gets `apply_to_next_month: true`
+   - This defers that payment to next month's budget instead of current month
+   - Useful for late-month paychecks you want to hold for next month's expenses
 
 ## Auto-Create Feature
 
@@ -259,15 +284,17 @@ The auto-create feature allows users to configure income sources that automatica
 ### How It Works
 
 1. **User Configuration**: 
-   - For predictable income: User sets `auto_create: true` and specifies `auto_day_of_month` (1-31)
+   - For predictable income: User sets `auto_create: true` and specifies `due_date` and `frequency`
    - For variable income: User sets `auto_create: false` (or leaves it as default `false`)
+   - Optionally set `last_payment_to_next_month: true` to defer last payment of each month
 
-2. **Automatic Event Generation** (Future Implementation for `auto_create: true`): 
-   - System will automatically create `IncomeEvent` records on the specified day of each month
-   - Uses the income's `estimated_amount` as the event's `actual_amount` (assuming they match)
-   - Uses the income's `name` for the event (or `custom_label` if not linked)
-   - Events are attributed to the appropriate month based on `auto_day_of_month`
-   - **Assumption**: `estimated_amount` equals the actual amount received (for consistent/predictable income)
+2. **Automatic Event Generation** (for `auto_create: true`): 
+   - System automatically creates `IncomeEvent` records based on `frequency` and `due_date`
+   - Calculates all occurrences in the month (e.g., bi-weekly = 2-3 events, weekly = 4-5 events)
+   - Events are created with `actual_amount: 0` initially (user marks as "Received" when money arrives)
+   - If `due_date` is today, `actual_amount` is pre-filled with `estimated_amount`
+   - If `last_payment_to_next_month` is `true`, the last event of the month gets `apply_to_next_month: true`
+   - Events are only created from today forward for current month (not past dates)
 
 3. **Manual Event Creation** (for `auto_create: false`):
    - User manually creates `IncomeEvent` records when income is received
@@ -278,35 +305,97 @@ The auto-create feature allows users to configure income sources that automatica
 
 ### Use Cases
 
-- **Fixed Monthly Salary**: User always gets paid exactly $5,000 on the 1st → `auto_create: true, auto_day_of_month: 1, estimated_amount: 5000.00`
-  - System creates event with `actual_amount: 5000.00` automatically
+- **Fixed Monthly Salary**: User always gets paid exactly $5,000 on the 1st → `auto_create: true, due_date: Date.parse("2025-12-01"), frequency: "monthly", estimated_amount: 5000.00`
+  - System creates one event per month on the 1st with `actual_amount: 0` (user marks as "Received" when paid)
+  
+- **Bi-weekly Salary with Deferral**: User gets paid bi-weekly, wants last pay of month to go to next month → `auto_create: true, due_date: Date.parse("2025-12-01"), frequency: "bi_weekly", last_payment_to_next_month: true`
+  - System creates 2-3 events per month based on due_date
+  - Last event of month automatically gets `apply_to_next_month: true`
   
 - **Variable Paycheck**: User's paycheck varies (e.g., $4,800-$5,200) due to hours/bonuses → `auto_create: false`
   - User manually creates events each month and enters the actual amount received
   - `estimated_amount` serves as a budget estimate, but `actual_amount` is entered per event
   
-- **Consistent Freelance Payment**: User always receives exactly $2,000 on the 15th from a regular client → `auto_create: true, auto_day_of_month: 15`
+- **Consistent Freelance Payment**: User always receives exactly $2,000 on the 15th from a regular client → `auto_create: true, due_date: Date.parse("2025-12-15"), frequency: "monthly"`
   
 - **Irregular Freelance Income**: User's freelance work varies significantly in amount and timing → `auto_create: false`
   - User manually creates events with varying amounts as income is received
 
-### Future Implementation Notes
+### Implementation Notes
 
-- Scheduled job/background task will process auto-create incomes daily
-- Check for incomes where `auto_create: true` and `active: true`
-- Create events for current month if not already created
-- Handle edge cases (end of month, leap years, etc.)
-- Allow users to review/approve auto-generated events
-- Provide option to disable auto-create for specific months
+- Auto-creation happens when user visits Money Map or Income This Month page
+- System checks for incomes where `auto_create: true` and `active: true`
+- Creates events for current and next month if not already created
+- Handles edge cases (end of month, leap years, different month lengths)
+- Events are only created from today forward for current month (not past dates)
+- Users can review, edit, or delete auto-generated events
+
+## Instance Methods
+
+### `events_for_month(month_year)`
+
+Calculates all income event dates for a given month based on frequency and due_date.
+
+**Parameters:**
+- `month_year` (String) - Month in YYYY-MM format (e.g., "2025-12")
+
+**Returns:**
+- Array of Date objects representing when income events should occur
+
+**Examples:**
+```ruby
+income = Income.create!(
+  user: user,
+  name: "Bi-weekly Salary",
+  frequency: "bi_weekly",
+  due_date: Date.parse("2025-12-01"),
+  auto_create: true
+)
+
+# Get events for December 2025
+dates = income.events_for_month("2025-12")
+# => [2025-12-01, 2025-12-15, 2025-12-29]
+```
+
+### `expected_amount_for_month(month_year)`
+
+Calculates the total expected income for a given month.
+
+**Parameters:**
+- `month_year` (String) - Month in YYYY-MM format
+
+**Returns:**
+- BigDecimal - Total expected amount (number of events × estimated_amount)
+
+**Examples:**
+```ruby
+income = Income.create!(
+  user: user,
+  name: "Bi-weekly Salary",
+  frequency: "bi_weekly",
+  due_date: Date.parse("2025-12-01"),
+  estimated_amount: 2600.00,
+  auto_create: true
+)
+
+# Calculate expected for December (3 pays)
+expected = income.expected_amount_for_month("2025-12")
+# => 7800.00 (3 × 2600.00)
+```
+
+### `last_payment_to_next_month?`
+
+Returns whether the last payment of each month should be deferred to next month.
+
+**Returns:**
+- Boolean - true if last payment should be deferred
 
 ## Future Enhancements
 
 Potential additions to the Income model:
 
-- **Implementation of Auto-Create**: Background job to automatically generate income events
 - **Notes/Description**: Additional details about the income source
 - **Start Date / End Date**: Track when income starts and ends
-- **Actual Amount**: Track actual income received vs. estimated
 - **Categories/Tags**: Categorize income types
 - **Currency**: Support for multiple currencies
 - **Income History**: Track income changes over time

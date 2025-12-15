@@ -17,9 +17,9 @@ The Income Event model represents actual income received events in the Willow ap
 | `income_id` | bigint | Nullable | Optionally references the income source this event came from (referential integrity enforced at model level). When present, the event's display name comes from `incomes.name`. |
 | `custom_label` | string | Nullable| Manual label for one-off income events that don't correspond to an income record (e.g., "Birthday Gift", "One-time Bonus"). Only used when `income_id` is null. When `income_id` is present, this field is typically `nil`. |
 | `month_year` | string | NOT NULL | Month/year the income was actually received (format: YYYY-MM) |
-| `assigned_month_year` | string | Nullable | Month/year this income should be attributed to (format: YYYY-MM) |
+| `apply_to_next_month` | boolean | NOT NULL, Default: false | If `true`, this income counts toward next month's budget instead of the month received |
 | `received_on` | date | NOT NULL | Specific date the income was received |
-| `actual_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | Actual amount of income received |
+| `actual_amount` | decimal(12,2) | NOT NULL, Default: 0.0, Allow nil | Actual amount of income received. Defaults to 0 until user marks as "Received" or edits the amount |
 | `notes` | text | Nullable | Optional notes about this income event |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
@@ -27,7 +27,7 @@ The Income Event model represents actual income received events in the Willow ap
 ### Indexes
 
 - **User ID + Month Year Index**: Composite index on `[user_id, month_year]` - optimized for finding events by user and month
-- **User ID + Assigned Month Year Index**: Composite index on `[user_id, assigned_month_year]` - for finding events by assigned month
+- **User ID + Apply to Next Month Index**: Composite index on `[user_id, apply_to_next_month]` - for finding deferred events
 - **Income ID + Month Year Index**: Composite index on `[income_id, month_year]` - for finding events by income source and month
 - **Income ID Index**: Index on `income_id` for fast lookups by income source
 
@@ -98,15 +98,12 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   - Valid examples: "2025-01", "2025-12", "2024-03"
   - Invalid examples: "2025-1", "25-12", "December 2025"
 
-- `validates :assigned_month_year, format: { with: /\A\d{4}-\d{2}\z/, message: "must be in YYYY-MM format" }, allow_blank: true`:
-  - `assigned_month_year` must match the pattern `YYYY-MM` if present.
-  - Can be blank (optional field).
-
 ### Numericality Validations
 
-- `validates :actual_amount, numericality: { greater_than_or_equal_to: 0 }`:
-  - `actual_amount` must be a number.
+- `validates :actual_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true`:
+  - `actual_amount` must be a number if present.
   - `actual_amount` must be zero or a positive value (cannot be negative).
+  - Can be `nil` or `0` until user marks as "Received" or edits the amount.
 
 ### Association Validations
 
@@ -136,6 +133,25 @@ event = IncomeEvent.create!(user: user, custom_label: "Birthday Gift", month_yea
 event.display_name # => "Birthday Gift"
 ```
 
+### `assigned_month`
+
+Returns the month this income event counts toward (helper method).
+
+**Logic:**
+- If `apply_to_next_month` is `true`, returns the next month from `month_year`.
+- Otherwise, returns `month_year`.
+
+**Example:**
+```ruby
+event = IncomeEvent.create!(
+  user: user,
+  month_year: "2025-12",
+  apply_to_next_month: true,
+  received_on: Date.parse("2025-12-28")
+)
+event.assigned_month # => "2026-01"
+```
+
 ## Business Rules
 
 1. **Required Associations**: Every income event must have a user. The income source is optional.
@@ -148,9 +164,14 @@ event.display_name # => "Birthday Gift"
 
 3. **Custom Events**: One-off income events (like birthday presents, unexpected bonuses, tax refunds, etc.) that don't correspond to regular income sources can be created without linking to an `incomes` record. These events require the `custom_label` field for their display name.
 
-4. **Date Formatting**: Both `month_year` and `assigned_month_year` must be in `YYYY-MM` format if provided.
+4. **Date Formatting**: `month_year` must be in `YYYY-MM` format.
 
-5. **Non-Negative Amounts**: Income amounts cannot be negative (though zero is allowed).
+5. **Non-Negative Amounts**: Income amounts cannot be negative (though zero or nil is allowed until received).
+
+6. **Deferral Logic**: 
+   - When `apply_to_next_month` is `true`, the income counts toward next month's budget
+   - Can be set automatically by income template (`last_payment_to_next_month`) or manually by user
+   - Useful for late-month paychecks you want to hold for next month's expenses
 
 6. **Cascade Deletion**: 
    - Deleting a user deletes all their income events
@@ -158,6 +179,8 @@ event.display_name # => "Birthday Gift"
 
 7. **Default Values**: 
    - New income events default to `actual_amount: 0.0` if not specified
+   - `apply_to_next_month` defaults to `false` (counts in month received)
+   - Auto-created events start with `actual_amount: 0` (unless due_date is today, then pre-filled)
 
 
 ## Usage Examples
@@ -220,7 +243,7 @@ income_event = user.income_events.create(
 )
 ```
 
-### Creating with Assigned Month
+### Creating with Deferral to Next Month
 
 ```ruby
 income = user.incomes.first  # e.g., "Monthly Salary"
@@ -228,13 +251,14 @@ income = user.incomes.first  # e.g., "Monthly Salary"
 income_event = user.income_events.create(
   income_id: income,
   month_year: "2025-12",        # Received in December
-  assigned_month_year: "2026-01", # But attribute to January
+  apply_to_next_month: true,    # But count toward January
   received_on: Date.parse("2025-12-28"),
   actual_amount: 4500.00,
-  notes: "Salary received early for January"
+  notes: "Salary received late, applying to January"
 )
 # Display name comes from income.name via display_name method
 income_event.display_name  # => "Monthly Salary"
+income_event.assigned_month # => "2026-01"
 ```
 
 ### Getting Display Name
@@ -347,16 +371,16 @@ missing_fields = user.income_events.create(
 
 ## Key Concepts
 
-### month_year vs assigned_month_year
+### month_year vs apply_to_next_month
 
 - **month_year**: The actual month and year when the income was received (required)
-- **assigned_month_year**: The month and year this income should be attributed to for reporting/budgeting purposes (optional)
+- **apply_to_next_month**: Boolean flag indicating if this income should count toward next month's budget instead of the month received
 
 This distinction allows for scenarios like:
-- Receiving December salary early (month_year: "2025-11", assigned_month_year: "2025-12")
-- Receiving January payment in late December (month_year: "2025-12", assigned_month_year: "2026-01")
+- Receiving late December paycheck that you want to hold for January expenses (month_year: "2025-12", apply_to_next_month: true)
+- Automatically deferring last payment of month when income template has `last_payment_to_next_month: true`
 
-When using `assigned_month_year`, the event is still linked to its income source (if applicable), but the income is attributed to a different month for budgeting/reporting purposes.
+When `apply_to_next_month` is `true`, the income counts toward next month's budget for planning purposes, even though it was received in the current month.
 
 ### Display Name Logic
 
@@ -396,7 +420,8 @@ The admin dashboard displays:
 ## Migration History
 
 - `20251209214918_create_income_events.rb` - Initial income_events table creation
-- `20251210174514_rename_income_type_to_custom_label_in_income_events.rb` - Renamed `income_type` to `custom_label`, made the column nullable, and changed default to "Other" to better reflect its purpose as an optional label for custom/one-off events
+- `20251210174514_rename_income_type_to_custom_label_in_income_events.rb` - Renamed `income_type` to `custom_label`
+- `20251215000004_replace_assigned_month_year_with_apply_to_next_month.rb` - Replaced `assigned_month_year` string with `apply_to_next_month` boolean for simpler deferral logic
 
 ## Future Enhancements
 

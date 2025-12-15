@@ -21,6 +21,11 @@ All routes are under `/expenses`:
 - **GET** `/expenses/new` - Show new expense form
 - **GET** `/expenses/new?month=YYYY-MM` - Show new expense form for specific month
 - **POST** `/expenses` - Create a new expense
+- **GET** `/expenses/:id/edit` - Show edit expense form
+- **GET** `/expenses/:id/edit?month=YYYY-MM` - Show edit expense form for specific month
+- **PATCH** `/expenses/:id` - Update an expense
+- **POST** `/expenses/:id/mark_paid` - Mark expense as fully paid (creates payment for remaining amount)
+- **POST** `/expenses/:expense_id/sweep_to_savings` - Sweep flex fund to savings expense
 - **POST** `/expenses/start_next_month` - Create next month's budget (deprecated - auto-created now)
 
 ## Actions
@@ -92,6 +97,81 @@ Creates a new expense (template-based or one-off).
 - `expense[name]` - Expense name (required for one-off, optional for template-based)
 - `expense[allotted_amount]` - Amount to allocate
 
+### `edit`
+
+Shows the form to edit an existing expense.
+
+**Instance Variables:**
+- `@expense` - The expense being edited
+- `@budget` - The monthly budget the expense belongs to
+- `@expense_templates` - All active expense templates for user selection
+- `@viewing_month` - Month being viewed (for navigation)
+
+**Parameters:**
+- `id` - Expense ID to edit
+- `month` (optional) - Month being viewed (YYYY-MM format)
+
+### `update`
+
+Updates an existing expense.
+
+**Success:**
+- Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense updated!"
+
+**Failure:**
+- Re-renders the `edit` template with `:unprocessable_entity` status
+- Re-sets `@expense_templates` and `@viewing_month` for the form
+
+**Parameters:**
+- `id` - Expense ID to update
+- `expense[expense_template_id]` - Template ID (optional)
+- `expense[name]` - Expense name
+- `expense[allotted_amount]` - Amount to allocate
+
+### `mark_paid`
+
+Marks an expense as fully paid by creating a payment for the remaining amount needed.
+
+**Behavior:**
+- Only works for current month expenses
+- Calculates amount needed: `allotted_amount - spent_amount`
+- Creates a payment for that amount with `spent_on: Date.today`
+- Adds note: "Marked as paid"
+
+**Success:**
+- Redirects to `expenses_path(month: current_month)` with notice showing amount paid
+
+**Restrictions:**
+- Only works for current month (not next or past months)
+- If expense is already paid, shows notice
+- If amount needed is <= 0, shows alert
+
+**Parameters:**
+- `id` - Expense ID to mark as paid
+
+### `sweep_to_savings`
+
+Sweeps money from the flex fund to a savings expense.
+
+**Behavior:**
+- Only works for current month
+- Only works for expenses named "Savings" or "Emergency Fund"
+- Increases the expense's `allotted_amount` by the swept amount
+- Reduces the flex fund accordingly
+
+**Success:**
+- Redirects to `expenses_path(month: month_year)` with success notice
+
+**Restrictions:**
+- Only works for current month
+- Only works for savings expenses
+- Requires positive flex fund amount
+
+**Parameters:**
+- `expense_id` - Savings expense ID
+- `amount` - Amount to sweep (must be <= flex fund)
+- `month` - Month being viewed
+
 ### `start_next_month` (Deprecated)
 
 This action is kept for backward compatibility but is no longer needed since next month is automatically created when viewing the Money Map.
@@ -122,6 +202,7 @@ Permits the following parameters:
 
 - `app/views/expenses/index.html.erb` - Money Map view with tab navigation
 - `app/views/expenses/new.html.erb` - New expense form
+- `app/views/expenses/edit.html.erb` - Edit expense form
 
 ## Usage Examples
 
@@ -156,6 +237,25 @@ POST /expenses
 
 ```ruby
 GET /expenses?month=2026-01
+```
+
+### Marking an Expense as Paid
+
+```ruby
+POST /expenses/123/mark_paid
+# Creates payment for remaining amount needed to fully pay the expense
+```
+
+### Editing an Expense
+
+```ruby
+GET /expenses/123/edit?month=2025-12
+PATCH /expenses/123
+{
+  expense: {
+    allotted_amount: 600.00
+  }
+}
 ```
 
 ## Key Features

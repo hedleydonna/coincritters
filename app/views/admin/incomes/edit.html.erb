@@ -58,7 +58,7 @@
                     { 
                       class: "h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded", 
                       id: "income_auto_create",
-                      onclick: "document.getElementById('auto_day_of_month_field').style.display = this.checked ? 'block' : 'none';"
+                      onclick: "document.getElementById('due_date_field').style.display = this.checked ? 'block' : 'none'; document.getElementById('last_payment_field').style.display = this.checked ? 'block' : 'none';"
                     } %>
                 <%= f.label :auto_create, "Enable Auto-Create", class: "ml-2 block text-sm text-gray-700" %>
               </div>
@@ -69,12 +69,24 @@
               </p>
             </div>
 
-            <div id="auto_day_of_month_field" style="<%= 'display: none;' unless @income.auto_create? %>">
-              <%= f.label :auto_day_of_month, "Day of Month (1-31)", class: "block text-sm font-medium text-gray-700 mb-2" %>
-              <%= f.number_field :auto_day_of_month, in: 1..31, value: @income.auto_day_of_month, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
+            <div id="due_date_field" style="<%= 'display: none;' unless @income.auto_create? %>">
+              <%= f.label :due_date, "Due Date", class: "block text-sm font-medium text-gray-700 mb-2" %>
+              <%= f.date_field :due_date, value: @income.due_date, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" %>
               <p class="mt-1 text-sm text-gray-500">
-                Income events will be automatically created on this day each month. The <strong>estimated amount above will be used as the actual amount</strong> in the created event (assumes amount is consistent).
+                Date when income is typically received. Used with frequency to calculate all occurrences in a month.
               </p>
+            </div>
+            
+            <div id="last_payment_field" style="<%= 'display: none;' unless @income.auto_create? %>">
+              <div class="flex items-start gap-3 mt-4">
+                <%= f.check_box :last_payment_to_next_month, 
+                      { checked: @income.last_payment_to_next_month? },
+                      class: "mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" %>
+                <div>
+                  <%= f.label :last_payment_to_next_month, "Defer last payment to next month", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
+                  <p class="text-sm text-gray-500">When enabled, the last payment of each month will automatically be counted in next month's budget.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -92,18 +104,26 @@
   // Set initial state on page load
   document.addEventListener('DOMContentLoaded', function() {
     const checkbox = document.getElementById('income_auto_create');
-    const field = document.getElementById('auto_day_of_month_field');
+    const field = document.getElementById('due_date_field');
+    const lastPaymentField = document.getElementById('last_payment_field');
     if (checkbox && field) {
       field.style.display = checkbox.checked ? 'block' : 'none';
+      if (lastPaymentField) {
+        lastPaymentField.style.display = checkbox.checked ? 'block' : 'none';
+      }
     }
   });
   
   // Also handle Turbo page loads
   document.addEventListener('turbo:load', function() {
     const checkbox = document.getElementById('income_auto_create');
-    const field = document.getElementById('auto_day_of_month_field');
+    const field = document.getElementById('due_date_field');
+    const lastPaymentField = document.getElementById('last_payment_field');
     if (checkbox && field) {
       field.style.display = checkbox.checked ? 'block' : 'none';
+      if (lastPaymentField) {
+        lastPaymentField.style.display = checkbox.checked ? 'block' : 'none';
+      }
     }
   });
 </script>

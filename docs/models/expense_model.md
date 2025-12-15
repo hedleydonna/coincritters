@@ -441,6 +441,134 @@ The admin dashboard displays:
 
 - `20251210005820_create_expense.rb` - Initial expense table creation
 
+## Testing Script: Create Past Months Data
+
+Use this script in the Rails console to create 3 past months of realistic test data:
+
+```ruby
+# Create 3 past months of test data for a user
+# Run in Rails console: rails console
+# Usage: user = User.find_by(email: "your@email.com"); load 'path/to/script.rb'
+
+def create_past_months_test_data(user)
+  # Create expense templates if they don't exist
+  # Note: due_date should be a full Date object, or nil if not specified
+  templates = [
+    { name: "Rent", frequency: "monthly", default_amount: 1200.00, due_date: Date.today.beginning_of_month + 0.days },
+    { name: "Groceries", frequency: "monthly", default_amount: 500.00 },
+    { name: "Utilities", frequency: "monthly", default_amount: 150.00, due_date: Date.today.beginning_of_month + 14.days },
+    { name: "Phone", frequency: "monthly", default_amount: 80.00, due_date: Date.today.beginning_of_month + 4.days },
+    { name: "Transportation", frequency: "monthly", default_amount: 200.00 }
+  ]
+  
+  templates.each do |template_attrs|
+    user.expense_templates.find_or_create_by!(name: template_attrs[:name]) do |template|
+      template.frequency = template_attrs[:frequency] || "monthly"
+      template.default_amount = template_attrs[:default_amount] || 0
+      template.due_date = template_attrs[:due_date] if template_attrs[:due_date]
+      template.auto_create = true
+      template.is_active = true
+    end
+  end
+  
+  # Create 3 past months
+  (1..3).each do |months_ago|
+    month_year = (Date.today - months_ago.months).strftime("%Y-%m")
+    
+    # Skip if budget already exists
+    next if user.monthly_budgets.exists?(month_year: month_year)
+    
+    # Create monthly budget
+    budget = user.monthly_budgets.create!(
+      month_year: month_year,
+      total_actual_income: 3500.00 + (rand * 500) # Vary income between 3500-4000
+    )
+    
+    # Auto-create expenses from templates
+    budget.auto_create_expenses
+    
+    # Adjust some expenses with realistic variations
+    budget.expenses.each do |expense|
+      # Randomly vary amounts by ±10%
+      variation = 1 + (rand * 0.2 - 0.1) # -10% to +10%
+      expense.update!(allotted_amount: (expense.allotted_amount * variation).round(2))
+    end
+    
+    # Add some payments to make it realistic
+    # Sample 3-5 expenses (or all if less than 3)
+    expenses_to_pay = budget.expenses.count >= 3 ? budget.expenses.sample(rand(3..5)) : budget.expenses.to_a
+    expenses_to_pay.each do |expense|
+      # Create 1-3 payments per expense
+      payment_count = rand(1..3)
+      payment_count.times do
+        # Random date within the month
+        month_start = Date.parse("#{month_year}-01")
+        month_end = month_start.end_of_month
+        random_date = month_start + rand((month_end - month_start).to_i).days
+        
+        # Payment amount: 20-100% of allotted amount
+        payment_amount = (expense.allotted_amount * (0.2 + rand * 0.8)).round(2)
+        
+        expense.payments.create!(
+          amount: payment_amount,
+          spent_on: random_date,
+          notes: ["Weekly groceries", "Gas fill-up", "Monthly payment", nil].sample
+        )
+      end
+    end
+    
+    puts "Created budget for #{budget.name} with #{budget.expenses.count} expenses and #{budget.total_spent.round(2)} spent"
+  end
+  
+  puts "\n✅ Created 3 past months of test data for #{user.email}"
+  puts "   Budgets: #{user.monthly_budgets.where('month_year < ?', Date.today.strftime('%Y-%m')).count}"
+  puts "   Total expenses: #{user.expenses.joins(:monthly_budget).where('monthly_budgets.month_year < ?', Date.today.strftime('%Y-%m')).count}"
+  puts "   Total payments: #{Payment.joins(expense: :monthly_budget).where('monthly_budgets.user_id = ? AND monthly_budgets.month_year < ?', user.id, Date.today.strftime('%Y-%m')).count}"
+end
+
+# Example usage:
+# user = User.first
+# create_past_months_test_data(user)
+```
+
+**To use this script in Rails console:**
+
+✅ **Yes, this script is designed to run directly in the Rails console!**
+
+**Steps:**
+
+1. Open Rails console: `rails console`
+
+2. Copy and paste the entire function definition (everything from `def create_past_months_test_data(user)` to the `end`)
+
+3. Find your user and run:
+   ```ruby
+   user = User.first  # or User.find_by(email: "your@email.com")
+   create_past_months_test_data(user)
+   ```
+
+**Example in Rails console:**
+```ruby
+# After pasting the function definition above:
+rails> user = User.first
+rails> create_past_months_test_data(user)
+Created budget for October 2025 with 5 expenses and 1250.50 spent
+Created budget for November 2025 with 5 expenses and 980.25 spent
+Created budget for December 2025 with 5 expenses and 1450.75 spent
+
+✅ Created 3 past months of test data for user@example.com
+   Budgets: 3
+   Total expenses: 15
+   Total payments: 12
+```
+
+This script will:
+- Create 5 common expense templates (Rent, Groceries, Utilities, Phone, Transportation)
+- Create 3 past months of budgets with varied income
+- Auto-populate expenses from templates with slight variations
+- Add realistic payment records with random dates and amounts
+- Display summary statistics
+
 ## Future Enhancements
 
 - **Automatic Payment Tracking**: Integrate with transaction import to automatically update `spent_amount`

@@ -142,5 +142,100 @@ class IncomeTest < ActiveSupport::TestCase
     income = Income.new(user: users(:one), name: "Income $1000+", frequency: "monthly", estimated_amount: 1000)
     assert income.valid?
   end
+
+  # Test last_payment_to_next_month
+  test "last_payment_to_next_month defaults to false" do
+    income = Income.new(user: users(:one), name: "Test Income", frequency: "monthly", estimated_amount: 100)
+    assert_equal false, income.last_payment_to_next_month
+  end
+
+  test "can set last_payment_to_next_month to true" do
+    income = Income.create!(user: users(:one), name: "Deferred Income", frequency: "bi_weekly", estimated_amount: 100, last_payment_to_next_month: true)
+    assert_equal true, income.last_payment_to_next_month
+    assert income.last_payment_to_next_month?
+  end
+
+  # Test events_for_month method
+  test "events_for_month returns empty array when auto_create is false" do
+    income = Income.create!(user: users(:one), name: "Manual Income", frequency: "monthly", estimated_amount: 100, auto_create: false)
+    assert_equal [], income.events_for_month("2025-12")
+  end
+
+  test "events_for_month returns empty array when due_date is nil" do
+    # When auto_create is true but due_date is nil, events_for_month should return empty array
+    # (Validation prevents creating such records, but method should handle nil gracefully)
+    income = Income.new(user: users(:one), name: "No Date Income", frequency: "monthly", estimated_amount: 100, auto_create: true, due_date: nil)
+    assert_equal [], income.events_for_month("2025-12")
+  end
+
+  test "events_for_month returns one event for monthly frequency" do
+    income = Income.create!(
+      user: users(:one),
+      name: "Monthly Income",
+      frequency: "monthly",
+      estimated_amount: 100,
+      auto_create: true,
+      due_date: Date.parse("2025-12-15")
+    )
+    events = income.events_for_month("2025-12")
+    assert_equal 1, events.count
+    assert_equal Date.parse("2025-12-15"), events.first
+  end
+
+  test "events_for_month returns multiple events for bi_weekly frequency" do
+    income = Income.create!(
+      user: users(:one),
+      name: "Bi-weekly Income",
+      frequency: "bi_weekly",
+      estimated_amount: 100,
+      auto_create: true,
+      due_date: Date.parse("2025-12-01")
+    )
+    events = income.events_for_month("2025-12")
+    assert events.count >= 2, "Bi-weekly should have at least 2 events in December"
+    assert events.all? { |d| d.is_a?(Date) }
+  end
+
+  test "events_for_month returns multiple events for weekly frequency" do
+    income = Income.create!(
+      user: users(:one),
+      name: "Weekly Income",
+      frequency: "weekly",
+      estimated_amount: 100,
+      auto_create: true,
+      due_date: Date.parse("2025-12-01")
+    )
+    events = income.events_for_month("2025-12")
+    assert events.count >= 4, "Weekly should have at least 4 events in December"
+    assert events.all? { |d| d.is_a?(Date) }
+  end
+
+  # Test expected_amount_for_month method
+  test "expected_amount_for_month calculates correctly for monthly" do
+    income = Income.create!(
+      user: users(:one),
+      name: "Monthly Income",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: true,
+      due_date: Date.parse("2025-12-01")
+    )
+    expected = income.expected_amount_for_month("2025-12")
+    assert_equal 5000.00, expected.to_f
+  end
+
+  test "expected_amount_for_month calculates correctly for bi_weekly" do
+    income = Income.create!(
+      user: users(:one),
+      name: "Bi-weekly Income",
+      frequency: "bi_weekly",
+      estimated_amount: 2600.00,
+      auto_create: true,
+      due_date: Date.parse("2025-12-01")
+    )
+    expected = income.expected_amount_for_month("2025-12")
+    # December 2025 has 3 bi-weekly pays starting Dec 1
+    assert expected.to_f >= 5200.00, "Should be at least 2 pays (5200)"
+  end
 end
 

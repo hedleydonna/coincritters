@@ -3,7 +3,7 @@ one:
   income: one
   custom_label: "Paycheck"
   month_year: "2025-12"
-  assigned_month_year: "2025-12"
+  apply_to_next_month: false
   received_on: "2025-12-01"
   actual_amount: 5000.00
   notes: "Regular monthly salary"
@@ -13,7 +13,7 @@ two:
   income: two
   custom_label: "Freelance"
   month_year: "2025-12"
-  assigned_month_year: "2025-12"
+  apply_to_next_month: false
   received_on: "2025-12-15"
   actual_amount: 1500.50
   notes: "Freelance project payment"
@@ -23,7 +23,7 @@ three:
   income: three
   custom_label: "Investment"
   month_year: "2025-11"
-  assigned_month_year: "2025-11"
+  apply_to_next_month: false
   received_on: "2025-11-30"
   actual_amount: 200.00
 
@@ -32,7 +32,7 @@ four:
   income: four
   custom_label: "Rental"
   month_year: "2025-12"
-  assigned_month_year: "2025-12"
-  received_on: "2025-12-05"
+  apply_to_next_month: true
+  received_on: "2025-12-28"
   actual_amount: 1200.00
-  notes: "Rental income for December"
+  notes: "Rental income for December, deferred to next month"

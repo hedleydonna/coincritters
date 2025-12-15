@@ -15,11 +15,20 @@
       <%= button_to "View Money Map", expenses_path, method: :get,
                     class: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg w-full" %>
       
-      <%= button_to "Build Your Branches", expense_templates_path, method: :get,
+      <%= button_to "Set Up Expenses", expense_templates_path, method: :get,
                     class: "bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg w-full" %>
       
-      <%= button_to "Edit Profile", edit_user_registration_path, method: :get,
-                    class: "bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg w-full" %>
+      <hr>
+      <%= button_to "Income This Month", income_events_path, method: :get,
+                    class: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg w-full" %>
+
+      <%= button_to "Set Up Income Sources", incomes_path, method: :get,
+                    class: "bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg w-full" %>
+      
+      <hr>
+      <%= form_with url: edit_user_registration_path, method: :get, local: true, class: "w-full" do |f| %>
+        <%= f.submit "Edit Profile", class: "bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg w-full cursor-pointer" %>
+      <% end %>
 
       <!-- Admin Dashboard -->
       <% if current_user&.admin? %>

@@ -6,6 +6,9 @@ one:
   frequency: monthly
   estimated_amount: 5000.00
   active: true
+  auto_create: true
+  due_date: "2025-12-01"
+  last_payment_to_next_month: false
 
 two:
   user: one
@@ -13,6 +16,8 @@ two:
   frequency: irregular
   estimated_amount: 1000.50
   active: true
+  auto_create: false
+  last_payment_to_next_month: false
 
 three:
   user: two
@@ -20,6 +25,9 @@ three:
   frequency: weekly
   estimated_amount: 500.00
   active: true
+  auto_create: true
+  due_date: "2025-12-01"
+  last_payment_to_next_month: false
 
 four:
   user: two
@@ -27,4 +35,6 @@ four:
   frequency: monthly
   estimated_amount: 2000.00
   active: false
+  auto_create: false
+  last_payment_to_next_month: false
 

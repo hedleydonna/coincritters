@@ -36,7 +36,7 @@ class Admin::IncomesController < Admin::BaseController
   end
 
   def income_params
-    params.require(:income).permit(:name, :frequency, :estimated_amount, :active, :user_id, :auto_create, :auto_day_of_month)
+    params.require(:income).permit(:name, :frequency, :estimated_amount, :active, :user_id, :auto_create, :due_date, :last_payment_to_next_month)
   end
 end
 

@@ -1,0 +1,89 @@
+<%= form_with model: @income, local: true, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
+  <% if @income.errors.any? %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <h3 class="text-red-800 font-semibold mb-2">
+        <%= pluralize(@income.errors.count, "error") %> prevented this income source from being saved:
+      </h3>
+      <ul class="list-disc list-inside text-red-700 space-y-1">
+        <% @income.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :name, "Income Source Name", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.text_field :name, 
+          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500", 
+          placeholder: "e.g. Salary, Side gig, Child support" %>
+    <p class="mt-1 text-sm text-gray-500">A descriptive name for this income source</p>
+  </div>
+
+  <div>
+    <%= f.label :frequency, "Frequency", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.select :frequency, 
+          options_for_select([
+            ["Monthly", "monthly"], 
+            ["Bi-weekly", "bi_weekly"],
+            ["Weekly", "weekly"],
+            ["Irregular", "irregular"]
+          ], @income.frequency || "monthly"),
+          {}, 
+          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
+    <p class="mt-1 text-sm text-gray-500">How often you receive this income</p>
+  </div>
+
+  <div>
+    <%= f.label :due_date, "Due Date", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <%= f.date_field :due_date, 
+          class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
+    <p class="mt-1 text-sm text-gray-500">
+      Required if auto-create is enabled. The date you typically receive this income (used to calculate how many events per month).
+      <br>
+      <strong>Example:</strong> If you get paid bi-weekly on the 1st and 15th, set due_date to the 1st.
+    </p>
+  </div>
+
+  <div>
+    <%= f.label :estimated_amount, "Estimated Amount", class: "block text-sm font-medium text-gray-700 mb-2" %>
+    <div class="relative">
+      <span class="absolute left-3 top-2 text-gray-500">$</span>
+      <%= f.number_field :estimated_amount, 
+            step: "0.01", 
+            min: "0",
+            class: "w-full border border-gray-300 rounded-lg px-4 py-2 pl-8 focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
+    </div>
+    <p class="mt-1 text-sm text-gray-500">The estimated amount you typically receive (you can override the actual amount when logging income)</p>
+  </div>
+
+  <div class="space-y-4">
+    <div class="flex items-start gap-3">
+      <%= f.check_box :auto_create, 
+            { checked: @income.new_record? ? false : @income.auto_create? },
+            class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
+      <div>
+        <%= f.label :auto_create, "Automatically create income events", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
+        <p class="text-sm text-gray-500">When enabled, the system will automatically create income events in monthly budgets based on frequency and due date. You can then edit the actual amounts when money is received.</p>
+      </div>
+    </div>
+    
+    <div class="flex items-start gap-3">
+      <%= f.check_box :last_payment_to_next_month, 
+            { checked: @income.last_payment_to_next_month? },
+            class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
+      <div>
+        <%= f.label :last_payment_to_next_month, "Defer last payment to next month", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
+        <p class="text-sm text-gray-500">When enabled, the last payment of each month will automatically be counted in next month's budget instead of the current month. Useful for late-month paychecks you want to hold for next month's expenses.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-4 pt-4">
+    <%= f.submit @income.new_record? ? "Create Income Source" : "Update Income Source", 
+          class: "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium cursor-pointer" %>
+    <%= link_to "Cancel", incomes_path, 
+          class: "bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium" %>
+  </div>
+<% end %>
+

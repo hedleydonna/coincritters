@@ -1,6 +1,7 @@
 # app/controllers/expenses_controller.rb
 class ExpensesController < ApplicationController
   before_action :authenticate_user!
+  before_action :set_expense, only: [:mark_paid, :edit, :update]
 
   def index
     # Auto-create current and next month if they don't exist
@@ -8,7 +9,9 @@ class ExpensesController < ApplicationController
     next_month_str = (Date.today + 1.month).strftime("%Y-%m")
     
     # Ensure current month exists
-    current_user.current_budget!
+    current_budget = current_user.current_budget!
+    # Always regenerate income events for current month when visiting Money Map
+    current_budget.auto_create_income_events
     
     # Ensure next month exists
     unless current_user.monthly_budgets.exists?(month_year: next_month_str)
@@ -33,9 +36,18 @@ class ExpensesController < ApplicationController
     end
     
     @expenses = @budget.expenses.order(:name)
+    
+    # Get income events for this month (for display/editing)
+    # Include events from this month (not deferred) + deferred from previous month
+    prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
+    @income_events = current_user.income_events.where(
+      "(month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)",
+      month_year, prev_month
+    ).order(:received_on)
 
     # For the top summary
     @total_income = @budget.total_actual_income
+    @expected_income = @budget.expected_income
     @total_spent = @budget.total_spent
     @remaining = @budget.remaining_to_assign
     @bank_match = @budget.bank_match?
@@ -82,6 +94,24 @@ class ExpensesController < ApplicationController
     end
   end
 
+  def edit
+    @budget = @expense.monthly_budget
+    @expense_templates = current_user.expense_templates.active.order(:name)
+    @viewing_month = @budget.month_year
+  end
+
+  def update
+    @budget = @expense.monthly_budget
+    
+    if @expense.update(expense_params)
+      redirect_to expenses_path(month: @budget.month_year), notice: "Expense updated!"
+    else
+      @expense_templates = current_user.expense_templates.active.order(:name)
+      @viewing_month = @budget.month_year
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
   def start_next_month
     begin
       budget = current_user.create_next_month_budget!
@@ -107,7 +137,93 @@ class ExpensesController < ApplicationController
     end
   end
 
+  def sweep_to_savings
+    current_month = Time.current.strftime("%Y-%m")
+    month_year = params[:month] || current_month
+    
+    # Only allow sweeping in current month
+    if month_year != current_month
+      redirect_to expenses_path(month: month_year), alert: "You can only sweep to savings in the current month."
+      return
+    end
+    
+    @budget = current_user.monthly_budgets.find_by(month_year: month_year)
+    unless @budget
+      redirect_to expenses_path, alert: "Budget not found."
+      return
+    end
+    
+    @expense = @budget.expenses.find_by(id: params[:expense_id])
+    unless @expense
+      redirect_to expenses_path(month: month_year), alert: "Expense not found."
+      return
+    end
+    
+    # Check if this is a savings expense
+    unless @expense.name.downcase.include?("savings") || @expense.name.downcase.include?("emergency")
+      redirect_to expenses_path(month: month_year), alert: "This expense is not a savings expense."
+      return
+    end
+    
+    flex_fund = @budget.unassigned
+    if flex_fund <= 0
+      redirect_to expenses_path(month: month_year), alert: "No flex fund available to sweep."
+      return
+    end
+    
+    amount = params[:amount].to_f
+    if amount <= 0 || amount > flex_fund
+      redirect_to expenses_path(month: month_year), alert: "Invalid amount. You can sweep up to #{helpers.number_to_currency(flex_fund)}."
+      return
+    end
+    
+    # Increase the expense's allotted_amount by the swept amount
+    @expense.update(allotted_amount: @expense.allotted_amount + amount)
+    
+      redirect_to expenses_path(month: month_year), notice: "Great! You saved an extra #{helpers.number_to_currency(amount)} this month ✓"
+  end
+
+  def mark_paid
+    current_month = Time.current.strftime("%Y-%m")
+    
+    # Only allow marking as paid in current month
+    if @expense.monthly_budget.month_year != current_month
+      redirect_to expenses_path(month: @expense.monthly_budget.month_year), alert: "You can only mark expenses as paid in the current month."
+      return
+    end
+    
+    # Check if already paid
+    if @expense.paid?
+      redirect_to expenses_path(month: current_month), notice: "This expense is already paid."
+      return
+    end
+    
+    # Calculate amount needed to mark as paid
+    amount_needed = @expense.allotted_amount - @expense.spent_amount
+    
+    if amount_needed <= 0
+      redirect_to expenses_path(month: current_month), alert: "This expense is already fully paid."
+      return
+    end
+    
+    # Create payment for the remaining amount
+    payment = @expense.payments.create!(
+      amount: amount_needed,
+      spent_on: Date.today,
+      notes: "Marked as paid"
+    )
+    
+    redirect_to expenses_path(month: current_month), notice: "Payment added! #{helpers.number_to_currency(amount_needed)} paid to #{@expense.display_name}."
+  end
+
   private
+
+  def set_expense
+    @expense = current_user.monthly_budgets.joins(:expenses).where(expenses: { id: params[:id] }).first&.expenses&.find_by(id: params[:id])
+    unless @expense
+      redirect_to expenses_path, alert: "Expense not found."
+    end
+  end
 
   def expense_params
     params.require(:expense).permit(:expense_template_id, :allotted_amount, :name)

@@ -31,6 +31,7 @@ class User < ApplicationRecord
 
     budget = monthly_budgets.create!(month_year: Time.current.strftime("%Y-%m"))
     budget.auto_create_expenses
+    budget.auto_create_income_events
     budget
   end
 
@@ -43,6 +44,7 @@ class User < ApplicationRecord
 
     budget = monthly_budgets.create!(month_year: next_month)
     budget.auto_create_expenses
+    budget.auto_create_income_events
     budget
   end
 

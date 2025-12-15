@@ -114,7 +114,7 @@ Permits the following parameters:
 - `income_id` - The income source this event is associated with (optional)
 - `custom_label` - Custom label for the income event (string, nullable)
 - `month_year` - The month/year this income is for, in "YYYY-MM" format (string, required)
-- `assigned_month_year` - The month/year this income is assigned to (string, nullable)
+- `apply_to_next_month` - Whether this income counts toward next month's budget (boolean, default: false)
 - `received_on` - The date the income was received (date, required)
 - `actual_amount` - The actual amount received (decimal, default: 0.0)
 - `notes` - Optional notes about the income event (text, nullable)
@@ -149,7 +149,7 @@ POST /admin/income_events
     income_id: 2,
     custom_label: "December Salary",
     month_year: "2025-12",
-    assigned_month_year: "2025-12",
+    apply_to_next_month: false,
     received_on: "2025-12-01",
     actual_amount: 5000.00,
     notes: "Monthly salary payment"

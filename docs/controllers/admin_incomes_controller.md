@@ -96,7 +96,8 @@ Permits the following parameters:
 - `active` - Whether the income is currently active (boolean, default: true)
 - `user_id` - The user who owns this income (required)
 - `auto_create` - Whether to automatically create income events (boolean, default: false)
-- `auto_day_of_month` - Day of month to auto-create income events (integer, nullable)
+- `due_date` - Date when income is typically received (date, nullable, required if auto_create is true)
+- `last_payment_to_next_month` - Whether to defer last payment of month to next month (boolean, default: false)
 
 ## Access Control
 
@@ -127,7 +128,8 @@ PATCH /admin/incomes/1
     estimated_amount: 5500.00,
     active: true,
     auto_create: true,
-    auto_day_of_month: 1
+    due_date: "2025-12-01",
+    last_payment_to_next_month: false
   }
 }
 ```

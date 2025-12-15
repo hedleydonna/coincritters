@@ -27,7 +27,8 @@ erDiagram
         decimal estimated_amount "precision: 12, scale: 2, default: 0.0"
         boolean active "default: true, NOT NULL"
         boolean auto_create "default: false, NOT NULL"
-        integer auto_day_of_month
+        date due_date
+        boolean last_payment_to_next_month
         datetime created_at
         datetime updated_at
     }
@@ -38,7 +39,7 @@ erDiagram
         bigint income_id FK "nullable"
         string custom_label
         string month_year "NOT NULL"
-        string assigned_month_year
+        boolean apply_to_next_month
         date received_on "NOT NULL"
         decimal actual_amount "precision: 12, scale: 2, default: 0.0"
         text notes

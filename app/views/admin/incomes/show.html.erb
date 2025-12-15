@@ -50,20 +50,21 @@
         <div>
           <label class="block text-sm font-medium text-gray-500">Auto-Create</label>
           <p class="mt-1">
-            <% if @income.auto_create? && @income.auto_day_of_month.present? %>
+            <% if @income.auto_create? && @income.due_date.present? %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                Enabled (Day <%= @income.auto_day_of_month %> of month)
+                Enabled
               </span>
               <p class="mt-2 text-sm text-gray-600">
-                Income events will be automatically created on the <%= @income.auto_day_of_month.ordinalize %> of each month.
-                <br>
-                <strong>Estimated amount ($<%= number_with_delimiter(@income.estimated_amount, delimiter: ",") %>) will be used as the actual amount</strong> in auto-generated events.
+                Income events will be automatically created based on frequency (<%= @income.frequency.humanize %>) starting from <%= @income.due_date.strftime("%B %d") %>.
+                <% if @income.last_payment_to_next_month? %>
+                  <br>Last payment of each month will be deferred to next month.
+                <% end %>
               </p>
             <% elsif @income.auto_create? %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-                Enabled (Day not set)
+                Enabled (Due date not set)
               </span>
-              <p class="mt-2 text-sm text-yellow-600">Auto-create is enabled but day of month is not configured. Please edit to set a day.</p>
+              <p class="mt-2 text-sm text-yellow-600">Auto-create is enabled but due date is not configured. Please edit to set a due date.</p>
             <% else %>
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-gray-100 text-gray-500 border border-gray-200">Manual</span>
               <p class="mt-2 text-sm text-gray-600">
