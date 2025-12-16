@@ -1,58 +1,63 @@
-<div data-controller="pull-refresh">
+<div data-controller="pull-refresh" class="fixed inset-0 bg-gradient-to-br from-green-50 to-emerald-50 overflow-y-auto px-4" style="top: 0; left: 0; right: 0; bottom: 5rem;">
   <!-- Pull to refresh indicator -->
   <div data-pull-refresh-target="indicator" 
-       class="hidden fixed top-0 left-0 right-0 bg-blue-600 text-white text-center py-3 z-50 font-medium shadow-lg">
+       class="hidden fixed top-0 left-0 right-0 bg-green-600 text-white text-center py-3 z-50 font-medium shadow-lg">
     Pull to refresh
   </div>
 
-<div class="max-w-4xl mx-auto py-8 px-4">
+<div class="w-full max-w-4xl mx-auto pt-4 pb-8">
   <!-- Header -->
   <div class="mb-6">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Income This Month</h1>
+        <h1 class="text-3xl font-bold text-gray-900">Money In</h1>
         <p class="text-gray-600 mt-1"><%= Date.parse("#{@viewing_month}-01").strftime("%B %Y") %></p>
       </div>
-      <%= link_to "← Dashboard", dashboard_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+      <%= link_to dashboard_path, class: "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-colors text-sm min-h-[44px] inline-flex items-center gap-1 flex-shrink-0 whitespace-nowrap" do %>
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Money Map
+      <% end %>
     </div>
     
-    <!-- Month Navigation -->
-    <div class="flex gap-2 mb-4">
-      <%= link_to income_events_path(month: @current_month), 
-            class: "px-4 py-3 rounded-lg font-medium transition-colors min-h-[44px] inline-flex items-center #{@is_current_month ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" do %>
-        <%= Date.parse("#{@current_month}-01").strftime("%B %Y") %>
-      <% end %>
-      <%= link_to income_events_path(month: @next_month_str), 
-            class: "px-4 py-3 rounded-lg font-medium transition-colors min-h-[44px] inline-flex items-center #{@is_next_month ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" do %>
-        <%= Date.parse("#{@next_month_str}-01").strftime("%B %Y") %>
-      <% end %>
+    <!-- Month Navigation: Segmented Control Style (Mobile-Friendly) -->
+    <div class="mb-4">
+      <!-- Segmented Control for Current/Next -->
+      <div class="inline-flex rounded-lg border border-green-300 bg-green-100 p-1 mb-3" role="tablist">
+        <%= link_to income_events_path(month: @current_month), 
+              class: "rounded-md px-4 py-3 text-sm font-medium transition-all min-h-[44px] inline-flex items-center #{@is_current_month ? 'bg-white text-green-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}" do %>
+          <span class="hidden sm:inline"><%= Date.parse("#{@current_month}-01").strftime("%B %Y") %></span>
+          <span class="sm:hidden">Current</span>
+        <% end %>
+        
+        <%= link_to income_events_path(month: @next_month_str), 
+              class: "rounded-md px-4 py-3 text-sm font-medium transition-all min-h-[44px] inline-flex items-center #{@is_next_month ? 'bg-white text-green-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}" do %>
+          <span class="hidden sm:inline"><%= Date.parse("#{@next_month_str}-01").strftime("%B %Y") %></span>
+          <span class="sm:hidden">Next</span>
+        <% end %>
+      </div>
     </div>
   </div>
 
   <!-- Top summary card -->
-  <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 mb-8 shadow-sm border border-green-100">
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
-      <div>
-        <p class="text-sm text-gray-600 mb-1">Planned</p>
-        <p class="text-2xl font-bold text-gray-900"><%= number_to_currency(@total_expected) %></p>
+  <div class="bg-green-100 rounded-xl p-3 sm:p-6 mb-8 shadow-sm border border-green-300">
+    <div class="grid grid-cols-3 gap-1 sm:gap-4">
+      <div class="text-center sm:text-left">
+        <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Planned</p>
+        <p class="text-sm sm:text-2xl font-bold text-gray-900 break-words leading-tight"><%= number_to_currency(@total_expected) %></p>
       </div>
-      <div>
-        <p class="text-sm text-gray-600 mb-1">Received</p>
-        <p class="text-2xl font-bold text-gray-900"><%= number_to_currency(@total_actual) %></p>
+      <div class="text-center sm:text-left">
+        <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Received</p>
+        <p class="text-sm sm:text-2xl font-bold text-gray-900 break-words leading-tight"><%= number_to_currency(@total_actual) %></p>
       </div>
-      <div>
-        <p class="text-sm text-gray-600 mb-1">Still Coming</p>
-        <p class="text-2xl font-bold <%= (@total_expected - @total_actual) > 0 ? 'text-orange-600' : 'text-green-600' %>">
+      <div class="text-center sm:text-left">
+        <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Still Coming</p>
+        <p class="text-sm sm:text-2xl font-bold <%= (@total_expected - @total_actual) > 0 ? 'text-orange-600' : 'text-green-600' %> break-words leading-tight">
           <%= number_to_currency(@total_expected - @total_actual) %>
         </p>
       </div>
     </div>
-  </div>
-
-  <!-- Add one-off income event button -->
-  <div class="mb-6">
-    <%= link_to "+ Log one-off income", new_income_event_path, 
-          class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow-md" %>
   </div>
 
   <!-- Income Events list -->
@@ -251,10 +256,17 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
       <p class="text-gray-500 text-lg mb-2">No income events yet for this month.</p>
       <p class="text-gray-400 mb-6">Create income sources with auto-create enabled to generate events automatically, or log one-off income manually.</p>
-      <%= link_to "Income Sources", income_templates_path,
-            class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg inline-block mr-3" %>
-      <%= link_to "Log one-off income", new_income_event_path,
-            class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg inline-block" %>
+    </div>
+  <% end %>
+
+  <!-- One-off income and Setup (only for current and next month) -->
+  <% unless @is_past_month %>
+    <div class="mt-8 pt-6 border-t border-gray-200 space-y-4">
+      <%= link_to "+ Log one-off income", new_income_event_path, 
+            class: "block w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
+      
+      <%= link_to "Set Up Income Sources", income_templates_path,
+            class: "block w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
     </div>
   <% end %>
 </div>

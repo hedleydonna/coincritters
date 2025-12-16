@@ -3,6 +3,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 # === CORE RAILS ===
 gem "rails", "~> 7.1.6"
+gem "ostruct" # Required for Ruby 3.5+ compatibility
 
 ruby "3.3.5"
 

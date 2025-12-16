@@ -17,6 +17,9 @@ class IncomeTemplate < ApplicationRecord
   scope :active, -> { where(active: true) }
   scope :auto_create, -> { where(auto_create: true) }
   
+  # Recalculate affected budgets when estimated_amount changes
+  after_update :recalculate_affected_budgets, if: :saved_change_to_estimated_amount?
+  
   # Check if last payment should be deferred to next month
   def last_payment_to_next_month?
     last_payment_to_next_month == true
@@ -85,6 +88,33 @@ class IncomeTemplate < ApplicationRecord
   def expected_amount_for_month(month_year)
     events_count = events_for_month(month_year).count
     events_count * estimated_amount
+  end
+
+  private
+
+  # Recalculate affected budgets when estimated_amount changes
+  # Note: Since expected_income is a calculated method, it will automatically
+  # use the new estimated_amount when accessed. This callback is here for
+  # documentation and in case we add caching in the future.
+  def recalculate_affected_budgets
+    # Find all months that have events from this template (current and future)
+    current_month = Time.current.strftime("%Y-%m")
+    affected_months = income_events
+      .where("month_year >= ?", current_month)
+      .distinct
+      .pluck(:month_year)
+    
+    # Also find months affected by deferred events from previous month
+    prev_month = (Date.parse("#{current_month}-01") - 1.month).strftime("%Y-%m")
+    deferred_events = income_events.where(month_year: prev_month, apply_to_next_month: true)
+    if deferred_events.any?
+      # Deferred events count toward the next month
+      affected_months << (Date.parse("#{prev_month}-01") + 1.month).strftime("%Y-%m")
+    end
+    
+    # expected_income is a calculated method, so it will automatically use
+    # the updated estimated_amount when accessed. No action needed here.
+    # This callback ensures the calculation is aware of the change.
   end
 end
 

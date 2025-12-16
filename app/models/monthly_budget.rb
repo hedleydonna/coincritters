@@ -146,23 +146,36 @@ class MonthlyBudget < ApplicationRecord
   # ------------------------------------------------------------------
   # Calculate expected income for this month
   # Note: This includes income that might be deferred from previous month
+  # Logic:
+  # 1. For template-based events: Count events per template × template.estimated_amount
+  # 2. For one-off events: Sum their actual_amount values
   # ------------------------------------------------------------------
   def expected_income
-    # Income from events assigned to this month (not deferred)
-    current_month_expected = user.income_templates.active.auto_create.sum do |income_template|
-      income_template.expected_amount_for_month(month_year)
-    end
+    # Get all events assigned to this month (including deferred from previous month)
+    current_month_events = user.income_events
+      .where(month_year: month_year, apply_to_next_month: false)
+      .includes(:income_template)
     
-    # Also include income deferred from previous month
     prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-    deferred_expected = user.income_templates.active.auto_create.select do |income_template|
-      income_template.last_payment_to_next_month?
-    end.sum do |income_template|
-      # Get last payment amount from previous month
-      prev_month_events = income_template.events_for_month(prev_month)
-      prev_month_events.any? ? income_template.estimated_amount : 0
-    end
+    deferred_events = user.income_events
+      .where(month_year: prev_month, apply_to_next_month: true)
+      .includes(:income_template)
     
-    current_month_expected + deferred_expected
+    all_events = current_month_events.to_a + deferred_events.to_a
+    
+    # Group template-based events by template and calculate: count × estimated_amount
+    template_events = all_events.select { |e| e.income_template_id.present? && e.income_template.present? }
+    template_expected = template_events
+      .group_by(&:income_template_id)
+      .sum do |template_id, events|
+        template = IncomeTemplate.find(template_id)
+        events.count * template.estimated_amount
+      end
+    
+    # Add one-off events (no template): sum their actual_amount
+    one_off_events = all_events.select { |e| e.income_template_id.nil? }
+    one_off_expected = one_off_events.sum { |e| e.actual_amount || 0 }
+    
+    template_expected + one_off_expected
   end
 end

@@ -36,20 +36,10 @@ class ExpensesController < ApplicationController
     end
     
     @expenses = @budget.expenses.order(:name)
-    
-    # Get income events for this month (for display/editing)
-    # Include events from this month (not deferred) + deferred from previous month
-    prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-    @income_events = current_user.income_events.where(
-      "(month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)",
-      month_year, prev_month
-    ).order(:received_on)
 
-    # For the top summary
-    @total_income = @budget.total_actual_income
-    @expected_income = @budget.expected_income
+    # For the expenses summary (expenses-focused, no income)
     @total_spent = @budget.total_spent
-    @remaining = @budget.remaining_to_assign
+    @remaining = @budget.total_actual_income.to_f - @budget.total_spent.to_f
     @bank_match = @budget.bank_match?
     @bank_difference = @budget.bank_difference
 

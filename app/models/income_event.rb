@@ -5,6 +5,7 @@ class IncomeEvent < ApplicationRecord
   validates :month_year, presence: true
   validates :received_on, presence: true
   validates :actual_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :actual_amount, numericality: { greater_than: 0 }, presence: true, if: -> { income_template_id.nil? }
   validates :custom_label, presence: true, if: -> { income_template_id.nil? }
   
   # Validate month_year format (YYYY-MM)
