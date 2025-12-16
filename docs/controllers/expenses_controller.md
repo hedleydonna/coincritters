@@ -37,7 +37,9 @@ The main Money Map view. Automatically creates current and next month budgets if
 **Auto-Creation Behavior:**
 - Automatically creates current month budget if missing
 - Automatically creates next month budget if missing
-- Both budgets are created with expenses from active templates (auto_create: true)
+- Always regenerates expenses from active templates (auto_create: true) for current month when visiting
+- Regenerates expenses for the month being viewed (if current or next month)
+- This ensures newly created expense templates with auto_create: true immediately appear in the spending list
 
 **Month Navigation:**
 - Supports `month` parameter to view specific months
@@ -47,10 +49,9 @@ The main Money Map view. Automatically creates current and next month budgets if
 **Instance Variables:**
 - `@budget` - The monthly budget being viewed
 - `@expenses` - All expenses for the budget, ordered by name
-- `@total_income` - Total actual income for the month
-- `@total_spent` - Total spent across all expenses
-- `@remaining` - Remaining amount to assign
-- `@bank_match` - Whether bank balance matches expected balance
+- `@total_spent` - Total spent across all expenses (calculated from payments)
+- `@remaining` - Remaining amount (total_actual_income - total_spent)
+- `@bank_match` - Whether bank balance matches expected balance (within $50 tolerance)
 - `@bank_difference` - Difference between bank balance and expected balance
 - `@current_month` - Current month string (YYYY-MM)
 - `@next_month_str` - Next month string (YYYY-MM)
@@ -86,6 +87,7 @@ Creates a new expense (template-based or one-off).
 
 **Success:**
 - Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense added!"
+- Uses `data: { turbo: false }` to force full page reload, ensuring the new expense appears immediately
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
@@ -151,13 +153,13 @@ Marks an expense as fully paid by creating a payment for the remaining amount ne
 
 ### `sweep_to_savings`
 
-Sweeps money from the flex fund to a savings expense.
+Sweeps money from the flex fund (unassigned money) to a savings expense.
 
 **Behavior:**
 - Only works for current month
-- Only works for expenses named "Savings" or "Emergency Fund"
+- Only works for expenses with names containing "savings" or "emergency" (case-insensitive)
 - Increases the expense's `allotted_amount` by the swept amount
-- Reduces the flex fund accordingly
+- Uses `@budget.unassigned` to determine available flex fund
 
 **Success:**
 - Redirects to `expenses_path(month: month_year)` with success notice
@@ -272,5 +274,5 @@ PATCH /expenses/123
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: January 2026
 

@@ -5,7 +5,7 @@
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-    <%= form_with model: @expense, url: expenses_path, class: "space-y-6" do |f| %>
+    <%= form_with model: @expense, url: expenses_path, class: "space-y-6", data: { turbo: false } do |f| %>
       <%= hidden_field_tag :month, @viewing_month if @viewing_month %>
       <% if @expense.errors.any? %>
         <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">

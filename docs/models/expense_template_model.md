@@ -104,7 +104,12 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 4. **Default Amounts**: Templates can have a default amount that will be used when automatically creating expense in monthly budgets.
 
-5. **Auto-Create**: When `auto_create` is true, the system will automatically create expense from this template in monthly budgets using the `MonthlyBudget#auto_create_expense` method. Only active templates are used for auto-creation.
+5. **Auto-Create**: When `auto_create` is true, the system will automatically create expense from this template in monthly budgets using the `MonthlyBudget#auto_create_expenses` method. Expenses are automatically created:
+   - When a new monthly budget is created (current or next month)
+   - When viewing the expenses page (regenerates expenses for current and next month)
+   - This ensures newly created templates with `auto_create: true` immediately appear in the spending list
+   - Only active templates are used for auto-creation
+   - Skips templates that already have an expense in that budget
 
 6. **Soft Delete (is_active)**: Templates use soft delete via the `is_active` field. When a template is "deleted", it's actually deactivated (`is_active: false`) rather than removed from the database. This preserves:
    - Historical data integrity
@@ -261,7 +266,16 @@ When override fields are `NULL`, the expenseuses the template's values. This all
 - Admins can access inactive templates for viewing/editing
 - Templates can be reactivated if needed
 
+### Auto-Creation Behavior
+
+When an expense template has `auto_create: true` and `is_active: true`:
+- Expenses are automatically created when viewing the expenses/spending page
+- Expenses are created for both current and next month budgets
+- The system checks for existing expenses and skips templates that already have an expense in that budget
+- Newly created templates with `auto_create: true` will immediately appear in the spending list after visiting the expenses page
+- The expense's `allotted_amount` is set from the template's `default_amount` (or 0.0 if not set)
+
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: January 2026
 

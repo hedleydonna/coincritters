@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `HomeController` handles the public landing page for unauthenticated users. It provides the initial entry point to the Willow application.
+The `HomeController` handles the public landing page for unauthenticated users. It provides the initial entry point to the CoinCritters application.
 
 ## Location
 

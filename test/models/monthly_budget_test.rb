@@ -629,5 +629,276 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert budget.expenses.exists?(expense_template_id: user1_template.id)
     assert_not budget.expenses.exists?(expense_template_id: user2_template.id)
   end
+
+  # Test auto_create_income_events method
+  test "auto_create_income_events should create income events for templates with auto_create true" do
+    user = User.create!(email: "income_autotest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-01",
+      total_actual_income: 5000.00
+    )
+    
+    # Create income templates with auto_create: true
+    template1 = IncomeTemplate.create!(
+      user: user,
+      name: "Salary",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: true,
+      due_date: Date.parse("2026-01-15")
+    )
+    
+    template2 = IncomeTemplate.create!(
+      user: user,
+      name: "Freelance",
+      frequency: "bi_weekly",
+      estimated_amount: 1000.00,
+      auto_create: true,
+      due_date: Date.parse("2026-01-01")
+    )
+    
+    # Create a template with auto_create: false (should be skipped)
+    template3 = IncomeTemplate.create!(
+      user: user,
+      name: "Bonus",
+      frequency: "monthly",
+      estimated_amount: 500.00,
+      auto_create: false,
+      due_date: Date.parse("2026-01-20")
+    )
+    
+    # Bi-weekly starting Jan 1, 2026 will create events on Jan 1, Jan 15, and Jan 29 (3 events)
+    # Monthly will create 1 event on Jan 15
+    # Total: 4 events
+    assert_difference("IncomeEvent.count", 4) do # 1 monthly + 3 bi-weekly
+      budget.auto_create_income_events
+    end
+    
+    # Check that events were created for auto_create templates
+    assert user.income_events.exists?(income_template_id: template1.id)
+    assert user.income_events.exists?(income_template_id: template2.id)
+    assert_not user.income_events.exists?(income_template_id: template3.id)
+  end
+
+  test "auto_create_income_events should skip templates that already have events for the same date" do
+    user = User.create!(email: "income_skiptest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-02",
+      total_actual_income: 5000.00
+    )
+    
+    template = IncomeTemplate.create!(
+      user: user,
+      name: "Salary",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: true,
+      due_date: Date.parse("2026-02-15")
+    )
+    
+    # Create an event manually for this template and date
+    existing_event = IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-02-15"),
+      month_year: "2026-02",
+      actual_amount: 5000.00
+    )
+    
+    # Should not create duplicate event
+    assert_no_difference("IncomeEvent.count") do
+      budget.auto_create_income_events
+    end
+    
+    # Should still have only one event
+    assert_equal 1, user.income_events.where(income_template: template, month_year: "2026-02").count
+  end
+
+  test "auto_create_income_events should handle last_payment_to_next_month deferral" do
+    user = User.create!(email: "income_defertest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-03",
+      total_actual_income: 5000.00
+    )
+    
+    template = IncomeTemplate.create!(
+      user: user,
+      name: "Bi-weekly Pay",
+      frequency: "bi_weekly",
+      estimated_amount: 2000.00,
+      auto_create: true,
+      due_date: Date.parse("2026-03-01"),
+      last_payment_to_next_month: true
+    )
+    
+    budget.auto_create_income_events
+    
+    # Get the last event for this month
+    events = user.income_events.where(income_template: template, month_year: "2026-03").order(:received_on)
+    last_event = events.last
+    
+    # The last event should have apply_to_next_month set to true
+    assert last_event.present?
+    assert last_event.apply_to_next_month?
+  end
+
+  # Test expected_income method
+  test "expected_income should calculate from template-based events" do
+    user = User.create!(email: "expected_income_test@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-04",
+      total_actual_income: 5000.00
+    )
+    
+    template = IncomeTemplate.create!(
+      user: user,
+      name: "Salary",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: false
+    )
+    
+    # Create 2 events for this template in this month
+    IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-04-01"),
+      month_year: "2026-04",
+      actual_amount: 0,
+      apply_to_next_month: false
+    )
+    
+    IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-04-15"),
+      month_year: "2026-04",
+      actual_amount: 0,
+      apply_to_next_month: false
+    )
+    
+    # Expected income = 2 events × 5000.00 = 10000.00
+    assert_equal 10000.00, budget.expected_income.to_f
+  end
+
+  test "expected_income should include deferred events from previous month" do
+    user = User.create!(email: "deferred_income_test@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-05",
+      total_actual_income: 5000.00
+    )
+    
+    template = IncomeTemplate.create!(
+      user: user,
+      name: "Salary",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: false
+    )
+    
+    # Create an event in previous month that's deferred to this month
+    prev_month = "2026-04"
+    IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-04-30"),
+      month_year: prev_month,
+      actual_amount: 0,
+      apply_to_next_month: true
+    )
+    
+    # Create an event in current month
+    IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-05-15"),
+      month_year: "2026-05",
+      actual_amount: 0,
+      apply_to_next_month: false
+    )
+    
+    # Expected income = 2 events × 5000.00 = 10000.00 (1 deferred + 1 current)
+    assert_equal 10000.00, budget.expected_income.to_f
+  end
+
+  test "expected_income should include one-off events (no template)" do
+    user = User.create!(email: "oneoff_income_test@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-06",
+      total_actual_income: 5000.00
+    )
+    
+    # Create one-off income event (no template)
+    IncomeEvent.create!(
+      user: user,
+      income_template: nil,
+      custom_label: "Bonus",
+      received_on: Date.parse("2026-06-10"),
+      month_year: "2026-06",
+      actual_amount: 1000.00,
+      apply_to_next_month: false
+    )
+    
+    # Expected income = 1000.00 (from one-off event)
+    assert_equal 1000.00, budget.expected_income.to_f
+  end
+
+  test "expected_income should combine template-based and one-off events" do
+    user = User.create!(email: "combined_income_test@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-07",
+      total_actual_income: 5000.00
+    )
+    
+    template = IncomeTemplate.create!(
+      user: user,
+      name: "Salary",
+      frequency: "monthly",
+      estimated_amount: 5000.00,
+      auto_create: false
+    )
+    
+    # Create template-based event
+    IncomeEvent.create!(
+      user: user,
+      income_template: template,
+      received_on: Date.parse("2026-07-15"),
+      month_year: "2026-07",
+      actual_amount: 0,
+      apply_to_next_month: false
+    )
+    
+    # Create one-off event
+    IncomeEvent.create!(
+      user: user,
+      income_template: nil,
+      custom_label: "Bonus",
+      received_on: Date.parse("2026-07-20"),
+      month_year: "2026-07",
+      actual_amount: 1000.00,
+      apply_to_next_month: false
+    )
+    
+    # Expected income = 5000.00 (template) + 1000.00 (one-off) = 6000.00
+    assert_equal 6000.00, budget.expected_income.to_f
+  end
+
+  test "expected_income should return 0 if no events exist" do
+    user = User.create!(email: "no_income_test@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-08",
+      total_actual_income: 0.00
+    )
+    
+    assert_equal 0.0, budget.expected_income.to_f
+  end
 end
 

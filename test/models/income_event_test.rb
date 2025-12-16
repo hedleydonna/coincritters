@@ -144,10 +144,10 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_includes income_event.errors[:actual_amount], "must be greater than or equal to 0"
   end
 
-  test "should allow actual_amount to be nil" do
+  test "should allow actual_amount to be nil when income_template is present" do
     income_event = IncomeEvent.new(
       user: @user_one,
-      custom_label: "Paycheck",
+      income_template: @income_template_one,
       month_year: "2025-12",
       received_on: Date.today,
       actual_amount: nil
@@ -155,10 +155,10 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert income_event.valid?
   end
 
-  test "should have default actual_amount of 0.0" do
+  test "should have default actual_amount of 0.0 when income_template is present" do
     income_event = IncomeEvent.create!(
       user: @user_one,
-      custom_label: "Paycheck",
+      income_template: @income_template_one,
       month_year: "2025-12",
       received_on: Date.today
     )
@@ -175,7 +175,8 @@ class IncomeEventTest < ActiveSupport::TestCase
       user: user_with_event,
       custom_label: "Bonus",
       month_year: "2025-12",
-      received_on: Date.today
+      received_on: Date.today,
+      actual_amount: 1000.00
     )
     
     # When a user is deleted, their income_events are cascade deleted

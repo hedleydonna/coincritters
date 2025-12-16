@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Payment model represents individual payment transactions within an expensein the Willow application. This unified model replaces the previous `variable_payment` and `bill_payments` tables, consolidating all payment records regardless of whether they are fixed bills or variable expenses.
+The Payment model represents individual payment transactions within an expense in the CoinCritters application. This unified model consolidates all payment records regardless of whether they are fixed bills or variable expenses.
 
 ## Database Table
 
@@ -13,7 +13,7 @@ The Payment model represents individual payment transactions within an expensein
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary Key | Auto-incrementing unique identifier |
-| `envelope_id` | bigint | NOT NULL | References the expensethis payment belongs to (referential integrity enforced at model level) |
+| `expense_id` | bigint | NOT NULL | References the expense this payment belongs to (referential integrity enforced at model level) |
 | `amount` | decimal(12,2) | NOT NULL, Default: 0.0 | The amount spent (must be greater than 0) |
 | `spent_on` | date | NOT NULL | The date the payment occurred |
 | `notes` | text | | Optional notes about the payment |
@@ -22,7 +22,7 @@ The Payment model represents individual payment transactions within an expensein
 
 ### Indexes
 
-- **ExpenseID + Spent On Index**: Composite index on `[envelope_id, spent_on]` for fast lookups by expenseand date
+- **ExpenseID + Spent On Index**: Composite index on `[expense_id, spent_on]` for fast lookups by expense and date
 - **ExpenseID Index**: Index on `expense_id` for fast expense lookups
 
 ### Referential Integrity
@@ -41,14 +41,14 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ### Belongs To
 
-- **Expense*: Each payment record belongs to exactly one envelope
+- **Expense**: Each payment record belongs to exactly one expense
   ```ruby
-  payment.expense # Returns the Expenseobject
+  payment.expense  # Returns the Expense object
   ```
 
 ### Has One Through
 
-- **Monthly Budget**: Each payment record has access to its monthly budget through the envelope
+- **Monthly Budget**: Each payment record has access to its monthly budget through the expense
   ```ruby
   payment.monthly_budget  # Returns the MonthlyBudget object
   ```
@@ -101,11 +101,11 @@ Payment.for_expenseexpense  # All payment for this envelope
 
 ## Instance Methods
 
-### `payment_group_name`
-Returns the payment group name from the associated expense(delegated to `expensename`).
+### `spending_group_name`
+Returns the spending group name from the associated expense (delegated to `expense.name`).
 
 ```ruby
-payment.payment_group_name  # e.g., "Groceries", "Rent"
+payment.spending_group_name  # e.g., "Groceries", "Rent"
 ```
 
 ### `formatted_amount`
@@ -148,9 +148,9 @@ payment.to_s  # e.g., "$75.50 on December 15, 2025 – Groceries"
 ### Creating a Payment Record
 
 ```ruby
-expense= Expensefind(1)
+expense = Expense.find(1)
 payment = Payment.create!(
-  expense expense
+  expense: expense,
   amount: 75.50,
   spent_on: Date.current,
   notes: "Weekly grocery shopping"
@@ -160,20 +160,20 @@ payment = Payment.create!(
 ### Querying Payment Records
 
 ```ruby
-# Get recent payment
-recent_payment = Payment.recent.limit(10)
+# Get recent payments
+recent_payments = Payment.recent.limit(10)
 
-# Get payment for a specific date
-today_payment = Payment.for_date(Date.current)
+# Get payments for a specific date
+today_payments = Payment.for_date(Date.current)
 
-# Get payment for this month
-monthly_payment = Payment.for_date_range(
+# Get payments for this month
+monthly_payments = Payment.for_date_range(
   Date.current.beginning_of_month,
   Date.current.end_of_month
 )
 
-# Get all payment for a specific envelope
-envelope_payment = Payment.for_expenseexpense
+# Get all payments for a specific expense
+expense_payments = Payment.for_expense(expense)
 ```
 
 ### Working with Associations
@@ -181,11 +181,11 @@ envelope_payment = Payment.for_expenseexpense
 ```ruby
 payment = Payment.find(1)
 
-# Access the envelope
-expense= payment.envelope
-puts expensepayment_group_name  # e.g., "Groceries"
+# Access the expense
+expense = payment.expense
+puts expense.name  # e.g., "Groceries"
 
-# Access the monthly budget through the envelope
+# Access the monthly budget through the expense
 budget = payment.monthly_budget
 puts budget.month_year  # e.g., "2025-12"
 
@@ -197,23 +197,21 @@ puts user.display_name
 ## Migration History
 
 - `20251210220000_create_payments.rb` - Created the `payments` table
-- `20251210220001_migrate_payment_data_to_payments.rb` - Migrated data from `variable_payment` and `bill_payments` tables
-- `20251210220002_drop_variable_payment_and_bill_payments.rb` - Dropped the old `variable_payment` and `bill_payments` tables
 
 ## Design Notes
 
-### Consolidation of Tables
+### Unified Payment Model
 
-The `payments` table consolidates what were previously two separate tables:
-- **Variable Payment**: Multiple payment records per expense(e.g., multiple grocery trips totaling $500)
-- **Bill Payments**: Single payment records per expense(e.g., one rent payment of $1200)
+The `payments` table represents all payment transactions, whether they are:
+- **Fixed bills**: Single payment records per expense (e.g., one rent payment of $1200)
+- **Variable expenses**: Multiple payment records per expense (e.g., multiple grocery trips totaling $500)
 
-Both are now represented as `payment` records, simplifying the data model while maintaining the same functionality. The distinction between fixed and variable payment is now handled at the expenselevel through the `expense_template` association, which defines the `group_type`.
+Both are represented as `payment` records, simplifying the data model while maintaining the same functionality. The distinction between fixed and variable expenses is handled at the expense level through the `expense_template` association and frequency settings.
 
-### Benefits of Consolidation
+### Benefits
 
-1. **Simplified Data Model**: One table instead of two
-2. **Easier Queries**: All payment in one place
+1. **Simplified Data Model**: One unified table for all payments
+2. **Easier Queries**: All payments in one place
 3. **Consistent Interface**: Same API for all payment types
 4. **Flexibility**: Easier to add new payment features
 

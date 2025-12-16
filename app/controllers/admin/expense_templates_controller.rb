@@ -6,9 +6,8 @@ class Admin::ExpenseTemplatesController < Admin::BaseController
   def index
     @expense_templates = ExpenseTemplate.active.includes(:user).reorder(created_at: :desc)
     @total_templates = ExpenseTemplate.active.count
-    @fixed_templates = ExpenseTemplate.active.fixed.count
-    @variable_templates = ExpenseTemplate.active.variable.count
-    @savings_templates = ExpenseTemplate.active.savings.count
+    @inactive_templates = ExpenseTemplate.inactive.count
+    @auto_create_templates = ExpenseTemplate.active.auto_create.count
   end
 
   def show

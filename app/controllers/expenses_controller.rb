@@ -12,6 +12,8 @@ class ExpensesController < ApplicationController
     current_budget = current_user.current_budget!
     # Always regenerate income events for current month when visiting Money Map
     current_budget.auto_create_income_events
+    # Always regenerate expenses from templates for current month
+    current_budget.auto_create_expenses
     
     # Ensure next month exists
     unless current_user.monthly_budgets.exists?(month_year: next_month_str)
@@ -22,6 +24,11 @@ class ExpensesController < ApplicationController
     month_year = params[:month] || current_month_str
     
     @budget = current_user.monthly_budgets.find_by(month_year: month_year)
+    
+    # Also auto-create expenses for the month being viewed (if it's current or next month)
+    if @budget && (month_year == current_month_str || month_year == next_month_str)
+      @budget.auto_create_expenses
+    end
     
     unless @budget
       # If trying to view a past month that doesn't exist, redirect to current
@@ -71,12 +78,14 @@ class ExpensesController < ApplicationController
   end
 
   def create
-    month_year = params[:expense][:month_year] || params[:month] || Time.current.strftime("%Y-%m")
+    # Get month from params - check both expense hash and top-level month param
+    month_year = params.dig(:expense, :month_year) || params[:month] || Time.current.strftime("%Y-%m")
     @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
     @expense = @budget.expenses.new(expense_params)
     
     if @expense.save
-      redirect_to expenses_path(month: @budget.month_year), notice: "Expense added!"
+      # Force a full page reload to ensure the new expense appears
+      redirect_to expenses_path(month: @budget.month_year), notice: "Expense added!", data: { turbo: false }
     else
       @expense_templates = current_user.expense_templates.active.order(:name)
       @viewing_month = @budget.month_year

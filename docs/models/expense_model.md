@@ -2,11 +2,11 @@
 
 ## Overview
 
-The Expensemodel represents payment categories within a monthly budget in the Willow application. Expense are a budgeting method where money is allocated to different payment categories (like "Groceries", "Rent", "Entertainment"). Each expensetracks how much was allotted for the month and how much has actually been spent.
+The Expense model represents payment categories within a monthly budget in the CoinCritters application. Expenses are a budgeting method where money is allocated to different payment categories (like "Groceries", "Rent", "Entertainment"). Each expense tracks how much was allotted for the month and how much has actually been spent.
 
 ## Database Table
 
-**Table Name:** `expense`
+**Table Name:** `expenses`
 
 ### Schema
 
@@ -38,37 +38,44 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ## Model Location
 
-`app/models/expenserb`
+`app/models/expense.rb`
 
 ## Associations
 
 ### Belongs To
 
-- **Monthly Budget**: Each expensebelongs to exactly one monthly budget
+- **Monthly Budget**: Each expense belongs to exactly one monthly budget
   ```ruby
-  expensemonthly_budget  # Returns the MonthlyBudget object
+  expense.monthly_budget  # Returns the MonthlyBudget object
   ```
 
-- **ExpenseTemplate**: Each expensecan optionally belong to an expensetemplate (nullable association for one-off expenses)
+- **ExpenseTemplate**: Each expense can optionally belong to an expense template (nullable association for one-off expenses)
   ```ruby
-  expenseexpense_template  # Returns the ExpenseTemplate object, or nil for one-off expenses
+  expense.expense_template  # Returns the ExpenseTemplate object, or nil for one-off expenses
   ```
 
 ### Has Many
 
-- **Payments**: Each expensecan have many payment records
+- **Payments**: Each expense can have many payment records
   ```ruby
-  expensepayments  # Returns collection of Payment objects
+  expense.payments  # Returns collection of Payment objects
   ```
-  - **Dependent Behavior**: `destroy` - when an expenseis deleted, all its payment records are deleted
+  - **Dependent Behavior**: `destroy` - when an expense is deleted, all its payment records are deleted
+
+### Has One Through
+
+- **User**: Each expense has access to its user through the monthly budget
+  ```ruby
+  expense.user  # Returns the User object
+  ```
 
 ### Has Many (from Monthly Budget)
 
-- **MonthlyBudget has_many :expense**: A monthly budget can have multiple expense
+- **MonthlyBudget has_many :expenses**: A monthly budget can have multiple expenses
   ```ruby
-  monthly_budget.expense  # Returns collection of Expenseobjects
+  monthly_budget.expenses  # Returns collection of Expense objects
   ```
-  - **Dependent Behavior**: `destroy` - when a monthly budget is deleted, all its expense are deleted
+  - **Dependent Behavior**: `destroy` - when a monthly budget is deleted, all its expenses are deleted
 
 ## Validations
 
@@ -101,10 +108,11 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 ## Callbacks
 
 - `before_validation :set_default_allotted_amount, on: :create, if: -> { expense_template_id.present? }`:
-  - Automatically sets `allotted_amount` from the expensetemplate's `default_amount` when creating a new expense with a template
-  - Only applies if expense has a template and `allotted_amount` is not explicitly set.
+  - Automatically sets `allotted_amount` from the expense template's `default_amount` when creating a new expense with a template
+  - Only applies if expense has a template and `allotted_amount` is nil or zero (not explicitly set).
   - If template's `default_amount` is `nil`, defaults to `0.0`.
   - Does not apply to one-off expenses (no template).
+  - Reloads the expense_template to ensure default_amount is available.
 
 ## Scopes
 
@@ -133,7 +141,7 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 - `available`: Returns the available amount (never negative). If `remaining` is negative, returns 0.
 - `over_budget?`: Returns `true` if `spent_amount > allotted_amount`.
 - `under_budget?`: Returns `true` if `spent_amount < allotted_amount`.
-- `paid?`: Returns `true` for fixed bills when `spent_amount >= allotted_amount`. Always returns `false` for variable expenses.
+- `paid?`: Returns `true` when `spent_amount >= allotted_amount` (expense is fully paid).
 - `spent_percentage`: Returns the percentage of allotted amount that has been spent (capped at 100%, returns decimal). Safely handles zero and negative allotted amounts by returning 0.
 - `percent_used`: Returns the percentage of allotted amount that has been spent (integer, rounded, not capped).
 

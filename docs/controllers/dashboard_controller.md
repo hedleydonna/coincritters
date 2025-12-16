@@ -22,12 +22,24 @@ The `DashboardController` provides the main dashboard view for authenticated use
 
 ### `index`
 
-Displays the user's dashboard.
+Displays the user's dashboard with financial overview.
 
 **Behavior:**
-- No instance variables are set in the controller
-- The view can access `current_user` to display user-specific data
-- Renders the dashboard view
+- Automatically creates current month budget if it doesn't exist (`current_user.current_budget!`)
+- Calculates financial statistics with safe nil handling
+- Includes error handling with fallback to safe defaults
+
+**Instance Variables:**
+- `@budget` - Current month's budget (created if missing)
+- `@total_income` - Total actual income for current month (from `@budget.total_actual_income`)
+- `@expected_income` - Expected income for current month (from `@budget.expected_income`)
+- `@total_spent` - Total spent across all expenses (from `@budget.total_spent`)
+- `@remaining` - Remaining amount (total_actual_income - total_spent)
+- `@flex_fund` - Remaining unassigned money (from `@budget.remaining_to_assign`)
+
+**Error Handling:**
+- If any error occurs, sets all variables to safe defaults (0 or nil)
+- Logs errors to Rails logger for debugging
 
 ## Access Control
 

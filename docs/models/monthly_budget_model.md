@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Monthly Budget model represents monthly budget tracking for users in the Willow application. Each monthly budget records the total actual income assigned to a specific month, a flex fund (unassigned money), and an optional bank balance. This allows users to track their financial situation on a month-by-month basis.
+The Monthly Budget model represents monthly budget tracking for users in the CoinCritters application. Each monthly budget records the total actual income assigned to a specific month, a flex fund (unassigned money), and an optional bank balance. This allows users to track their financial situation on a month-by-month basis.
 
 ## Database Table
 
@@ -154,14 +154,34 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   budget.bank_match?  # => true or false
   ```
 
-### ExpenseManagement Methods
+### Expense Management Methods
 
-- `auto_create_expense` - Automatically creates expense for all payment categories with `auto_create: true` that don't already have an expensein this budget
+- `auto_create_expenses` - Automatically creates expenses from active expense templates with `auto_create: true` that don't already have an expense in this budget. Called automatically when viewing the expenses page to ensure newly created templates appear immediately.
   ```ruby
-  budget.auto_create_expense
-  # Creates expense for each payment category with auto_create: true
-  # Uses category.default_amount for the expenses allotted_amount
-  # Skips categories that already have an expensein this budget
+  budget.auto_create_expenses
+  # Creates expenses for each expense template with auto_create: true
+  # Uses template.default_amount for the expense's allotted_amount
+  # Skips templates that already have an expense in this budget
+  ```
+
+- `auto_create_income_events` - Automatically creates income events from active income templates with `auto_create: true` for this month
+  ```ruby
+  budget.auto_create_income_events
+  # Creates income events for each income template with auto_create: true
+  # Calculates event dates based on frequency and due_date
+  # Only creates events from today forward for current month
+  # Handles last_payment_to_next_month deferral logic
+  ```
+
+### Income Calculation Methods
+
+- `expected_income` - Calculates expected income for this month from all income events (template-based and one-off)
+  ```ruby
+  budget.expected_income
+  # Returns total expected income:
+  # - Template-based events: count × template.estimated_amount
+  # - One-off events: sum of actual_amount
+  # Includes deferred events from previous month
   ```
 
 ## Business Rules
@@ -235,10 +255,12 @@ budget = MonthlyBudget.create!(
   total_actual_income: 5000.00
 )
 
-# Auto-create expense for payment categories with auto_create: true
-budget.auto_create_expense
-# => Creates expense for categories like "Groceries", "Rent", "Emergency Fund"
-# Each expensegets the category's default_amount as its allotted_amount
+# Auto-create expenses for expense templates with auto_create: true
+budget.auto_create_expenses
+# => Creates expenses for templates like "Groceries", "Rent", "Emergency Fund"
+# Each expense gets the template's default_amount as its allotted_amount
+# Skips templates that already have an expense in this budget
+# Note: This is automatically called when viewing the expenses page
 ```
 
 ### Updating a Monthly Budget
@@ -342,5 +364,5 @@ The admin dashboard displays:
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: January 2026
 

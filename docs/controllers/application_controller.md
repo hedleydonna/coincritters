@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ApplicationController` is the base controller for all controllers in the Willow application. It provides common functionality including authentication configuration, parameter sanitization, and redirect handling.
+The `ApplicationController` is the base controller for all controllers in the CoinCritters application. It provides common functionality including authentication configuration, parameter sanitization, and redirect handling.
 
 ## Location
 

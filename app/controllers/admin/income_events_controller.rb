@@ -5,6 +5,7 @@ class Admin::IncomeEventsController < Admin::BaseController
 
   def index
     @income_events = IncomeEvent.includes(:user, :income_template).order(created_at: :desc)
+    @total_income_events = IncomeEvent.count
   end
 
   def show
