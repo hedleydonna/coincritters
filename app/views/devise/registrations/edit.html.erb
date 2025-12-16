@@ -69,6 +69,22 @@
     <% end %>
 
     <div class="border-t border-gray-200 pt-6 mt-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Account</h3>
+      <div class="space-y-3">
+        <%= button_to "Sign out", destroy_user_session_path, method: :delete,
+              class: "block w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" %>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 pt-6 mt-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">About</h3>
+      <%= link_to credits_path, 
+            class: "block w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" do %>
+        Credits
+      <% end %>
+    </div>
+
+    <div class="border-t border-gray-200 pt-6 mt-6">
       <h3 class="text-lg font-semibold text-gray-800 mb-3">Danger Zone</h3>
       <p class="text-sm text-gray-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
       <%= button_to "Cancel my account", registration_path(resource_name), 

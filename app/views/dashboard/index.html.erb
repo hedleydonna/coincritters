@@ -1,27 +1,90 @@
-<div class="min-h-screen bg-gray-50 flex items-center justify-center">
-  <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-    <h1 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
-      Welcome back, <%= current_user.display_name.presence || current_user.email.split("@").first.capitalize %>!
-    </h1>
-    
-    <div class="mt-8">
-      <%= image_tag "willow.png", alt: "Baby Willow", class: "mx-auto h-24 w-24 object-contain" %>
-      <p class="text-2xl text-gray-600 mt-4">
+<div class="fixed inset-0 bg-gray-50 flex flex-col justify-center px-4" style="top: 0; left: 0; right: 0; bottom: 5rem; overflow: hidden;">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-5 mx-auto" style="max-height: 100%; overflow-y: auto;">
+    <!-- Welcome Header -->
+    <div class="text-center mb-4">
+      <div class="mb-3">
+        <%= image_tag "willow.png", alt: "Baby Willow", class: "mx-auto h-16 w-16 object-contain" %>
+      </div>
+      
+      <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+        Welcome back
+      </h1>
+      <p class="text-lg text-gray-600 mt-1">
+        <%= current_user.display_name.presence || current_user.email.split("@").first.capitalize %>!
+      </p>
+      <p class="text-xs text-gray-500 mt-1">
         Your willow tree is ready to grow!
       </p>
     </div>
 
-    <div class="mt-10 space-y-4">
-      <%= button_to "Income This Month", income_events_path, method: :get,
-                    class: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg w-full" %>
-      
-      <hr>
-      <%= button_to "Sign out", destroy_user_session_path, method: :delete,
-                    class: "bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg w-full" %>
-    </div>
-
-    <div class="mt-10 text-center">
-      <%= link_to "Credits", credits_path, class: "text-sm text-gray-500 hover:text-gray-700 hover:underline" %>
-    </div>
+    <!-- Quick Stats Overview -->
+    <% if @budget %>
+      <div class="space-y-2">
+        <h2 class="text-sm font-semibold text-gray-900 mb-2 text-center">
+          <%= Date.today.strftime("%B %Y") %> Overview
+        </h2>
+        
+        <!-- Income Card - Swipeable to Income page -->
+        <%= link_to income_events_path, class: "block bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 shadow-sm border border-green-200 hover:shadow-md transition-all active:scale-98" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Income</p>
+              <p class="text-3xl font-bold text-gray-900"><%= number_to_currency(@total_income) %></p>
+              <% if @expected_income > @total_income %>
+                <p class="text-xs text-orange-600 mt-1">
+                  Expected: <%= number_to_currency(@expected_income) %>
+                </p>
+              <% end %>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        <% end %>
+        
+        <!-- Spent Card - Swipeable to Money Map -->
+        <%= link_to expenses_path, class: "block bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-200 hover:shadow-md transition-all active:scale-98" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Spent</p>
+              <p class="text-3xl font-bold text-gray-900"><%= number_to_currency(@total_spent) %></p>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        <% end %>
+        
+        <!-- Remaining Card - Swipeable to Money Map -->
+        <%= link_to expenses_path, class: "block bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 shadow-sm border border-purple-200 hover:shadow-md transition-all active:scale-98" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Remaining</p>
+              <p class="text-3xl font-bold <%= @remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                <%= number_to_currency(@remaining) %>
+              </p>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        <% end %>
+        
+        <!-- Flex Fund Card - Swipeable to Money Map -->
+        <%= link_to expenses_path, class: "block bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-4 shadow-sm border border-orange-200 hover:shadow-md transition-all active:scale-98" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Flex Fund</p>
+              <p class="text-3xl font-bold <%= @flex_fund >= 0 ? 'text-green-600' : 'text-orange-600' %>">
+                <%= number_to_currency(@flex_fund) %>
+              </p>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   </div>
 </div>
