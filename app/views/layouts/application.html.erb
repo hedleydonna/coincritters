@@ -15,7 +15,10 @@
     <%= csrf_meta_tags %>
   </head>
 
-  <body>
+  <body class="pb-20">
+    <% if user_signed_in? %>
+      <%= render 'shared/bottom_navigation' %>
+    <% end %>
     <main class="container mx-auto mt-28 px-5 flex">
       <%= yield %>
     </main>

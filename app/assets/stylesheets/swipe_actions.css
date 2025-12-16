@@ -1,0 +1,46 @@
+/* Swipe Actions Styles */
+[data-controller="swipe"] {
+  touch-action: pan-y; /* Allow vertical scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-swipe-target="content"] {
+  transition: transform 0.3s ease;
+  will-change: transform;
+  position: relative;
+  z-index: 1;
+}
+
+[data-swipe-target="actions"] {
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+/* Pull to Refresh Styles */
+[data-controller="pull-refresh"] {
+  position: relative;
+}
+
+[data-pull-refresh-target="indicator"] {
+  transition: opacity 0.3s ease;
+}
+
+/* Bottom Navigation Styles */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure content isn't hidden behind bottom nav on mobile */
+@media (max-width: 767px) {
+  body.pb-20 {
+    padding-bottom: 5rem; /* 80px - space for 64px nav + 16px spacing */
+  }
+}
+
+@media (min-width: 768px) {
+  /* Hide bottom nav on desktop */
+  body.pb-20 {
+    padding-bottom: 0;
+  }
+}
+
