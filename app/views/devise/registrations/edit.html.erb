@@ -45,6 +45,30 @@
     </div>
 
     <div class="border-t border-gray-200 pt-6 mt-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Budget Setup</h3>
+      <div class="space-y-3">
+        <%= link_to expense_templates_path, 
+              class: "block w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" do %>
+          Set Up Expenses
+        <% end %>
+        <%= link_to income_templates_path, 
+              class: "block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" do %>
+          Set Up Income Sources
+        <% end %>
+      </div>
+    </div>
+
+    <% if current_user&.admin? %>
+      <div class="border-t border-gray-200 pt-6 mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Administration</h3>
+        <%= link_to admin_root_path, 
+              class: "block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" do %>
+          Admin Dashboard
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="border-t border-gray-200 pt-6 mt-6">
       <h3 class="text-lg font-semibold text-gray-800 mb-3">Danger Zone</h3>
       <p class="text-sm text-gray-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
       <%= button_to "Cancel my account", registration_path(resource_name), 

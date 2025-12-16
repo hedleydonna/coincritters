@@ -129,7 +129,11 @@
   <!-- Income Events List (only for current and next month) -->
   <% if @income_events.any? && !@is_past_month %>
     <div class="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">Expected Income</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Expected Income</h2>
+        <%= link_to "View all income", income_events_path(month: @viewing_month), 
+              class: "text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium" %>
+      </div>
       <div class="space-y-2">
         <% @income_events.each do |event| %>
           <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
