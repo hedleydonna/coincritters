@@ -1,11 +1,42 @@
 # Todos
 
-## Income Event Types
+## Fixed: One-off expense form
 
-- [ ] Add a yml file for income event types using frozen records
-- [ ] Add a yml file for payment groups types using frozen records
-- [ ] Add income types to dropdown in income events form
-- [ ] Add payment groups types in drop down of evelope type
+**Problem**: The "Add One-Off Expense" form included a template dropdown, which shouldn't be needed for one-off expenses.
+
+**Solution**:
+- Removed the template dropdown from the new expense form
+- Simplified the form to only show:
+  - Expense Name (required)
+  - Amount (required)
+- Updated the controller to remove unnecessary `@expense_templates` loading
+- Updated documentation to reflect that this form is specifically for one-off expenses
+
+**Note**: The edit form still includes the template dropdown, which is fine for editing existing expenses (allows linking/unlinking from templates).
+
+## Priority recommendations
+
+1. Mobile-first polish (High Priority)
+   - Swipe actions for common tasks
+   - Pull-to-refresh functionality
+   - Form tweaking (minor improvements you mentioned)
+
+2. Month-end summary (Medium Priority)
+   - "How Did I Do?" summary page
+   - Month-over-month comparisons
+   - Visual insights
+
+3. Undo functionality (Medium Priority)
+   - Quick reverse for accidental actions
+   - Reduces user anxiety
+
+4. Empty states (Medium Priority)
+   - Helpful guidance when no data exists
+
+5. Loading states (Medium Priority)
+   - Progress indicators during operations
+
+Recommendation: Start with mobile-first polish (swipe actions and pull-to-refresh) since mobile testing is complete and the app is functional. These will improve the mobile experience.
 
 
 

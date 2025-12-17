@@ -303,7 +303,7 @@
       <%= link_to "+ Log one-off income", new_income_event_path, 
             class: "block w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
       
-      <%= link_to "Set Up Income Sources", income_templates_path,
+      <%= link_to "Set Up Money In", income_templates_path(return_to: 'income_events'),
             class: "block w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
     </div>
   <% end %>

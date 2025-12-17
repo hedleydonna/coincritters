@@ -1,4 +1,5 @@
 <%= form_with model: @income_template, local: true, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
   <% if @income_template.errors.any? %>
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
       <h3 class="text-red-800 font-semibold mb-2">
@@ -80,9 +81,9 @@
   </div>
 
   <div class="flex gap-4 pt-4">
-    <%= f.submit @income_template.new_record? ? "Create Income Source" : "Update Income Source", 
+    <%= f.submit @income_template.new_record? ? "Create Money In Source" : "Update Money In Source", 
           class: "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium cursor-pointer" %>
-    <%= link_to "Cancel", income_templates_path, 
+    <%= link_to "Cancel", income_templates_path(return_to: @return_to), 
           class: "bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium" %>
   </div>
 <% end %>

@@ -70,20 +70,25 @@ The main Money Map view. Automatically creates current and next month budgets if
 
 ### `new`
 
-Shows the form to create a new expense (one-off or template-based).
+Shows the form to create a new **one-off expense** (not template-based).
+
+**Note:** This form is specifically for creating one-off expenses. Template-based expenses are automatically created from expense templates with `auto_create: true` when viewing the expenses page.
 
 **Instance Variables:**
 - `@budget` - The monthly budget to create expense in (from params or current)
 - `@expense` - New, unsaved Expense instance
-- `@expense_templates` - All active expense templates for user selection
 - `@viewing_month` - Month being viewed (for navigation)
 
 **Parameters:**
 - `month` (optional) - Month to create expense for (YYYY-MM format)
 
+**Form Fields:**
+- `name` (required) - Name of the one-off expense
+- `allotted_amount` (required) - Amount to allocate
+
 ### `create`
 
-Creates a new expense (template-based or one-off).
+Creates a new one-off expense.
 
 **Success:**
 - Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense added!"
@@ -91,13 +96,14 @@ Creates a new expense (template-based or one-off).
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
-- Re-sets `@expense_templates` and `@viewing_month` for the form
+- Re-sets `@viewing_month` for the form
 
 **Parameters:**
 - `expense[month_year]` or `month` - Month to create expense for
-- `expense[expense_template_id]` - Template ID (optional for one-off expenses)
-- `expense[name]` - Expense name (required for one-off, optional for template-based)
+- `expense[name]` - Expense name (required for one-off expenses)
 - `expense[allotted_amount]` - Amount to allocate
+
+**Note:** The `expense_template_id` parameter is not used in the new expense form - this form is specifically for one-off expenses only.
 
 ### `edit`
 

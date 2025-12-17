@@ -73,7 +73,6 @@ class ExpensesController < ApplicationController
     month_year = params[:month] || Time.current.strftime("%Y-%m")
     @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
     @expense = @budget.expenses.new
-    @expense_templates = current_user.expense_templates.active.order(:name)
     @viewing_month = @budget.month_year
   end
 
@@ -87,7 +86,6 @@ class ExpensesController < ApplicationController
       # Force a full page reload to ensure the new expense appears
       redirect_to expenses_path(month: @budget.month_year), notice: "Expense added!", data: { turbo: false }
     else
-      @expense_templates = current_user.expense_templates.active.order(:name)
       @viewing_month = @budget.month_year
       render :new, status: :unprocessable_entity
     end

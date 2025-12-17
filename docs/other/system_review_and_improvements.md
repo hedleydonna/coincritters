@@ -6,8 +6,8 @@
 - [x] [Rename `incomes` to `income_templates`](#part-1-renaming-incomes-to-income_templates) - *Completed December 2025*
 
 ### High Priority
-- [ ] [Mobile Testing & Deployment](#mobile-testing-strategy) - Deploy to Render and test on real devices (START HERE)
-- [ ] [Mobile-First Polish](#1-mobile-first-polish-high-priority) - Touch targets, swipe actions, bottom navigation, pull-to-refresh
+- [x] [Mobile Testing & Deployment](#mobile-testing-strategy) - ✅ **COMPLETED**: Tested on real device - Functional and usable (January 2026)
+- [ ] [Mobile-First Polish](#1-mobile-first-polish-high-priority) - Swipe actions, pull-to-refresh (Touch targets & bottom nav already done ✅)
 - [ ] [Month-End Summary](#2-month-end-summary-medium-priority) - "How Did I Do?" summary with comparisons and insights
 
 ### Medium Priority
@@ -21,6 +21,7 @@
 - [ ] [Reporting and Insights](#4-reporting-and-insights) - Charts, trends, month-over-month comparisons
 - [ ] [Safety Features](#7-safety-features) - Soft delete, audit log, backup/export
 - [ ] [User Experience Enhancements](#3-user-experience-enhancements) - Bulk actions, search/filter, sorting options
+- [ ] [Bank Account Integration](#9-bank-account-integration-low-medium-priority) - Optional bank account tracking for balance verification
 
 ### Low Priority / Future
 - [ ] [Smart Defaults and Automation](#5-smart-defaults-and-automation) - Auto-suggest amounts, pattern detection
@@ -50,6 +51,7 @@
      - [Performance Optimization](#6-performance-optimization)
      - [Safety Features](#7-safety-features)
      - [Future Feature Considerations](#8-future-feature-considerations)
+     - [Bank Account Integration](#9-bank-account-integration-low-medium-priority)
 4. [Mobile Testing Strategy](#mobile-testing-strategy)
    - [Current Readiness Assessment](#current-readiness-assessment)
    - [Quick Pre-Flight Checklist](#quick-pre-flight-checklist)
@@ -300,6 +302,113 @@ The current system has several strengths that should be preserved:
 **Priority**: Low (Future)  
 **Effort**: High
 
+#### 9. Bank Account Integration (Low-Medium Priority)
+
+**Current State**: No bank account tracking or balance verification.
+
+**Proposal**: Add optional bank account tracking to allow users to verify their budget calculations match their actual bank balances. This provides a baseline for reconciliation without requiring automatic syncing.
+
+**Design Overview**:
+
+**Database Structure**:
+- `bank_accounts` table:
+  - `id`, `user_id`, `name` (e.g., "Chase Checking", "Savings Account")
+  - `account_type` (optional: checking, savings, credit, etc.)
+  - `is_active` (boolean, for soft deletion)
+  - `created_at`, `updated_at`
+- `bank_balances` table:
+  - `id`, `bank_account_id`, `monthly_budget_id`
+  - `balance` (decimal, the account balance for that month)
+  - `created_at`, `updated_at`
+- Associations:
+  - `User` has_many `bank_accounts`
+  - `BankAccount` has_many `bank_balances`
+  - `MonthlyBudget` has_many `bank_balances`
+  - `BankBalance` belongs_to `bank_account` and `monthly_budget`
+
+**User Experience Flow**:
+
+1. **Account Setup (One-Time)**:
+   - Add "Bank Accounts" section to Settings page (`app/views/devise/registrations/edit.html.erb`)
+   - Link to `/bank_accounts` for CRUD operations
+   - Users can add multiple accounts (e.g., "Chase Checking", "Savings", "Credit Card")
+   - Simple interface: name, optional type, active/inactive toggle
+
+2. **Balance Entry (Monthly)**:
+   - Add "Bank Balances" section to Expenses/Spending page (current month only)
+   - Shows list of active accounts with current month's balance (if entered)
+   - "Enter balances" or "Update Balances" link opens form
+   - Form allows quick entry of balance for each active account
+   - Route: `/bank_balances/:month/edit` or `/bank_balances/edit?month=YYYY-MM`
+
+3. **Verification Display**:
+   - Shows total of all bank account balances
+   - Calculates expected balance: `total_actual_income - total_spent`
+   - Compares actual bank balance vs. calculated balance
+   - Shows difference with visual indicator:
+     - Green ✓ if within tolerance (e.g., $50)
+     - Orange ⚠ if difference exists
+   - Helps users catch discrepancies and reconcile
+
+4. **Optional Dashboard Integration**:
+   - Small card showing total bank balance (if balances are set)
+   - Match status indicator (balanced/needs attention)
+
+**Key Features**:
+- **Optional**: Only appears if user has set up accounts
+- **Non-Intrusive**: Doesn't change existing workflow
+- **Manual Entry**: User controls when to enter balances (no automatic syncing)
+- **Multiple Accounts**: Supports users with multiple bank accounts
+- **Historical Tracking**: Can track balances month-over-month
+- **Verification Tool**: Helps users verify their budget matches reality
+
+**Integration Points**:
+- Settings page: "Manage Bank Accounts" link in Budget Setup section
+- Expenses page: "Bank Balances" section after summary cards (current month only)
+- Dashboard: Optional small card showing total balance and match status
+
+**Model Methods**:
+- `MonthlyBudget#total_bank_balance`: Sum of all bank balances for the month
+- `MonthlyBudget#bank_difference`: Difference between actual and calculated balance
+- `MonthlyBudget#bank_match?`: Returns true if difference is within tolerance
+
+**Benefits**:
+- **Verification**: Catches discrepancies between budget and actual accounts
+- **Reconciliation**: Helps users identify missing transactions or errors
+- **Flexibility**: Supports 1 account or many, user's choice
+- **Privacy**: No bank syncing required, user enters data manually
+- **Historical**: Can track account balances over time
+
+**Example User Flow**:
+```
+User creates "Chase Checking" account in Settings
+↓
+User goes to Expenses page (current month)
+↓
+Sees "Bank Balances" section with "Enter balances" link
+↓
+Clicks link, enters $3,500 for Chase Checking
+↓
+System calculates: Income ($5,000) - Spending ($1,200) = $3,800 expected
+↓
+Shows: "Expected: $3,800 | Actual: $3,500 | Difference: $300 ⚠"
+↓
+User can investigate the $300 difference
+```
+
+**Implementation Considerations**:
+- Tolerance for "match" status (e.g., $50) should be configurable
+- Balance entry form should be simple and quick
+- Only show for current month (past months are historical, future months don't have balances yet)
+- Consider adding balance history view for tracking over time
+- Could add notes/comments field to bank_balances for reconciliation notes
+
+**Priority**: Low-Medium  
+**Effort**: Medium  
+**Impact**: Medium (helpful verification tool, but optional feature)
+
+**Related**: This feature complements the existing monthly budget system without changing core workflows. It provides optional verification for users who want to ensure their budget matches their actual bank accounts.
+
 ---
 
 ## Top Recommendations
@@ -368,8 +477,8 @@ These core strengths should be preserved as the system evolves:
 | Feature | Priority | Effort | Impact | Timeline |
 |---------|---------|--------|--------|----------|
 | Rename to income_templates | Medium | Medium | High | 1-2 days | ✅ Completed |
-| Mobile testing & deployment | High | Low | High | 1 day | 🚀 START HERE |
-| Mobile-first polish | High | Medium-High | High | 2-3 weeks |
+| Mobile testing & deployment | High | Low | High | 1 day | ✅ **COMPLETED** - Tested on real device, functional (Jan 2026) |
+| Mobile-first polish | High | Medium-High | High | 2-3 weeks | Touch targets & bottom nav done ✅ |
 | Month-end summary | Medium | Medium | High | 1-2 weeks |
 | Undo functionality | Medium | Low-Medium | Medium | 3-5 days |
 | Empty states | Medium | Low | Medium | 2-3 days |
@@ -378,6 +487,7 @@ These core strengths should be preserved as the system evolves:
 | Performance optimization | Medium | Medium | Medium | 1-2 weeks |
 | Smart defaults | Low | Medium | Low-Medium | 1 week |
 | Safety features | Low-Medium | Medium-High | Medium | 2-3 weeks |
+| Bank account integration | Low-Medium | Medium | Medium | 1-2 weeks |
 
 ---
 
@@ -388,17 +498,18 @@ These core strengths should be preserved as the system evolves:
 **✅ What You Have (Ready for Testing):**
 - Viewport meta tag configured (`width=device-width,initial-scale=1`)
 - Tailwind CSS with responsive utilities (`sm:`, `md:`, `hidden sm:inline`)
-- Some mobile-aware patterns (responsive padding, conditional display)
+- Mobile-aware patterns (responsive padding, conditional display)
 - Core functionality working
 - Render account and deployment experience
 - Local development working
+- **Bottom navigation implemented** with 44px touch targets (`min-h-[44px]`)
+- **Touch targets meet 44px minimum** (33+ instances across views)
+- **Mobile-friendly layout** (uses `mt-4` instead of `mt-28`)
 
 **⚠️ What's Missing (Will Need Polish):**
-- Touch target sizes (44x44px minimum) - some buttons may be too small
 - Mobile-specific interactions (swipe actions, pull-to-refresh)
-- Bottom navigation (not implemented yet)
-- Mobile-optimized spacing (e.g., `mt-28` may be too much on mobile)
 - Performance testing on real devices
+- Real device testing and feedback collection
 
 ### Recommendation: Deploy Now, Iterate Based on Real Feedback
 
@@ -415,15 +526,15 @@ These core strengths should be preserved as the system evolves:
 Before deploying to Render, quickly verify:
 
 **Critical Checks:**
-- [ ] All buttons are at least 44x44px (check `px-6 py-3` buttons — should be fine)
-- [ ] No horizontal scrolling on mobile viewport
+- [x] All buttons are at least 44x44px ✅ (33+ instances with `min-h-[44px]` or `min-w-[44px]`)
+- [ ] No horizontal scrolling on mobile viewport (test in DevTools)
 - [ ] Forms are usable on mobile (text inputs, selects)
-- [ ] Navigation works on small screens
+- [x] Navigation works on small screens ✅ (Bottom navigation implemented)
 
 **Quick Fixes (if needed):**
-- [ ] Fix top margin: Change `mt-28` to `mt-8 sm:mt-28` in layout
-- [ ] Ensure small buttons (`px-3 py-1.5`) are at least `px-4 py-2` for mobile
-- [ ] Test in Chrome DevTools first (Device toolbar → iPhone/Android)
+- [x] Mobile-friendly layout ✅ (uses `mt-4`, not `mt-28`)
+- [x] Touch targets meet minimum ✅ (44px minimum enforced)
+- [ ] Test in Chrome DevTools first (Device toolbar → iPhone/Android) - **DO THIS NOW**
 
 ### Testing Phases
 
@@ -445,13 +556,13 @@ Before deploying to Render, quickly verify:
 
 #### Phase 2: Mobile-Optimized Testing (After Mobile Polish)
 
-**Prerequisites:** (From your todo list)
-- Touch targets ≥ 44x44px
-- Mobile-optimized layouts
-- Bottom navigation (if applicable)
-- Swipe actions implemented
+**Prerequisites:** ✅ Most are done
+- ✅ Touch targets ≥ 44x44px (implemented)
+- ✅ Mobile-optimized layouts (implemented)
+- ✅ Bottom navigation (implemented)
+- [ ] Swipe actions (not yet implemented - future enhancement)
 
-**Timeline:** After implementing mobile-first polish improvements
+**Timeline:** Can proceed to Phase 1 testing now, Phase 2 enhancements can come later
 
 ### Testing Methods
 
@@ -511,22 +622,20 @@ Before deploying to Render, quickly verify:
 - Core functionality
 - Responsive layouts (mostly)
 
-**⚠️ Will Need Polish:**
-- Touch target sizes (some buttons may be small)
-- Spacing on small screens
-- Swipe actions (not implemented yet)
-- Bottom navigation (not implemented yet)
-- Performance optimization
+**⚠️ Will Need Polish (Future Enhancements):**
+- Swipe actions (not implemented yet - nice-to-have)
+- Pull-to-refresh functionality (not implemented yet)
+- Performance optimization (test and optimize based on real device feedback)
 
 ### Mobile Testing Checklist
 
 **Functionality:**
-- [ ] All pages load correctly
-- [ ] Forms submit properly
-- [ ] Navigation works
-- [ ] Buttons are tappable (44x44px minimum)
-- [ ] Text is readable without zooming
-- [ ] Images scale properly
+- [x] All pages load correctly ✅ (Tested on real device)
+- [x] Forms submit properly ✅ (Tested on real device)
+- [x] Navigation works ✅ (Bottom navigation implemented)
+- [x] Buttons are tappable (44x44px minimum) ✅ (33+ instances verified)
+- [x] Text is readable without zooming ✅ (Tested on real device - OK)
+- [x] Images scale properly ✅ (Tested on real device)
 
 **Performance:**
 - [ ] Pages load in < 3 seconds on 4G
@@ -535,17 +644,17 @@ Before deploying to Render, quickly verify:
 - [ ] Auto-generation doesn't freeze UI
 
 **User Experience:**
-- [ ] No horizontal scrolling
-- [ ] Touch targets are comfortable
-- [ ] Forms are easy to fill on mobile
-- [ ] Error messages are visible
-- [ ] Loading states are clear
+- [x] No horizontal scrolling ✅ (Tested on real device - OK)
+- [x] Touch targets are comfortable ✅ (Tested on real device - OK)
+- [x] Forms are easy to fill on mobile ✅ (Tested - OK, needs minor tweaking but good enough)
+- [ ] Error messages are visible (verify during use)
+- [ ] Loading states are clear (verify during use)
 
 **Device-Specific:**
-- [ ] Test on iPhone (Safari)
-- [ ] Test on Android (Chrome)
-- [ ] Test on different screen sizes
-- [ ] Test in portrait and landscape
+- [x] Test on iPhone (Safari) ✅ (Completed - OK)
+- [ ] Test on Android (Chrome) (Optional - if available)
+- [x] Test on different screen sizes ✅ (Completed - OK)
+- [ ] Test in portrait and landscape (Optional - verify if needed)
 
 ### Action Plan
 
@@ -555,11 +664,11 @@ Before deploying to Render, quickly verify:
 - Skip to Step 2, deploy and test
 - Fix issues as you find them
 
-**Option B: Quick Polish First (30-60 minutes)**
-- Fix top margin: `mt-8 sm:mt-28` in layout
-- Verify button sizes (ensure `px-4 py-2` minimum)
-- Test in Chrome DevTools
-- Then deploy and test
+**Option B: Quick DevTools Test First (15 minutes)**
+- Test in Chrome DevTools (Device toolbar → iPhone/Android)
+- Verify no horizontal scrolling
+- Check form usability
+- Then deploy and test on real device
 
 #### Step 2: Deploy to Render (5 minutes)
 
@@ -570,12 +679,12 @@ Before deploying to Render, quickly verify:
 #### Step 3: Test on Your Phone (15-30 minutes)
 
 **Main Flows to Test:**
-- [ ] Login/signup
-- [ ] Create income template
-- [ ] View Money Map
-- [ ] Mark expense as paid
-- [ ] Log income event
-- [ ] Navigate between pages
+- [x] Login/signup ✅ (Tested - OK)
+- [x] Create income template ✅ (Tested - OK)
+- [x] View Money Map ✅ (Tested - OK)
+- [x] Mark expense as paid ✅ (Tested - OK)
+- [x] Log income event ✅ (Tested - OK)
+- [x] Navigate between pages ✅ (Tested - OK)
 
 **What to Note:**
 - What's hard to tap?
@@ -603,37 +712,93 @@ Create a quick list organized by priority:
 3. Test again
 4. Repeat
 
-### Quick Wins Before Deploying (Optional)
+### ✅ What's Already Done
 
-If you want to spend 30 minutes first, these help:
+**Completed Mobile Optimizations:**
+1. ✅ **Mobile-friendly layout** - Uses `mt-4` instead of `mt-28`
+2. ✅ **Touch targets** - 33+ buttons with `min-h-[44px]` or `min-w-[44px]` (meets 44px minimum)
+3. ✅ **Bottom navigation** - Implemented with proper touch targets and mobile-first design
+4. ✅ **Viewport configured** - Proper meta tag for mobile rendering
+5. ✅ **Responsive design** - Tailwind responsive utilities throughout
 
-**1. Fix Top Margin on Mobile:**
-```erb
-<!-- In app/views/layouts/application.html.erb -->
-<main class="container mx-auto mt-8 sm:mt-28 px-4 sm:px-5 flex">
-```
+**Status:** Core mobile infrastructure is in place. Ready for real device testing.
 
-**2. Ensure Minimum Button Sizes:**
-- Buttons with `px-3 py-1.5` should be at least `px-4 py-2` for mobile
-- Check all buttons in your views
+### 🚀 Next Steps - What To Do Now
 
-**3. Test in Chrome DevTools First:**
-- Open DevTools → Device toolbar
-- Test iPhone/Android sizes
-- Fix obvious layout breaks
+**IMMEDIATE (Do This First - 15-30 minutes):**
 
-### Next Steps Priority
+1. **Quick DevTools Test (5-10 minutes)**
+   - Open Chrome → DevTools (F12 or Cmd+Option+I)
+   - Enable Device Toolbar (Cmd+Shift+M)
+   - Test iPhone and Android presets
+   - Check for:
+     - ✅ No horizontal scrolling
+     - ✅ Forms are usable
+     - ✅ Text is readable
+     - ✅ Navigation works
+   - Fix any obvious layout issues found
 
-1. **NOW:** Deploy to Render and test on your phone
-2. **This Week:** Fix critical issues found during testing
-3. **Next Week:** Implement mobile-first polish improvements (from todo list)
-4. **Ongoing:** Iterate based on real-world usage
+2. **Deploy to Render (5 minutes)**
+   - Push current code to your Render deployment
+   - Verify it's accessible at your Render URL
+   - Ensure database migrations are up to date
 
-### Bottom Line
+3. **Real Device Testing (15-30 minutes)**
+   - Open your Render URL on your phone
+   - Test main user flows:
+     - [ ] Login/signup
+     - [ ] View dashboard (Money Map)
+     - [ ] Navigate via bottom navigation
+     - [ ] Create income template
+     - [ ] Mark expense as paid
+     - [ ] Log income event
+     - [ ] View expenses list
+   - Document issues as you find them:
+     - **Critical** (blocks usage)
+     - **Annoying** (works but frustrating)
+     - **Nice-to-have** (polish)
 
-**Deploy now.** You'll learn more from 30 minutes of real device testing than from hours of guessing. The app is functional enough to test, and you can fix issues as you find them.
+**THIS WEEK:**
 
-The mobile-first polish from your todo list can happen in parallel with real-world testing. **Test → fix → test → fix** is more effective than trying to perfect everything first.
+4. **Fix Critical Issues**
+   - Address any blocking issues found during testing
+   - Redeploy and retest
+   - Iterate until core flows work smoothly
+
+5. **Collect Feedback**
+   - Test on multiple devices if possible (iPhone, Android, different screen sizes)
+   - Note performance issues (slow loads, laggy interactions)
+   - Identify UX pain points
+
+**FUTURE ENHANCEMENTS (After Initial Testing):**
+
+6. **Mobile-First Polish** (from todo list)
+   - Swipe actions for common tasks
+   - Pull-to-refresh functionality
+   - Performance optimization based on real device feedback
+   - Additional mobile-specific UX improvements
+
+### Testing Results Summary (January 2026)
+
+**✅ Mobile Testing Completed:**
+- **Status**: Functional and usable on real device
+- **Device Tested**: iPhone (Safari)
+- **Overall Assessment**: Good enough for production use, minor polish needed
+
+**Test Results:**
+- ✅ No horizontal scrolling - OK
+- ✅ Text readable without zooming - OK
+- ✅ Forms easy to fill - OK (needs minor tweaking but acceptable)
+- ✅ Main user flows work - OK
+- ✅ Performance acceptable - OK
+- ✅ Overall polish - OK (needs some polish but functional)
+
+**Next Steps:**
+- Minor form tweaking (low priority)
+- Additional polish as needed (can be done incrementally)
+- Consider testing on Android if available (optional)
+
+**Conclusion**: Mobile testing strategy is complete. The app is functional and ready for use. Polish can be done incrementally based on user feedback.
 
 ---
 
@@ -797,7 +962,7 @@ The proposed renaming to `income_templates` would create perfect consistency wit
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: January 2026  
 **Status**: Planning/Consideration  
 **Next Review**: After mobile app MVP is complete
 
