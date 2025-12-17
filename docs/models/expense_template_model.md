@@ -19,14 +19,14 @@ The `ExpenseTemplate` model represents user-defined templates that can be reused
 | `due_date` | date | Nullable | Optional due date for this expense |
 | `default_amount` | decimal(12,2) | Nullable | Default amount to allocate when creating expense |
 | `auto_create` | boolean | NOT NULL, Default: true | Automatically create expensein monthly budgets |
-| `is_active` | boolean | NOT NULL, Default: true | Whether the template is active (soft delete) |
+| `deleted_at` | datetime | Nullable | Timestamp when template was soft deleted (NULL = active) |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
 ### Indexes
 
-- **User ID + Name Index**: Composite unique index on `[user_id, name]` - ensures unique template names per user (only among active templates)
-- **Is Active Index**: Index on `is_active` - optimized for filtering active/inactive templates
+- **User ID + Name Index**: Composite index on `[user_id, name]` - NOT unique (allows reusing names after deletion)
+- **Deleted At Index**: Index on `deleted_at` - optimized for filtering active/deleted templates
 
 ### Referential Integrity
 
@@ -54,7 +54,7 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ### Uniqueness Validations
 
-- `validates :name, uniqueness: { scope: :user_id, conditions: -> { where(is_active: true) } }` - Template names must be unique per user among active templates. Different users can have templates with the same name. Inactive templates don't count toward uniqueness, allowing the same name to be reused after deactivation.
+- `validates :name, uniqueness: { scope: :user_id, conditions: -> { where(deleted_at: nil) } }` - Template names must be unique per user among active templates. Different users can have templates with the same name. Deleted templates don't count toward uniqueness, allowing the same name to be reused after deletion.
 
 ### Numericality Validations
 
@@ -66,16 +66,17 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ## Default Scope
 
-- `default_scope -> { order(:name) }` - All queries are ordered alphabetically by name by default. Use `.reorder()` to override this ordering when needed (e.g., `ExpenseTemplate.active.reorder(created_at: :desc)`).
+- `default_scope -> { where(deleted_at: nil).order(:name) }` - All queries exclude deleted templates and are ordered alphabetically by name by default. Use `.with_deleted` or `.unscoped` to access deleted templates. Use `.reorder()` to override this ordering when needed (e.g., `ExpenseTemplate.active.reorder(created_at: :desc)`).
 
 ## Scopes
 
-- `scope :active` - Returns only active templates (`is_active: true`)
-- `scope :inactive` - Returns only inactive templates (`is_active: false`)
+- `scope :active` - Returns only active templates (`deleted_at IS NULL`) - redundant with default_scope but explicit
+- `scope :deleted` - Returns only deleted templates (`deleted_at IS NOT NULL`) - requires `unscope(where: :deleted_at)` first
+- `scope :with_deleted` - Removes the `deleted_at` filter from default_scope, allowing access to all templates including deleted ones
 - `scope :auto_create` - Returns only templates with `auto_create: true`
 - `scope :by_frequency` - Returns templates with a specific frequency (e.g., `ExpenseTemplate.by_frequency("monthly")`)
 
-**Note:** Most queries should use `.active` to only show active templates. The `active` scope should be chained with other scopes (e.g., `ExpenseTemplate.active.by_frequency("monthly")`). To override the default alphabetical ordering, use `.reorder()` (e.g., `ExpenseTemplate.active.reorder(created_at: :desc)`).
+**Note:** The default scope already filters to active templates, so `.active` is redundant but explicit. To access deleted templates, use `.with_deleted` or `.unscoped`. To override the default alphabetical ordering, use `.reorder()` (e.g., `ExpenseTemplate.reorder(created_at: :desc)`).
 
 ## Instance Methods
 
@@ -88,11 +89,13 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   - `"Yearly"` for yearly templates
   - Defaults to `"Monthly"` if frequency is not set
 
-- `deactivate!` - Soft deletes the template by setting `is_active` to `false`. Preserves the template and all associated expense for historical purposes.
+- `soft_delete!` - Soft deletes the template by setting `deleted_at` to current time. Preserves the template and all associated expense for historical purposes.
 
-- `activate!` - Reactivates a deactivated template by setting `is_active` to `true`.
+- `restore!` - Restores a deleted template by setting `deleted_at` to `nil`.
 
-- `active?` - Returns `true` if the template is active, `false` otherwise. Alias for `is_active?`.
+- `deleted?` - Returns `true` if the template is deleted (`deleted_at` is present), `false` otherwise.
+
+- `active?` - Returns `true` if the template is active (`deleted_at` is `nil`), `false` otherwise. Alias for checking if `deleted_at` is `nil`.
 
 ## Business Rules
 
@@ -111,13 +114,14 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
    - Only active templates are used for auto-creation
    - Skips templates that already have an expense in that budget
 
-6. **Soft Delete (is_active)**: Templates use soft delete via the `is_active` field. When a template is "deleted", it's actually deactivated (`is_active: false`) rather than removed from the database. This preserves:
+6. **Soft Delete (deleted_at)**: Templates use soft delete via the `deleted_at` timestamp field. When a template is "deleted", it's actually marked with a timestamp (`deleted_at` is set) rather than removed from the database. This preserves:
    - Historical data integrity
    - Existing expense that reference the template
-   - Ability to reactivate templates if needed
+   - Ability to restore templates if needed
    - No cascade deletion issues
+   - Historical reporting can still access deleted templates
 
-7. **Active Templates Only**: Most queries should filter to active templates using `.active`. Inactive templates are hidden from normal views but can still be accessed by admins.
+7. **Active Templates Only**: The default scope automatically filters to active templates (where `deleted_at IS NULL`). Deleted templates are hidden from normal views but can be accessed using `.with_deleted` or `.unscoped`.
 
 8. **Cascade Deletion**: 
    - **User Deletion**: When a user account is deleted (by admin), all their expensetemplates are automatically deleted via `dependent: :destroy` in the `User` model association.
@@ -216,25 +220,32 @@ template.display_name      # => "Rent"
 template.frequency_text    # => "Monthly", "Weekly", "Biweekly", or "Yearly"
 ```
 
-### Soft Delete (Deactivation)
+### Soft Delete
 
 ```ruby
 template = ExpenseTemplate.find(1)
 
-# Deactivate a template (soft delete)
-template.deactivate!
-template.is_active?  # => false
-template.active?      # => false
+# Soft delete a template
+template.soft_delete!
+template.deleted?  # => true
+template.active?   # => false
+template.deleted_at  # => 2026-01-15 10:30:00 UTC (timestamp)
 
-# Reactivate a template
-template.activate!
-template.is_active?  # => true
-template.active?      # => true
+# Restore a deleted template
+template.restore!
+template.deleted?  # => false
+template.active?   # => true
+template.deleted_at  # => nil
 
 # Check if template is active
 if template.active?
   # Template is available for use
 end
+
+# Access deleted templates
+deleted_templates = ExpenseTemplate.with_deleted.deleted
+# or
+all_templates = ExpenseTemplate.with_deleted
 ```
 
 ## Relationship with Expense
@@ -258,17 +269,18 @@ Expense can override template values:
 
 When override fields are `NULL`, the expenseuses the template's values. This allows for both consistency (using templates) and flexibility (customizing per month).
 
-### Active/Inactive Templates
+### Active/Deleted Templates
 
-- Only **active** templates are shown in dropdowns and used for auto-creation
-- **Inactive** templates are hidden from normal views but preserved in the database
-- Existing expense can still reference inactive templates (they remain valid)
-- Admins can access inactive templates for viewing/editing
-- Templates can be reactivated if needed
+- Only **active** templates (where `deleted_at IS NULL`) are shown in dropdowns and used for auto-creation
+- **Deleted** templates are hidden from normal views but preserved in the database
+- Existing expense can still reference deleted templates (they remain valid)
+- Deleted templates can be accessed using `.with_deleted` or `.unscoped` scopes
+- Templates can be restored using `restore!` method
+- Expenses from deleted templates are automatically filtered out from the spending list
 
 ### Auto-Creation Behavior
 
-When an expense template has `auto_create: true` and `is_active: true`:
+When an expense template has `auto_create: true` and `deleted_at IS NULL`:
 - Expenses are automatically created when viewing the expenses/spending page
 - Expenses are created for both current and next month budgets
 - The system checks for existing expenses and skips templates that already have an expense in that budget

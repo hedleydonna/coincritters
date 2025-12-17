@@ -1,26 +1,26 @@
 <div class="w-full max-w-4xl mx-auto">
-  <div class="mb-4">
-    <% case @return_to %>
-    <% when 'expenses' %>
-      <%= link_to expenses_path,
-            class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
-            title: "Back to Spending" do %>
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-      <% end %>
-    <% else %>
-      <%= link_to dashboard_path,
-            class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
-            title: "Return to Dashboard" do %>
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-      <% end %>
-    <% end %>
-  </div>
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Set Up Your Spending</h1>
+    <div class="flex items-center gap-3">
+      <% case @return_to %>
+      <% when 'expenses' %>
+        <%= link_to expenses_path,
+              class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
+              title: "Back to Spending" do %>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        <% end %>
+      <% else %>
+        <%= link_to dashboard_path,
+              class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
+              title: "Return to Dashboard" do %>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        <% end %>
+      <% end %>
+      <h1 class="text-3xl font-bold text-gray-900">Set Up Your Spending</h1>
+    </div>
     <%= link_to "Add new spending", new_expense_template_path(return_to: @return_to),
           class: "bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium",
           title: "Add a new spending item" %>
@@ -59,11 +59,11 @@
               </svg>
             <% end %>
             <%= button_to expense_template_path(template, return_to: @return_to), method: :delete,
-                  data: { confirm: "Turn off this spending item? It will stop appearing in new months but can be turned back on later." },
+                  data: { turbo_confirm: "WARNING: Deleting this spending item may result in loss of historical data and could be difficult to recover. This will stop it from appearing in new months. Are you really sure you want to do this?" },
                   class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                  title: "Turn off this spending item" do %>
+                  title: "Delete this spending item" do %>
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             <% end %>
           </div>
@@ -77,38 +77,6 @@
       <%= link_to "Add your first spending item", new_expense_template_path(return_to: @return_to),
             class: "bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium inline-block",
             title: "Create your first spending item" %>
-    </div>
-  <% end %>
-
-  <% if @inactive_templates.any? %>
-    <div class="mt-20 pt-8 border-t border-gray-200">
-      <h2 class="text-2xl font-bold text-gray-700 mb-4">Turned Off Spending Items</h2>
-      <p class="text-gray-500 text-sm mb-6">These spending items are disabled and won't appear in new monthly budgets.</p>
-      <div class="space-y-4">
-        <% @inactive_templates.each do |template| %>
-          <div class="bg-gray-50 shadow rounded-lg p-6 flex justify-between items-center border border-gray-200">
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold text-gray-600 mb-2"><%= template.display_name %></h3>
-              <div class="flex flex-wrap gap-3 text-sm text-gray-500">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-                  <%= template.frequency_text %>
-                </span>
-                <% if template.default_amount.present? && template.default_amount > 0 %>
-                  <span class="text-gray-500">
-                    <strong><%= number_to_currency(template.default_amount) %></strong> default
-                  </span>
-                <% end %>
-                <span class="text-gray-500 italic">Turned off</span>
-              </div>
-            </div>
-            <div class="flex gap-3 ml-4">
-              <%= button_to "Turn on", reactivate_expense_template_path(template, return_to: @return_to), method: :patch,
-                    class: "bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium",
-                    title: "Turn on this spending item" %>
-            </div>
-          </div>
-        <% end %>
-      </div>
     </div>
   <% end %>
 </div>

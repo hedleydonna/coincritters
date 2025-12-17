@@ -342,5 +342,72 @@ class ExpensesControllerTest < ActionDispatch::IntegrationTest
     # Check that form has data-turbo="false" attribute
     assert_match /data-turbo="false"/, response.body
   end
+
+  # Test destroy action
+  test "should delete one-off expense" do
+    sign_in @user
+    budget = @user.current_budget!
+    expense = Expense.create!(
+      monthly_budget: budget,
+      expense_template_id: nil,  # One-off expense
+      name: "One-off Test Expense",
+      allotted_amount: 50.00
+    )
+    
+    assert_difference("Expense.count", -1) do
+      delete expense_path(expense, month: @current_month)
+    end
+    
+    assert_redirected_to expenses_path(month: @current_month)
+    assert_match /Expense deleted/, flash[:notice]
+    assert_not Expense.exists?(expense.id)
+  end
+
+  test "should not delete template-based expense" do
+    sign_in @user
+    budget = @user.current_budget!
+    template = ExpenseTemplate.create!(
+      user: @user,
+      name: "Test Template",
+      frequency: "monthly"
+    )
+    expense = Expense.create!(
+      monthly_budget: budget,
+      expense_template: template,
+      allotted_amount: 100.00
+    )
+    
+    assert_no_difference("Expense.count") do
+      delete expense_path(expense, month: @current_month)
+    end
+    
+    assert_redirected_to expenses_path(month: @current_month)
+    assert_match /Cannot delete expenses created from templates/, flash[:alert]
+    assert Expense.exists?(expense.id)
+  end
+
+  test "should delete associated payments when deleting one-off expense" do
+    sign_in @user
+    budget = @user.current_budget!
+    expense = Expense.create!(
+      monthly_budget: budget,
+      expense_template_id: nil,
+      name: "One-off Expense",
+      allotted_amount: 100.00
+    )
+    payment = Payment.create!(
+      expense: expense,
+      amount: 50.00,
+      spent_on: Date.today
+    )
+    
+    assert_difference("Expense.count", -1) do
+      assert_difference("Payment.count", -1) do
+        delete expense_path(expense, month: @current_month)
+      end
+    end
+    
+    assert_not Payment.exists?(payment.id)
+  end
 end
 

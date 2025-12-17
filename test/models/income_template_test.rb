@@ -81,7 +81,7 @@ class IncomeTemplateTest < ActiveSupport::TestCase
   end
 
   # Test uniqueness constraint
-  test "should enforce unique name per user" do
+  test "should enforce unique name per user among active templates" do
     user = users(:one)
     IncomeTemplate.create!(user: user, name: "Unique IncomeTemplate Source", frequency: "monthly", estimated_amount: 100)
     
@@ -104,32 +104,68 @@ class IncomeTemplateTest < ActiveSupport::TestCase
     assert_equal "Shared IncomeTemplate Name", income_template2.name
   end
 
-  # Test active scope
-  test "active scope should return only active income templates" do
-    user = users(:two)
-    active_count = user.income_templates.active.count
-    total_count = user.income_templates.count
+  # Test soft deletion
+  test "soft_delete! should set deleted_at timestamp" do
+    income_template = IncomeTemplate.create!(user: users(:one), name: "To Delete", frequency: "monthly", estimated_amount: 100)
+    assert_nil income_template.deleted_at
     
-    assert active_count < total_count, "Should have both active and inactive income templates"
-    assert user.income_templates.active.all?(&:active?), "All scoped income templates should be active"
+    income_template.soft_delete!
+    income_template.reload
+    assert_not_nil income_template.deleted_at
+    assert income_template.deleted?
+    assert_not income_template.active?
   end
 
-  test "active scope should exclude inactive income templates" do
-    user = users(:two)
-    inactive_income_template = income_templates(:four)
+  test "restore! should clear deleted_at" do
+    income_template = IncomeTemplate.create!(user: users(:one), name: "To Restore", frequency: "monthly", estimated_amount: 100)
+    income_template.soft_delete!
+    assert income_template.deleted?
     
-    assert_not user.income_templates.active.include?(inactive_income_template)
+    income_template.restore!
+    income_template.reload
+    assert_nil income_template.deleted_at
+    assert_not income_template.deleted?
+    assert income_template.active?
   end
 
-  # Test active attribute
-  test "active should default to true" do
-    income_template = IncomeTemplate.new(user: users(:one), name: "Test", frequency: "monthly", estimated_amount: 100)
-    assert_equal true, income_template.active
+  test "deleted scope should return only deleted templates" do
+    active_template = IncomeTemplate.create!(user: users(:one), name: "Active", frequency: "monthly", estimated_amount: 100)
+    deleted_template = IncomeTemplate.create!(user: users(:one), name: "Deleted", frequency: "monthly", estimated_amount: 100)
+    deleted_template.soft_delete!
+    
+    deleted_templates = IncomeTemplate.with_deleted.deleted
+    assert_includes deleted_templates, deleted_template
+    assert_not_includes deleted_templates, active_template
   end
 
-  test "can set active to false" do
-    income_template = IncomeTemplate.create!(user: users(:one), name: "Inactive IncomeTemplate", frequency: "monthly", estimated_amount: 100, active: false)
-    assert_equal false, income_template.active
+  test "default scope should exclude deleted templates" do
+    active_template = IncomeTemplate.create!(user: users(:one), name: "Active 2", frequency: "monthly", estimated_amount: 100)
+    deleted_template = IncomeTemplate.create!(user: users(:one), name: "Deleted 2", frequency: "monthly", estimated_amount: 100)
+    deleted_template.soft_delete!
+    
+    all_templates = IncomeTemplate.all
+    assert_includes all_templates, active_template
+    assert_not_includes all_templates, deleted_template
+  end
+
+  test "active scope should return only active templates" do
+    active_template = IncomeTemplate.create!(user: users(:one), name: "Active 3", frequency: "monthly", estimated_amount: 100)
+    deleted_template = IncomeTemplate.create!(user: users(:one), name: "Deleted 3", frequency: "monthly", estimated_amount: 100)
+    deleted_template.soft_delete!
+    
+    active_templates = IncomeTemplate.active
+    assert_includes active_templates, active_template
+    assert_not_includes active_templates, deleted_template
+  end
+
+  test "should allow same name for active and deleted templates for same user" do
+    active_template = IncomeTemplate.create!(user: users(:one), name: "Shared Name", frequency: "monthly", estimated_amount: 100)
+    active_template.soft_delete!
+    
+    # Should be able to create a new active template with the same name
+    new_active_template = IncomeTemplate.create!(user: users(:one), name: "Shared Name", frequency: "monthly", estimated_amount: 100)
+    assert new_active_template.valid?
+    assert new_active_template.persisted?
   end
 
   # Test edge cases

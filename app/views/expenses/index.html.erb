@@ -8,17 +8,18 @@
 <div class="w-full max-w-4xl mx-auto pt-4 pb-8">
   <!-- Header -->
   <div class="mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Spending</h1>
-        <p class="text-gray-600 mt-1"><%= Date.parse("#{@viewing_month}-01").strftime("%B %Y") %></p>
+    <div class="flex items-center mb-4">
+      <div class="flex items-center gap-3">
+        <%= link_to dashboard_path, class: "bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-300 font-semibold px-3 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center", title: "Return to Dashboard" do %>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        <% end %>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Spending</h1>
+          <p class="text-gray-600 mt-1"><%= Date.parse("#{@viewing_month}-01").strftime("%B %Y") %></p>
+        </div>
       </div>
-      <%= link_to dashboard_path, class: "bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-300 font-semibold px-4 py-2 rounded-lg transition-colors text-sm min-h-[44px] inline-flex items-center gap-1" do %>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Money Map
-      <% end %>
     </div>
     
     <!-- Month Navigation: Segmented Control Style (Mobile-Friendly) -->
@@ -207,6 +208,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     <% end %>
+                    
+                    <% if expense.expense_template_id.nil? %>
+                      <%= button_to expense_path(expense, month: @viewing_month), method: :delete,
+                            class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+                            title: "Delete",
+                            data: { confirm: "Are you sure? This will delete this expense and all associated payments." } do %>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      <% end %>
+                    <% end %>
                   <% elsif @is_next_month %>
                     <%= link_to edit_expense_path(expense.id, month: @viewing_month),
                           class: "bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
@@ -214,6 +226,17 @@
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
+                    <% end %>
+                    
+                    <% if expense.expense_template_id.nil? %>
+                      <%= button_to expense_path(expense, month: @viewing_month), method: :delete,
+                            class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+                            title: "Delete",
+                            data: { confirm: "Are you sure? This will delete this expense and all associated payments." } do %>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      <% end %>
                     <% end %>
                   <% else %>
                     <span class="text-sm text-gray-400">View only</span>

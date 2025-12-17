@@ -59,7 +59,7 @@ class ExpenseTemplatesControllerTest < ActionDispatch::IntegrationTest
         return_to: 'expenses'
       }
     end
-    assert_redirected_to expenses_path
+    assert_redirected_to expense_templates_path(return_to: 'expenses')
   end
 
   test "should create expense template and redirect to templates index when no return_to" do
@@ -123,9 +123,10 @@ class ExpenseTemplatesControllerTest < ActionDispatch::IntegrationTest
       auto_create: true
     )
     delete expense_template_path(template, return_to: 'expenses')
-    assert_redirected_to expenses_path
+    assert_redirected_to expense_templates_path(return_to: 'expenses')
     template.reload
-    assert_not template.is_active?
+    assert template.deleted?
+    assert_not template.active?
   end
 
   test "should reactivate expense template and redirect based on return_to" do
@@ -134,13 +135,14 @@ class ExpenseTemplatesControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "To Reactivate",
       frequency: "monthly",
-      auto_create: true,
-      is_active: false
+      auto_create: true
     )
+    template.soft_delete!
     patch reactivate_expense_template_path(template, return_to: 'expenses')
     assert_redirected_to expenses_path
     template.reload
-    assert template.is_active?
+    assert template.active?
+    assert_not template.deleted?
   end
 end
 

@@ -1,7 +1,7 @@
 # app/controllers/expenses_controller.rb
 class ExpensesController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_expense, only: [:mark_paid, :edit, :update]
+  before_action :set_expense, only: [:mark_paid, :edit, :update, :destroy]
 
   def index
     # Auto-create current and next month if they don't exist
@@ -42,7 +42,12 @@ class ExpensesController < ApplicationController
       end
     end
     
-    @expenses = @budget.expenses.order(:name)
+    # Only show expenses from active (non-deleted) templates, or one-off expenses (no template)
+    # Use with_deleted to access deleted templates for the join, then filter them out
+    @expenses = @budget.expenses
+      .joins("LEFT JOIN expense_templates ON expenses.expense_template_id = expense_templates.id")
+      .where("expense_templates.deleted_at IS NULL OR expense_templates.id IS NULL")
+      .order(:name)
 
     # For the expenses summary (expenses-focused, no income)
     @total_spent = @budget.total_spent
@@ -211,6 +216,21 @@ class ExpensesController < ApplicationController
     )
     
     redirect_to expenses_path(month: current_month), notice: "Payment added! #{helpers.number_to_currency(amount_needed)} paid to #{@expense.display_name}."
+  end
+
+  def destroy
+    # Only allow deletion of one-off expenses (no template)
+    unless @expense.expense_template_id.nil?
+      redirect_to expenses_path(month: @expense.monthly_budget.month_year), 
+                  alert: "Cannot delete expenses created from templates. Edit the template or set the amount to $0 instead."
+      return
+    end
+    
+    budget = @expense.monthly_budget
+    month_year = budget.month_year
+    @expense.destroy
+    redirect_to expenses_path(month: month_year), 
+                notice: "Expense deleted."
   end
 
   private

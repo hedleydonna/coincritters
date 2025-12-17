@@ -31,19 +31,26 @@ class IncomeEventsController < ApplicationController
     
     # Get income events for this month (including deferred from previous month)
     # Events count toward this month if: (month_year matches AND not deferred) OR (month_year is previous AND deferred)
+    # Only show events from active (non-deleted) templates, or one-off events (no template)
     if month_year == current_month_str
       # Current month: show events from this month (not deferred) + deferred from previous month
       prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-      @income_events = current_user.income_events.where(
-        "(month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)",
-        month_year, prev_month
-      ).order(:received_on)
+      @income_events = current_user.income_events
+        .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
+        .where(
+          "((month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)) AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
+          month_year, prev_month
+        )
+        .order(:received_on)
     else
       # Next month: show events from next month (not deferred) + deferred from current month
-      @income_events = current_user.income_events.where(
-        "(month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)",
-        month_year, current_month_str
-      ).order(:received_on)
+      @income_events = current_user.income_events
+        .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
+        .where(
+          "((month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)) AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
+          month_year, current_month_str
+        )
+        .order(:received_on)
     end
     
     # Calculate totals for the viewing month
@@ -127,9 +134,17 @@ class IncomeEventsController < ApplicationController
   end
 
   def destroy
+    # Only allow deletion of one-off income events (no template)
+    unless @income_event.income_template_id.nil?
+      redirect_to income_events_path, 
+                  alert: "Cannot delete income events created from templates. Edit the template or set the amount to $0 instead."
+      return
+    end
+    
     amount = @income_event.actual_amount
     @income_event.destroy
-    redirect_to income_events_path, notice: "Income event removed. #{helpers.number_to_currency(amount)} has been removed from your budget."
+    redirect_to income_events_path, 
+                notice: "Income event removed. #{helpers.number_to_currency(amount)} has been removed from your budget."
   end
 
   def mark_received

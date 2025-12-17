@@ -24,6 +24,7 @@ All routes are under `/expenses`:
 - **GET** `/expenses/:id/edit` - Show edit expense form
 - **GET** `/expenses/:id/edit?month=YYYY-MM` - Show edit expense form for specific month
 - **PATCH** `/expenses/:id` - Update an expense
+- **DELETE** `/expenses/:id` - Delete a one-off expense (template-based expenses cannot be deleted)
 - **POST** `/expenses/:id/mark_paid` - Mark expense as fully paid (creates payment for remaining amount)
 - **POST** `/expenses/:expense_id/sweep_to_savings` - Sweep flex fund to savings expense
 - **POST** `/expenses/start_next_month` - Create next month's budget (deprecated - auto-created now)
@@ -41,6 +42,11 @@ The main Money Map view. Automatically creates current and next month budgets if
 - Regenerates expenses for the month being viewed (if current or next month)
 - This ensures newly created expense templates with auto_create: true immediately appear in the spending list
 
+**Filtering:**
+- Expenses from deleted templates (where `expense_template.deleted_at IS NOT NULL`) are automatically filtered out
+- One-off expenses (no template) are always shown
+- Uses LEFT JOIN to check template deletion status without excluding one-off expenses
+
 **Month Navigation:**
 - Supports `month` parameter to view specific months
 - Defaults to current month if no parameter provided
@@ -48,7 +54,7 @@ The main Money Map view. Automatically creates current and next month budgets if
 
 **Instance Variables:**
 - `@budget` - The monthly budget being viewed
-- `@expenses` - All expenses for the budget, ordered by name
+- `@expenses` - All expenses for the budget, ordered by name (excludes expenses from deleted templates)
 - `@total_spent` - Total spent across all expenses (calculated from payments)
 - `@remaining` - Remaining amount (total_actual_income - total_spent)
 - `@bank_match` - Whether bank balance matches expected balance (within $50 tolerance)
@@ -180,6 +186,40 @@ Sweeps money from the flex fund (unassigned money) to a savings expense.
 - `amount` - Amount to sweep (must be <= flex fund)
 - `month` - Month being viewed
 
+### `destroy`
+
+Deletes a one-off expense (hard delete). Template-based expenses cannot be deleted.
+
+**Restrictions:**
+- **Only one-off expenses can be deleted** (`expense_template_id IS NULL`)
+- Template-based expenses cannot be deleted (they would be auto-recreated)
+- If attempting to delete a template-based expense, redirects with alert suggesting to edit the template or set amount to $0
+
+**Behavior:**
+- Hard deletes the expense record
+- Automatically deletes all associated payments (via `dependent: :destroy` on Expense model)
+- Recalculates monthly budget totals
+
+**Success:**
+- Redirects to `expenses_path(month: month_year)` with notice: "Expense deleted."
+
+**Failure:**
+- Redirects with alert if attempting to delete a template-based expense
+
+**Parameters:**
+- `id` - Expense ID to delete
+- `month` (optional) - Month parameter for redirect
+
+**Deletion Strategy:**
+The system only allows deletion of one-off expenses to prevent auto-recreation issues. When a template-based expense is deleted, the auto-creation logic (`auto_create_expenses`) would immediately recreate it on the next page view because it checks `expenses.exists?(expense_template_id: template.id)`. 
+
+For template-based expenses users don't want:
+- Edit the template (turn off auto-create, delete the template, etc.)
+- Set the expense's `allotted_amount` to $0 for that month
+- The expense remains but with zero allocation
+
+This preserves the integrity of the template system while allowing users to remove mistakes (one-off expenses).
+
 ### `start_next_month` (Deprecated)
 
 This action is kept for backward compatibility but is no longer needed since next month is automatically created when viewing the Money Map.
@@ -271,14 +311,20 @@ PATCH /expenses/123
 1. **Auto-Creation**: Automatically creates current and next month budgets on first view
 2. **Tab Navigation**: Easy switching between current and next month
 3. **Month Restrictions**:
-   - Current month: Full access (edit expenses, add payments)
-   - Next month: Planning mode (edit allotted amounts, no payments)
+   - Current month: Full access (edit expenses, add payments, delete one-offs)
+   - Next month: Planning mode (edit allotted amounts, delete one-offs, no payments)
    - Past months: View-only
 4. **Two Expense Types**:
-   - Template-based: Created from expense templates (recurring)
-   - One-off: Created without template (unique, non-recurring)
+   - Template-based: Created from expense templates (recurring, cannot be deleted)
+   - One-off: Created without template (unique, non-recurring, can be deleted)
+5. **Deletion Policy**: Only one-off expenses can be deleted to prevent auto-recreation conflicts
 
 ---
 
 **Last Updated**: January 2026
+
+**Recent Changes (January 2026)**:
+- Added `destroy` action for one-off expenses only
+- Template-based expenses cannot be deleted (prevents auto-recreation conflicts)
+- Delete button only appears for one-off expenses in the UI
 

@@ -24,7 +24,7 @@ All routes are under `/income_events`:
 - **PATCH** `/income_events/:id` - Update an income event
 - **POST** `/income_events/:id/toggle_defer` - Toggle deferral to next month
 - **POST** `/income_events/:id/mark_received` - Mark event as received (sets actual_amount to estimated_amount)
-- **DELETE** `/income_events/:id` - Delete an income event
+- **DELETE** `/income_events/:id` - Delete a one-off income event (template-based events cannot be deleted)
 
 ## Actions
 
@@ -46,9 +46,14 @@ Displays income events for current or next month.
 - **Current month**: Shows events from current month (not deferred) + deferred events from previous month
 - **Next month**: Shows events from next month (not deferred) + deferred events from current month
 
+**Filtering:**
+- Income events from deleted templates (where `income_template.deleted_at IS NOT NULL`) are automatically filtered out
+- One-off income events (no template) are always shown
+- Uses LEFT JOIN to check template deletion status without excluding one-off events
+
 **Instance Variables:**
 - `@budget` - The monthly budget being viewed
-- `@income_events` - Income events for the viewing month (includes deferred from previous month)
+- `@income_events` - Income events for the viewing month (includes deferred from previous month, excludes events from deleted templates)
 - `@total_expected` - Expected income for the month (from `@budget.expected_income`)
 - `@total_actual` - Actual income received (from `@budget.total_actual_income`)
 - `@current_month` - Current month string (YYYY-MM)
@@ -170,17 +175,36 @@ Marks an income event as received by setting actual_amount to estimated_amount.
 
 ### `destroy`
 
-Deletes an income event.
+Deletes a one-off income event (hard delete). Template-based income events cannot be deleted.
+
+**Restrictions:**
+- **Only one-off income events can be deleted** (`income_template_id IS NULL`)
+- Template-based income events cannot be deleted (they would be auto-recreated)
+- If attempting to delete a template-based event, redirects with alert suggesting to edit the template or set amount to $0
 
 **Behavior:**
-- Removes the event and recalculates monthly budget income
+- Hard deletes the income event record
+- Recalculates monthly budget income totals automatically
 - Shows notice with amount removed
 
 **Success:**
-- Redirects to `income_events_path` with notice showing amount removed
+- Redirects to `income_events_path` with notice showing amount removed: "Income event removed. $X.XX has been removed from your budget."
+
+**Failure:**
+- Redirects with alert if attempting to delete a template-based income event
 
 **Parameters:**
 - `id` - Income event ID to delete
+
+**Deletion Strategy:**
+The system only allows deletion of one-off income events to prevent auto-recreation issues. When a template-based income event is deleted, the auto-creation logic (`auto_create_income_events`) would immediately recreate it on the next page view because it checks for existing events by template ID and date.
+
+For template-based income events users don't want:
+- Edit the template (turn off auto-create, delete the template, etc.)
+- Set the event's `actual_amount` to $0
+- The event remains but with zero amount
+
+This preserves the integrity of the template system while allowing users to remove mistakes (one-off income events).
 
 ## Strong Parameters
 
@@ -227,6 +251,7 @@ Deletes an income event.
 3. **Auto-Creation**: Income events are auto-created from templates when viewing a month
 4. **Deferral**: Income can be deferred to next month using `apply_to_next_month`
 5. **Budget Updates**: Monthly budget totals update automatically when events change
+6. **Deletion Policy**: Only one-off income events can be deleted to prevent auto-recreation conflicts
 
 ## Usage Examples
 
@@ -281,4 +306,9 @@ POST /income_events/123/mark_received
 ---
 
 **Last Updated**: January 2026
+
+**Recent Changes (January 2026)**:
+- Updated `destroy` action to only allow deletion of one-off income events
+- Template-based income events cannot be deleted (prevents auto-recreation conflicts)
+- Delete button only appears for one-off income events in the UI
 

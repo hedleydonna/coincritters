@@ -8,17 +8,18 @@
 <div class="w-full max-w-4xl mx-auto pt-4 pb-8">
   <!-- Header -->
   <div class="mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Money In</h1>
-        <p class="text-gray-600 mt-1"><%= Date.parse("#{@viewing_month}-01").strftime("%B %Y") %></p>
+    <div class="flex items-center mb-4">
+      <div class="flex items-center gap-3">
+        <%= link_to dashboard_path, class: "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 font-semibold px-3 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center", title: "Return to Dashboard" do %>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        <% end %>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Money In</h1>
+          <p class="text-gray-600 mt-1"><%= Date.parse("#{@viewing_month}-01").strftime("%B %Y") %></p>
+        </div>
       </div>
-      <%= link_to dashboard_path, class: "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-colors text-sm min-h-[44px] inline-flex items-center gap-1 flex-shrink-0 whitespace-nowrap" do %>
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Money Map
-      <% end %>
     </div>
     
     <!-- Month Navigation: Segmented Control Style (Mobile-Friendly) -->
@@ -147,13 +148,15 @@
                     </svg>
                   <% end %>
                   <% if @is_current_month || @is_next_month %>
-                    <%= button_to income_event_path(event), method: :delete,
-                          class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                          title: "Delete",
-                          data: { confirm: "Are you sure? This will remove #{number_to_currency(event.actual_amount)} from your budget." } do %>
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                    <% if event.income_template_id.nil? %>
+                      <%= button_to income_event_path(event), method: :delete,
+                            class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+                            title: "Delete",
+                            data: { confirm: "Are you sure? This will remove #{number_to_currency(event.actual_amount)} from your budget." } do %>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      <% end %>
                     <% end %>
                   <% end %>
                 </div>
@@ -275,13 +278,15 @@
                   </svg>
                 <% end %>
                 <% if @is_current_month || @is_next_month %>
-                  <%= button_to income_event_path(event), method: :delete,
-                        class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                        title: "Delete",
-                        data: { confirm: "Are you sure? This will remove #{number_to_currency(event.actual_amount)} from your budget." } do %>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                  <% if event.income_template_id.nil? %>
+                    <%= button_to income_event_path(event), method: :delete,
+                          class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+                          title: "Delete",
+                          data: { confirm: "Are you sure? This will remove #{number_to_currency(event.actual_amount)} from your budget." } do %>
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    <% end %>
                   <% end %>
                 <% end %>
               </div>
@@ -303,7 +308,7 @@
       <%= link_to "+ Log one-off income", new_income_event_path, 
             class: "block w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
       
-      <%= link_to "Set Up Money In", income_templates_path(return_to: 'income_events'),
+      <%= link_to "Manage Income Sources", income_templates_path(return_to: 'income_events'),
             class: "block w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
     </div>
   <% end %>

@@ -244,92 +244,107 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     assert_equal "Yearly", yearly_template.frequency_text
   end
 
-  test "should default is_active to true" do
+  test "should default deleted_at to nil (active)" do
     expense_template = ExpenseTemplate.create!(
       user: @user_one,
       name: "Default Active Test"
     )
-    assert expense_template.is_active?
+    assert_nil expense_template.deleted_at
     assert expense_template.active?
+    assert_not expense_template.deleted?
   end
 
   test "active scope should return only active templates" do
     active_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Active Template",
-      is_active: true
+      name: "Active Template"
     )
-    inactive_template = ExpenseTemplate.create!(
+    deleted_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Inactive Template",
-      is_active: false
+      name: "Deleted Template"
     )
+    deleted_template.soft_delete!
     
     active_templates = ExpenseTemplate.active
     assert_includes active_templates, active_template
-    assert_not_includes active_templates, inactive_template
+    assert_not_includes active_templates, deleted_template
   end
 
-  test "inactive scope should return only inactive templates" do
+  test "deleted scope should return only deleted templates" do
     active_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Active Template 2",
-      is_active: true
+      name: "Active Template 2"
     )
-    inactive_template = ExpenseTemplate.create!(
+    deleted_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Inactive Template 2",
-      is_active: false
+      name: "Deleted Template 2"
     )
+    deleted_template.soft_delete!
     
-    inactive_templates = ExpenseTemplate.inactive
-    assert_includes inactive_templates, inactive_template
-    assert_not_includes inactive_templates, active_template
+    deleted_templates = ExpenseTemplate.with_deleted.deleted
+    assert_includes deleted_templates, deleted_template
+    assert_not_includes deleted_templates, active_template
   end
 
-  test "deactivate! should set is_active to false" do
+  test "soft_delete! should set deleted_at timestamp" do
     template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Template To Deactivate"
+      name: "Template To Delete"
     )
-    assert template.is_active?
+    assert_nil template.deleted_at
+    assert template.active?
     
-    template.deactivate!
+    template.soft_delete!
     template.reload
-    assert_not template.is_active?
+    assert_not_nil template.deleted_at
+    assert template.deleted?
     assert_not template.active?
   end
 
-  test "activate! should set is_active to true" do
+  test "restore! should clear deleted_at" do
     template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Template To Activate",
-      is_active: false
+      name: "Template To Restore"
     )
-    assert_not template.is_active?
+    template.soft_delete!
+    assert template.deleted?
     
-    template.activate!
+    template.restore!
     template.reload
-    assert template.is_active?
+    assert_nil template.deleted_at
     assert template.active?
+    assert_not template.deleted?
   end
 
-  test "should allow same name for active and inactive templates for same user" do
-    skip "Requires partial unique index migration - database constraint prevents this currently"
+  test "default scope should exclude deleted templates" do
     active_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Shared Name",
-      is_active: true
+      name: "Active Template 3"
+    )
+    deleted_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Deleted Template 3"
+    )
+    deleted_template.soft_delete!
+    
+    all_templates = ExpenseTemplate.all
+    assert_includes all_templates, active_template
+    assert_not_includes all_templates, deleted_template
+  end
+
+  test "should allow same name for active and deleted templates for same user" do
+    active_template = ExpenseTemplate.create!(
+      user: @user_one,
+      name: "Shared Name"
     )
     
-    # Deactivate the first one
-    active_template.deactivate!
+    # Soft delete the first one
+    active_template.soft_delete!
     
     # Should be able to create a new active template with the same name
     new_active_template = ExpenseTemplate.create!(
       user: @user_one,
-      name: "Shared Name",
-      is_active: true
+      name: "Shared Name"
     )
     assert new_active_template.valid?
     assert new_active_template.persisted?
@@ -338,14 +353,12 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
   test "should not allow duplicate active templates with same name for same user" do
     ExpenseTemplate.create!(
       user: @user_one,
-      name: "Unique Name",
-      is_active: true
+      name: "Unique Name"
     )
     
     duplicate = ExpenseTemplate.new(
       user: @user_one,
-      name: "Unique Name",
-      is_active: true
+      name: "Unique Name"
     )
     assert_not duplicate.valid?
     assert_includes duplicate.errors[:name], "has already been taken"

@@ -28,7 +28,7 @@ Rails.application.routes.draw do
     post "expenses/:expense_id/sweep_to_savings", to: "expenses#sweep_to_savings", as: :sweep_to_savings
     post "expenses/:id/mark_paid", to: "expenses#mark_paid", as: :mark_expense_paid
     resources :payments, only: [:new, :create]
-    resources :expenses, only: [:new, :create, :edit, :update]
+    resources :expenses, only: [:new, :create, :edit, :update, :destroy]
     get "income_events", to: "income_events#index"
     resources :income_events, only: [:new, :create, :edit, :update, :destroy] do
       member do

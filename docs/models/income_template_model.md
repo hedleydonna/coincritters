@@ -17,8 +17,9 @@ The IncomeTemplate model represents income sources for users in the CoinCritters
 | `name` | string | NOT NULL | Name of the income source (e.g., "Salary", "Freelance") |
 | `frequency` | string | NOT NULL, Default: "monthly" | How often this income is received |
 | `estimated_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | Estimated amount of income |
-| `active` | boolean | NOT NULL, Default: true | Whether this income source is currently active |
+| `active` | boolean | NOT NULL, Default: true | Legacy field (not used for soft deletion) |
 | `auto_create` | boolean | NOT NULL, Default: false | If `true`, automatically creates income events based on frequency and due_date |
+| `deleted_at` | datetime | Nullable | Timestamp when template was soft deleted (NULL = active) |
 | `due_date` | date | Nullable | Date when income is typically received (required if `auto_create` is `true`). Used to calculate event dates based on frequency. |
 | `last_payment_to_next_month` | boolean | NOT NULL, Default: false | If `true`, the last payment of each month will automatically be deferred to next month's budget |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
@@ -27,8 +28,8 @@ The IncomeTemplate model represents income sources for users in the CoinCritters
 ### Indexes
 
 - **User ID Index**: Index on `user_id` for fast user lookups
-- **User ID + Name Index**: Unique composite index on `[user_id, name]` - prevents duplicate income names per user
-- **User ID + Active Index**: Composite index on `[user_id, active]` - optimized for filtering active income templates
+- **User ID + Name Index**: Composite index on `[user_id, name]` - NOT unique (allows reusing names after deletion)
+- **Deleted At Index**: Index on `deleted_at` - optimized for filtering active/deleted templates
 
 ### Referential Integrity
 
@@ -71,15 +72,20 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 ### Name
 
 - **Presence**: Name must be present
-- **Uniqueness**: Name must be unique per user (different users can have income templates with the same name)
+- **Uniqueness**: Name must be unique per user among active templates (different users can have income templates with the same name, and deleted templates don't count toward uniqueness)
   ```ruby
   # Valid - same name, different users
   user1.income_templates.create(name: "Salary", ...)
   user2.income_templates.create(name: "Salary", ...)
   
-  # Invalid - same name, same user
+  # Invalid - same name, same user (both active)
   user1.income_templates.create(name: "Salary", ...)
   user1.income_templates.create(name: "Salary", ...)  # Error: name has already been taken
+  
+  # Valid - can reuse name after deleting
+  template1 = user1.income_templates.create(name: "Salary", ...)
+  template1.soft_delete!
+  user1.income_templates.create(name: "Salary", ...)  # OK - previous one is deleted
   ```
 
 ### Estimated Amount
@@ -115,20 +121,47 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   - When `true`: The last payment of each month automatically gets `apply_to_next_month: true` on the income event
   - Useful for late-month paychecks you want to hold for next month's expenses
 
+## Default Scope
+
+- `default_scope -> { where(deleted_at: nil).order(:name) }` - All queries exclude deleted templates and are ordered alphabetically by name by default. Use `.with_deleted` or `.unscoped` to access deleted templates.
+
 ## Scopes
 
 ### Active Scope
 
-Returns only active income sources for efficient querying:
+Returns only active income sources (redundant with default_scope but explicit):
 
 ```ruby
-user.income_templates.active  # Returns only income templates where active: true
+user.income_templates.active  # Returns only income templates where deleted_at IS NULL
 ```
 
 **Usage:**
-- Filter active income sources
-- Calculate current income totals
-- Display only relevant income templates to users
+- Filter active income sources (though default_scope already does this)
+- Explicitly show intent in code
+
+### Deleted Scope
+
+Returns only deleted income templates:
+
+```ruby
+IncomeTemplate.with_deleted.deleted  # Returns only income templates where deleted_at IS NOT NULL
+```
+
+**Usage:**
+- Access deleted templates for restoration
+- Historical reporting
+
+### With Deleted Scope
+
+Removes the `deleted_at` filter from default_scope:
+
+```ruby
+IncomeTemplate.with_deleted  # Returns all templates including deleted ones
+```
+
+**Usage:**
+- Access all templates including deleted
+- Required before using `.deleted` scope
 
 ### Auto Create Scope
 
@@ -234,18 +267,29 @@ user.income_templates.exists?(name: "Salary")
 # Update amount
 income_template.update(estimated_amount: 5500.00)
 
-# Deactivate income template
-income_template.update(active: false)
+# Soft delete income template
+income_template.soft_delete!
+
+# Restore deleted template
+income_template.restore!
 
 # Change frequency
 income_template.update(frequency: "bi_weekly")
 ```
 
-### Deleting Income Template
+### Soft Deleting Income Template
 
 ```ruby
-# Delete single income template
-income_template.destroy
+# Soft delete single income template
+income_template.soft_delete!
+# Sets deleted_at timestamp, preserves all associated income events
+
+# Restore deleted template
+income_template.restore!
+# Clears deleted_at, makes template active again
+
+# Access deleted templates
+deleted_templates = IncomeTemplate.with_deleted.deleted
 
 # Delete all income templates for user (when user is deleted, cascade handles this)
 user.destroy  # Automatically deletes all associated income templates
@@ -253,11 +297,13 @@ user.destroy  # Automatically deletes all associated income templates
 
 ## Business Rules
 
-1. **Unique Names Per User**: Users cannot have duplicate income source names (prevents confusion)
+1. **Unique Names Per User (Active Only)**: Users cannot have duplicate income source names among active templates. Deleted templates don't count toward uniqueness, allowing name reuse.
 2. **Different Users, Same Names**: Multiple users can have income templates with the same name (e.g., both users can have "Salary")
-3. **Active Status**: Inactive income templates are retained but hidden from active calculations
-4. **Cascade Delete**: Deleting a user automatically deletes all their income templates
+3. **Soft Delete with `deleted_at`**: Deleted income templates are retained but hidden from normal views. They can be restored using `restore!` method.
+4. **Cascade Delete**: Deleting a user automatically deletes all their income templates (hard delete via `dependent: :destroy`)
 5. **Non-Negative Amounts**: Income amounts cannot be negative (for expenses, use a separate model)
+6. **Default Scope Filtering**: The default scope automatically excludes deleted templates. Use `.with_deleted` to access all templates including deleted ones.
+7. **Filtered Views**: Income events from deleted templates are automatically filtered out from the money-in list.
 6. **Auto Create Requirements**: 
    - When `auto_create` is `true`, `due_date` must be provided
    - When `auto_create` is `false`, `due_date` can be `nil`
@@ -339,6 +385,62 @@ The auto-create feature allows users to configure income templates that automati
 - Users can review, edit, or delete auto-generated events
 
 ## Instance Methods
+
+### `soft_delete!`
+
+Soft deletes the income template by setting `deleted_at` to current time.
+
+**Returns:**
+- Boolean - true if update succeeds
+
+**Example:**
+```ruby
+income_template.soft_delete!
+income_template.deleted?  # => true
+income_template.deleted_at  # => 2026-01-15 10:30:00 UTC
+```
+
+### `restore!`
+
+Restores a deleted income template by clearing `deleted_at`.
+
+**Returns:**
+- Boolean - true if update succeeds
+
+**Example:**
+```ruby
+income_template.restore!
+income_template.active?  # => true
+income_template.deleted_at  # => nil
+```
+
+### `deleted?`
+
+Checks if the income template is deleted.
+
+**Returns:**
+- Boolean - true if `deleted_at` is present
+
+**Example:**
+```ruby
+income_template.deleted?  # => false (if active)
+income_template.soft_delete!
+income_template.deleted?  # => true
+```
+
+### `active?`
+
+Checks if the income template is active (not deleted).
+
+**Returns:**
+- Boolean - true if `deleted_at` is nil
+
+**Example:**
+```ruby
+income_template.active?  # => true
+income_template.soft_delete!
+income_template.active?  # => false
+```
 
 ### `events_for_month(month_year)`
 
@@ -424,5 +526,5 @@ Potential additions to the IncomeTemplate model:
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: January 2026
 

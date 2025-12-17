@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_15_000006) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_17_191733) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,8 +24,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000006) do
     t.boolean "is_active", default: true, null: false
     t.string "frequency", default: "monthly"
     t.date "due_date"
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_expense_templates_on_deleted_at"
     t.index ["is_active"], name: "index_expense_templates_on_is_active"
-    t.index ["user_id", "name"], name: "index_expense_templates_on_user_id_and_name", unique: true
+    t.index ["user_id", "name"], name: "index_expense_templates_on_user_id_and_name"
     t.index ["user_id"], name: "index_expense_templates_on_user_id"
   end
 
@@ -71,8 +73,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_15_000006) do
     t.boolean "auto_create", default: false, null: false
     t.date "due_date"
     t.boolean "last_payment_to_next_month", default: false, null: false
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_income_templates_on_deleted_at"
     t.index ["user_id", "active"], name: "index_income_templates_on_user_id_and_active"
-    t.index ["user_id", "name"], name: "index_income_templates_on_user_id_and_name", unique: true
+    t.index ["user_id", "name"], name: "index_income_templates_on_user_id_and_name"
     t.index ["user_id"], name: "index_income_templates_on_user_id"
   end
 

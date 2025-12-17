@@ -287,6 +287,59 @@ The current system has several strengths that should be preserved:
 **Priority**: Low-Medium  
 **Effort**: Medium-High
 
+**Implementation Decision (January 2026)**: Using `deleted_at` column for soft deletion instead of `is_active`/`active` flags.
+
+**Rationale**:
+- **Historical Data Preservation**: Deleted items remain in database for history reports and analysis
+- **Recovery Capability**: Users can recover accidentally deleted templates
+- **User Experience**: Items appear deleted to users (hidden from normal UI) but data is preserved
+- **Timestamp Tracking**: `deleted_at` provides clear audit trail of when items were deleted
+
+**Recovery Strategy**:
+- **Current (Web App)**: Data stored on server (PostgreSQL on Render), recovery can be built into app UI
+- **Future (Mobile App)**: Built-in recovery UI in Settings page, allowing users to restore deleted items themselves
+- **Export/Import**: Include deleted items in data export for backup/recovery
+- **No External Recovery Needed**: Users can recover through app interface
+
+**Technical Implementation**:
+- Replace `is_active` (expense_templates) and `active` (income_templates) with `deleted_at` timestamp
+- Default scope excludes deleted items (`where(deleted_at: nil)`)
+- Deleted items only visible in admin/recovery views
+- Historical reports can include deleted items for accurate history
+- Recovery UI in Settings (future enhancement)
+
+**Note**: Recovery UI implementation deferred - focus on deletion mechanism first. Recovery can be added later as needed.
+
+**Implementation Decision (January 2026)**: Deletion Strategy for Expenses and Income Events - One-Off Items Only
+
+**Rationale**:
+The system uses auto-creation logic that regenerates expenses and income events from templates when viewing pages. If template-based items were allowed to be deleted, they would immediately be recreated on the next page view, creating a poor user experience.
+
+**Decision**: Only allow hard deletion of one-off expenses and income events (items with no template association).
+
+**Technical Details**:
+- **Expenses**: Only expenses where `expense_template_id IS NULL` can be deleted
+- **Income Events**: Only income events where `income_template_id IS NULL` can be deleted
+- **Template-based items**: Cannot be deleted (delete button hidden in UI, controller blocks attempts)
+- **Auto-recreation**: Template-based items are automatically created when viewing the expenses/income pages if they don't exist
+- **User alternatives**: For template-based items users don't want:
+  - Edit the template (turn off auto-create, delete the template, etc.)
+  - Set the expense's `allotted_amount` to $0 or income event's `actual_amount` to $0
+  - The item remains but with zero allocation
+
+**Benefits**:
+- Prevents auto-recreation conflicts
+- Clear mental model: templates create recurring items; one-offs are temporary
+- Users can still remove mistakes (one-off items)
+- Preserves template system integrity
+- Simpler code (no need for `user_deleted_at` tracking column)
+
+**Implementation**:
+- Delete buttons only appear for one-off items in the UI
+- Controllers check `template_id.nil?` before allowing deletion
+- Clear error messages guide users to edit templates instead
+- Payments are automatically deleted when their expense is deleted (via `dependent: :destroy`)
+
 #### 8. Future Feature Considerations
 
 **Ideas for Future Versions**:

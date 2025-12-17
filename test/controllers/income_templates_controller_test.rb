@@ -55,13 +55,12 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
           frequency: "monthly",
           estimated_amount: 1000.00,
           auto_create: true,
-          active: true,
           due_date: Date.today
         },
         return_to: 'income_events'
       }
     end
-    assert_redirected_to income_events_path
+    assert_redirected_to income_templates_path(return_to: 'income_events')
   end
 
   test "should create income template and redirect to templates index when no return_to" do
@@ -69,11 +68,10 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_difference("IncomeTemplate.count", 1) do
       post income_templates_path, params: {
         income_template: {
-          name: "Test Income Source",
+          name: "Test Income Source 2",
           frequency: "monthly",
           estimated_amount: 1000.00,
           auto_create: true,
-          active: true,
           due_date: Date.today
         }
       }
@@ -124,12 +122,12 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "To Delete",
       frequency: "monthly",
-      estimated_amount: 500.00,
-      active: true
+      estimated_amount: 500.00
     )
     delete income_template_path(template, return_to: 'income_events')
-    assert_redirected_to income_events_path
+    assert_redirected_to income_templates_path(return_to: 'income_events')
     template.reload
+    assert template.deleted?
     assert_not template.active?
   end
 
@@ -139,13 +137,14 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "To Reactivate",
       frequency: "monthly",
-      estimated_amount: 500.00,
-      active: false
+      estimated_amount: 500.00
     )
+    template.soft_delete!
     patch reactivate_income_template_path(template, return_to: 'income_events')
     assert_redirected_to income_events_path
     template.reload
     assert template.active?
+    assert_not template.deleted?
   end
 end
 

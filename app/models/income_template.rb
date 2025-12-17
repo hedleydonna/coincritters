@@ -2,7 +2,7 @@ class IncomeTemplate < ApplicationRecord
   belongs_to :user
   has_many :income_events, dependent: :destroy
 
-  validates :name, presence: true, uniqueness: { scope: :user_id }
+  validates :name, presence: true, uniqueness: { scope: :user_id, conditions: -> { where(deleted_at: nil) } }
   validates :estimated_amount, numericality: { greater_than_or_equal_to: 0 }
 
   # Frequency options
@@ -14,7 +14,12 @@ class IncomeTemplate < ApplicationRecord
   # When auto_create is false, user must manually create events and enter actual_amount (which may differ from estimated_amount)
   validates :due_date, presence: true, if: -> { auto_create? }
 
-  scope :active, -> { where(active: true) }
+  # Default scope excludes deleted items
+  default_scope -> { where(deleted_at: nil).order(:name) }
+
+  scope :active, -> { where(deleted_at: nil) }
+  scope :deleted, -> { unscope(where: :deleted_at).where.not(deleted_at: nil) }
+  scope :with_deleted, -> { unscope(where: :deleted_at) }
   scope :auto_create, -> { where(auto_create: true) }
   
   # Recalculate affected budgets when estimated_amount changes
@@ -88,6 +93,26 @@ class IncomeTemplate < ApplicationRecord
   def expected_amount_for_month(month_year)
     events_count = events_for_month(month_year).count
     events_count * estimated_amount
+  end
+
+  # Soft delete: set deleted_at timestamp
+  def soft_delete!
+    update(deleted_at: Time.current)
+  end
+
+  # Restore a deleted template
+  def restore!
+    update(deleted_at: nil)
+  end
+
+  # Check if template is deleted
+  def deleted?
+    deleted_at.present?
+  end
+
+  # Alias for compatibility
+  def active?
+    deleted_at.nil?
   end
 
   private

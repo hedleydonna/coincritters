@@ -36,16 +36,10 @@
 5. Loading states (Medium Priority)
    - Progress indicators during operations
 
+
+6. set up a restore deleted items mechnizm in users setting page.
+
 Recommendation: Start with mobile-first polish (swipe actions and pull-to-refresh) since mobile testing is complete and the app is functional. These will improve the mobile experience.
-
-
-
-
-
-Checking where the viewport meta tag is configured:
-
-
-[1 tool called]
 
 
 The viewport meta tag is on line 5 of your layout file.
