@@ -336,18 +336,18 @@
   <% else %>
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
       <p class="text-gray-500 text-lg mb-2">No expenses yet for this month.</p>
-      <p class="text-gray-400 mb-6">Create expense templates to auto-generate expenses, or add a one-off expense below.</p>
+      <p class="text-gray-400 mb-6">Create expense templates to auto-generate expenses, or add a custom expense below.</p>
     </div>
   <% end %>
 
   <!-- One-off expense and Setup (only for current and next month) -->
   <% unless @is_past_month %>
-    <div class="mt-8 pt-6 border-t border-gray-200 space-y-4">
-      <%= link_to "+ Add one-off expense", new_expense_path(month: @viewing_month), 
-            class: "block w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
+    <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-4">
+      <%= link_to "Add custom expense", new_expense_path(month: @viewing_month), 
+            class: "block w-full sm:w-1/2 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
       
-      <%= link_to "Set Up Spending", expense_templates_path(return_to: 'expenses'),
-            class: "block w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
+      <%= link_to "Manage Spending", expense_templates_path(return_to: 'expenses'),
+            class: "block w-full sm:w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
     </div>
   <% end %>
 </div>

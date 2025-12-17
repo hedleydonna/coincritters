@@ -74,12 +74,16 @@
                  class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div class="flex justify-between items-start mb-4">
                 <div class="flex-1">
-                  <h3 class="text-xl font-semibold text-gray-900 mb-1"><%= event.display_name %></h3>
+                  <h3 class="text-xl font-semibold text-gray-900 mb-1">
+                    <%= event.display_name %>
+                    <% if event.income_template %>
+                      <span class="text-xs font-normal text-gray-500 ml-2"><%= event.income_template.frequency.humanize %></span>
+                    <% else %>
+                      <span class="text-xs font-normal text-gray-500 ml-2">Custom</span>
+                    <% end %>
+                  </h3>
                   <p class="text-gray-600 text-sm">
                     <%= event.received_on.strftime("%B %d, %Y") %>
-                    <% if event.income_template %>
-                      • Expected: <%= number_to_currency(event.income_template.estimated_amount) %>
-                    <% end %>
                   </p>
                 </div>
                 <div class="text-right ml-4">
@@ -100,39 +104,11 @@
                   <span class="text-gray-600">
                     Expected: <%= number_to_currency(expected) %>
                   </span>
-                  <span class="text-gray-500 font-medium">
-                    Not yet received
-                  </span>
                 </div>
               <% end %>
 
-              <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-                <div>
-                  <% if event.income_template %>
-                    <p class="text-sm text-gray-500">
-                      Source: <%= event.income_template.name %> • <%= event.income_template.frequency.humanize %>
-                      <% if event.apply_to_next_month? %>
-                        <span class="text-orange-600 font-medium">• Deferred to next month</span>
-                      <% end %>
-                    </p>
-                  <% else %>
-                    <p class="text-sm text-gray-500">
-                      One-off income
-                      <% if event.apply_to_next_month? %>
-                        <span class="text-orange-600 font-medium">• Deferred to next month</span>
-                      <% end %>
-                    </p>
-                  <% end %>
-                </div>
+              <div class="flex justify-start items-center mt-4 pt-4 border-t border-gray-200">
                 <div class="flex gap-2 items-center flex-wrap">
-                  <%= button_to mark_received_income_event_path(event), method: :patch,
-                        class: "bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                        title: "Mark as received",
-                        data: { confirm: "Mark as received with expected amount of #{number_to_currency(event.income_template.estimated_amount)}?" } do %>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  <% end %>
                   <%= button_to toggle_defer_income_event_path(event), method: :patch,
                         class: "bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
                         title: event.apply_to_next_month? ? "Count this month" : "Defer to next month" do %>
@@ -159,6 +135,14 @@
                       <% end %>
                     <% end %>
                   <% end %>
+                  <%= button_to mark_received_income_event_path(event), method: :patch,
+                        class: "bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+                        title: "Mark as received",
+                        data: { confirm: "Mark as received with expected amount of #{number_to_currency(event.income_template.estimated_amount)}?" } do %>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  <% end %>
                 </div>
               </div>
             </div>
@@ -184,12 +168,16 @@
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div class="flex justify-between items-start mb-4">
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900 mb-1"><%= event.display_name %></h3>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1">
+                  <%= event.display_name %>
+                  <% if event.income_template %>
+                    <span class="text-xs font-normal text-gray-500 ml-2"><%= event.income_template.frequency.humanize %></span>
+                  <% else %>
+                    <span class="text-xs font-normal text-gray-500 ml-2">Custom</span>
+                  <% end %>
+                </h3>
                 <p class="text-gray-600 text-sm">
                   <%= event.received_on.strftime("%B %d, %Y") %>
-                  <% if event.income_template %>
-                    • Expected: <%= number_to_currency(event.income_template.estimated_amount) %>
-                  <% end %>
                 </p>
               </div>
               <div class="text-right ml-4">
@@ -237,31 +225,11 @@
                   <span class="text-gray-600">
                     Expected: <%= number_to_currency(expected) %>
                   </span>
-                  <span class="text-gray-500 font-medium">
-                    Not yet received
-                  </span>
                 </div>
               <% end %>
             <% end %>
 
-            <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-              <div>
-                <% if event.income_template %>
-                  <p class="text-sm text-gray-500">
-                    Source: <%= event.income_template.name %> • <%= event.income_template.frequency.humanize %>
-                    <% if event.apply_to_next_month? %>
-                      <span class="text-orange-600 font-medium">• Deferred to next month</span>
-                    <% end %>
-                  </p>
-                <% else %>
-                  <p class="text-sm text-gray-500">
-                    One-off income
-                    <% if event.apply_to_next_month? %>
-                      <span class="text-orange-600 font-medium">• Deferred to next month</span>
-                    <% end %>
-                  </p>
-                <% end %>
-              </div>
+            <div class="flex justify-start items-center mt-4 pt-4 border-t border-gray-200">
               <div class="flex gap-2 items-center flex-wrap">
                 <%= button_to toggle_defer_income_event_path(event), method: :patch,
                       class: "bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
@@ -298,18 +266,18 @@
   <% else %>
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
       <p class="text-gray-500 text-lg mb-2">No income events yet for this month.</p>
-      <p class="text-gray-400 mb-6">Create income sources with auto-create enabled to generate events automatically, or log one-off income manually.</p>
+      <p class="text-gray-400 mb-6">Create income sources with auto-create enabled to generate events automatically, or add custom income entries.</p>
     </div>
   <% end %>
 
   <!-- One-off income and Setup (only for current and next month) -->
   <% unless @is_past_month %>
-    <div class="mt-8 pt-6 border-t border-gray-200 space-y-4">
-      <%= link_to "+ Log one-off income", new_income_event_path, 
-            class: "block w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
+    <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-4">
+      <%= link_to "Add Custom Income", new_income_event_path, 
+            class: "block w-full sm:w-1/2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
       
       <%= link_to "Manage Income Sources", income_templates_path(return_to: 'income_events'),
-            class: "block w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
+            class: "block w-full sm:w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center" %>
     </div>
   <% end %>
 </div>
