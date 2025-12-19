@@ -77,7 +77,20 @@
   <!-- Expenses Summary (only for current month) -->
   <% if @is_current_month %>
     <div class="bg-amber-100 rounded-xl p-3 sm:p-6 mb-6 shadow-sm border border-amber-300">
-      <% flex_fund = @budget.remaining_to_assign %>
+      <% if @carryover != 0 %>
+        <div class="mb-3 pb-3 border-b border-amber-200">
+          <p class="text-xs sm:text-sm text-gray-600 mb-1">Available Income</p>
+          <p class="text-sm sm:text-xl font-bold text-gray-900 break-words leading-tight">
+            <%= number_to_currency(@available_income) %>
+            <% if @carryover > 0 %>
+              <span class="text-xs font-normal text-green-700 ml-2">(includes <%= number_to_currency(@carryover) %> from last month)</span>
+            <% elsif @carryover < 0 %>
+              <span class="text-xs font-normal text-red-700 ml-2">(includes <%= number_to_currency(@carryover.abs) %> debt from last month)</span>
+            <% end %>
+          </p>
+        </div>
+      <% end %>
+      <% remaining_to_assign = @budget.remaining_to_assign %>
       <div class="grid grid-cols-3 gap-1 sm:gap-4">
         <div class="text-center sm:text-left">
           <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Spent so far</p>
@@ -90,9 +103,9 @@
           </p>
         </div>
         <div class="text-center sm:text-left">
-          <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Flex Fund</p>
-          <p class="text-sm sm:text-2xl font-bold <%= flex_fund >= 0 ? 'text-green-600' : 'text-orange-600' %> break-words leading-tight">
-            <%= number_to_currency(flex_fund) %>
+          <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Available to Assign</p>
+          <p class="text-sm sm:text-2xl font-bold <%= remaining_to_assign >= 0 ? 'text-green-600' : 'text-orange-600' %> break-words leading-tight">
+            <%= number_to_currency(remaining_to_assign) %>
           </p>
         </div>
       </div>
@@ -146,9 +159,9 @@
                 <div class="flex gap-2 items-center flex-wrap">
                   <% if @is_current_month %>
                     <% is_savings = expense.name.downcase.include?("savings") || expense.name.downcase.include?("emergency") %>
-                    <% flex_fund = [@budget.remaining_to_assign, 0].max %>
+                    <% available_to_assign = [@budget.remaining_to_assign, 0].max %>
                     
-                    <% if is_savings && flex_fund > 0 %>
+                    <% if is_savings && available_to_assign > 0 %>
                       <!-- Sweep to Savings Form -->
                       <details class="relative">
                         <summary class="text-green-600 hover:text-green-800 hover:underline text-sm font-medium cursor-pointer">
@@ -161,13 +174,13 @@
                               <label class="block text-sm font-medium text-gray-700 mb-1">How much?</label>
                               <div class="relative">
                                 <span class="absolute left-2 top-2 text-gray-500">$</span>
-                                <%= number_field_tag :amount, flex_fund, 
+                                <%= number_field_tag :amount, available_to_assign, 
                                       step: "0.01", 
                                       min: "0.01",
-                                      max: flex_fund,
+                                      max: available_to_assign,
                                       class: "w-full px-4 py-2 pl-6 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
                               </div>
-                              <p class="mt-1 text-xs text-gray-500">Available: <%= number_to_currency(flex_fund) %></p>
+                              <p class="mt-1 text-xs text-gray-500">Available: <%= number_to_currency(available_to_assign) %></p>
                             </div>
                             <div class="flex gap-2">
                               <%= f.submit "Sweep", 
@@ -213,7 +226,7 @@
                       <%= button_to expense_path(expense, month: @viewing_month), method: :delete,
                             class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
                             title: "Delete",
-                            data: { confirm: "Are you sure? This will delete this expense and all associated payments." } do %>
+                            data: { turbo_confirm: "⚠️ WARNING: This will permanently delete this expense and all associated payments. This action cannot be undone and you may lose important financial data. Are you absolutely sure you want to proceed?" } do %>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -232,7 +245,7 @@
                       <%= button_to expense_path(expense, month: @viewing_month), method: :delete,
                             class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
                             title: "Delete",
-                            data: { confirm: "Are you sure? This will delete this expense and all associated payments." } do %>
+                            data: { turbo_confirm: "⚠️ WARNING: This will permanently delete this expense and all associated payments. This action cannot be undone and you may lose important financial data. Are you absolutely sure you want to proceed?" } do %>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>

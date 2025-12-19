@@ -51,8 +51,26 @@ class MonthlyBudget < ApplicationRecord
     expenses.sum(&:spent_amount)
   end
 
+  # ------------------------------------------------------------------
+  # Automatic carryover from previous month
+  # ------------------------------------------------------------------
+  def carryover_from_previous_month
+    return 0.0 unless month_year.present?
+    
+    prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
+    prev_budget = user.monthly_budgets.find_by(month_year: prev_month)
+    return 0.0 unless prev_budget
+    
+    # Calculate previous month's balance: income - spent (can be positive or negative)
+    prev_budget.total_actual_income - prev_budget.total_spent
+  end
+
+  def available_income
+    total_actual_income + carryover_from_previous_month
+  end
+
   def remaining_to_assign
-    total_actual_income - total_allotted
+    available_income - total_allotted
   end
 
   def unassigned
@@ -107,9 +125,6 @@ class MonthlyBudget < ApplicationRecord
         event_dates = event_dates.select { |date| date >= Date.today }
       end
       
-      # Determine if this is the last payment of the month (for deferral logic)
-      last_event_date = event_dates.last
-      
       event_dates.each do |event_date|
         # Skip if income event for this income_template and date already exists
         next if user.income_events.exists?(
@@ -117,10 +132,6 @@ class MonthlyBudget < ApplicationRecord
           received_on: event_date,
           month_year: event_date.strftime("%Y-%m")
         )
-        
-        # Determine if this event should be deferred to next month
-        # Only defer if: it's the last payment of the month AND template has last_payment_to_next_month enabled
-        apply_to_next = income.last_payment_to_next_month? && event_date == last_event_date
         
         # Create the income event with actual_amount set to 0 initially
         # User will update it when they confirm receipt, or it can be auto-filled on due date
@@ -136,7 +147,7 @@ class MonthlyBudget < ApplicationRecord
           income_template: income,
           received_on: event_date,
           month_year: event_date.strftime("%Y-%m"),
-          apply_to_next_month: apply_to_next,
+          apply_to_next_month: false, # Defer functionality removed - use automatic carryover instead
           actual_amount: actual_amount
         )
       end
@@ -145,26 +156,19 @@ class MonthlyBudget < ApplicationRecord
 
   # ------------------------------------------------------------------
   # Calculate expected income for this month
-  # Note: This includes income that might be deferred from previous month
   # Logic:
   # 1. For template-based events: Count events per template × template.estimated_amount
   # 2. For one-off events: Sum their actual_amount values
+  # Note: Defer functionality removed - use automatic carryover instead
   # ------------------------------------------------------------------
   def expected_income
-    # Get all events assigned to this month (including deferred from previous month)
+    # Get all events for this month (no defer logic)
     current_month_events = user.income_events
       .where(month_year: month_year, apply_to_next_month: false)
       .includes(:income_template)
     
-    prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-    deferred_events = user.income_events
-      .where(month_year: prev_month, apply_to_next_month: true)
-      .includes(:income_template)
-    
-    all_events = current_month_events.to_a + deferred_events.to_a
-    
     # Group template-based events by template and calculate: count × estimated_amount
-    template_events = all_events.select { |e| e.income_template_id.present? && e.income_template.present? }
+    template_events = current_month_events.select { |e| e.income_template_id.present? && e.income_template.present? }
     template_expected = template_events
       .group_by(&:income_template_id)
       .sum do |template_id, events|
@@ -173,7 +177,7 @@ class MonthlyBudget < ApplicationRecord
       end
     
     # Add one-off events (no template): sum their actual_amount
-    one_off_events = all_events.select { |e| e.income_template_id.nil? }
+    one_off_events = current_month_events.select { |e| e.income_template_id.nil? }
     one_off_expected = one_off_events.sum { |e| e.actual_amount || 0 }
     
     template_expected + one_off_expected

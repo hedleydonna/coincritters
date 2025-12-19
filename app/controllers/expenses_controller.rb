@@ -49,9 +49,11 @@ class ExpensesController < ApplicationController
       .where("expense_templates.deleted_at IS NULL OR expense_templates.id IS NULL")
       .order(:name)
 
-    # For the expenses summary (expenses-focused, no income)
+    # For the expenses summary (expenses-focused, includes carryover)
     @total_spent = @budget.total_spent
-    @remaining = @budget.total_actual_income.to_f - @budget.total_spent.to_f
+    @available_income = @budget.available_income.to_f
+    @carryover = @budget.carryover_from_previous_month.to_f
+    @remaining = @budget.available_income.to_f - @budget.total_spent.to_f
     @bank_match = @budget.bank_match?
     @bank_difference = @budget.bank_difference
 

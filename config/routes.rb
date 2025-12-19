@@ -33,7 +33,6 @@ Rails.application.routes.draw do
     resources :income_events, only: [:new, :create, :edit, :update, :destroy] do
       member do
         patch :mark_received
-        patch :toggle_defer
       end
     end
   end

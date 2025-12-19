@@ -1,7 +1,7 @@
 # app/controllers/income_events_controller.rb
 class IncomeEventsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_income_event, only: [:edit, :update, :mark_received, :toggle_defer, :destroy]
+  before_action :set_income_event, only: [:edit, :update, :mark_received, :destroy]
 
   def index
     # Allow viewing current or next month
@@ -29,33 +29,21 @@ class IncomeEventsController < ApplicationController
       @budget.auto_create_income_events if @budget
     end
     
-    # Get income events for this month (including deferred from previous month)
-    # Events count toward this month if: (month_year matches AND not deferred) OR (month_year is previous AND deferred)
+    # Get income events for this month (no defer logic - use automatic carryover instead)
     # Only show events from active (non-deleted) templates, or one-off events (no template)
-    if month_year == current_month_str
-      # Current month: show events from this month (not deferred) + deferred from previous month
-      prev_month = (Date.parse("#{month_year}-01") - 1.month).strftime("%Y-%m")
-      @income_events = current_user.income_events
-        .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
-        .where(
-          "((month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)) AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
-          month_year, prev_month
-        )
-        .order(:received_on)
-    else
-      # Next month: show events from next month (not deferred) + deferred from current month
-      @income_events = current_user.income_events
-        .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
-        .where(
-          "((month_year = ? AND apply_to_next_month = false) OR (month_year = ? AND apply_to_next_month = true)) AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
-          month_year, current_month_str
-        )
-        .order(:received_on)
-    end
+    @income_events = current_user.income_events
+      .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
+      .where(
+        "month_year = ? AND apply_to_next_month = false AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
+        month_year
+      )
+      .order(:received_on)
     
     # Calculate totals for the viewing month
     @total_expected = @budget&.expected_income || 0
     @total_actual = @budget&.total_actual_income || 0
+    @carryover = @budget&.carryover_from_previous_month || 0.0
+    @available_income = @budget&.available_income || 0.0
     
     # Month navigation helpers
     @current_month = current_month_str
@@ -88,15 +76,14 @@ class IncomeEventsController < ApplicationController
   end
 
   def edit
-    @income_templates = current_user.income_templates.active.order(:name)
-    @income_data = @income_templates.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
+    # Template selection removed - income events keep their original template association (or remain custom)
   end
 
   def create
     @income_event = current_user.income_events.new(income_event_params)
     # Ensure income_template_id is nil for one-off events
     @income_event.income_template_id = nil
-    # One-off income always counts in the month received (not deferred)
+    # Defer functionality removed - use automatic carryover instead
     @income_event.apply_to_next_month = false
     
     # Set month_year from received_on
@@ -110,8 +97,6 @@ class IncomeEventsController < ApplicationController
   end
 
   def update
-    @income_templates = current_user.income_templates.active.order(:name)
-    
     # Update month_year if received_on changed
     new_month_year = @income_event.received_on.strftime("%Y-%m")
     if params[:income_event][:received_on].present?
@@ -121,16 +106,8 @@ class IncomeEventsController < ApplicationController
     if @income_event.update(income_event_params.merge(month_year: new_month_year))
       redirect_to income_events_path, notice: "Income updated! #{helpers.number_to_currency(@income_event.actual_amount)}"
     else
-      @income_templates = current_user.income_templates.active.order(:name)
-      @income_data = @income_templates.map { |i| [i.id.to_s, i.estimated_amount.to_f] }.to_h.to_json
       render :edit, status: :unprocessable_entity
     end
-  end
-
-  def toggle_defer
-    @income_event.update(apply_to_next_month: !@income_event.apply_to_next_month)
-    status = @income_event.apply_to_next_month? ? "deferred to next month" : "counts in this month"
-    redirect_to income_events_path, notice: "Income #{status}."
   end
 
   def destroy
@@ -164,12 +141,13 @@ class IncomeEventsController < ApplicationController
   end
 
   def income_event_params
-    # For new one-off events, don't allow income_template_id or apply_to_next_month
-    # For editing existing events (which might be linked to templates), allow it
+    # Defer functionality removed - apply_to_next_month is no longer user-editable
+    # For new one-off events, don't allow income_template_id
+    # For editing existing events, don't allow changing income_template_id (it stays as originally set)
     if action_name == 'create'
       params.require(:income_event).permit(:custom_label, :received_on, :actual_amount, :notes)
     else
-      params.require(:income_event).permit(:income_template_id, :custom_label, :received_on, :actual_amount, :notes, :apply_to_next_month)
+      params.require(:income_event).permit(:custom_label, :received_on, :actual_amount, :notes)
     end
   end
 end
