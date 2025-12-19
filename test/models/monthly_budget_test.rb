@@ -354,15 +354,18 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal(-1000.00, budget.remaining_to_assign.to_f)
   end
 
-  test "unassigned should return remaining_to_assign but never negative" do
+  test "remaining_to_assign should return available income minus total allotted" do
+    # Use a different user to avoid carryover from other tests
+    test_user = User.create!(email: "remaining_test@example.com", password: "password123")
+    
     budget = MonthlyBudget.create!(
-      user: @user_one,
+      user: test_user,
       month_year: "2026-12",
       total_actual_income: 5000.00
     )
     
     template = ExpenseTemplate.create!(
-      user: @user_one,
+      user: test_user,
       name: "Test Template",
       frequency: "monthly",
       default_amount: 100.00
@@ -374,12 +377,16 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       allotted_amount: 2000.00
     )
     
-    assert_equal 3000.00, budget.unassigned.to_f
+    # remaining_to_assign = available_income - total_allotted
+    # available_income = total_actual_income + carryover (0 in this case, no previous month)
+    # So: 5000.00 - 2000.00 = 3000.00
+    assert_equal 3000.00, budget.remaining_to_assign.to_f
     
-    # Test negative case
+    # Test negative case - can be negative (indicates overspending)
+    # Use a month that doesn't have a previous month budget to avoid carryover
     budget2 = MonthlyBudget.create!(
-      user: @user_one,
-      month_year: "2027-01",
+      user: test_user,
+      month_year: "2026-11",  # Before budget, so no carryover
       total_actual_income: 1000.00
     )
     
@@ -389,7 +396,10 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       allotted_amount: 2000.00
     )
     
-    assert_equal 0.0, budget2.unassigned.to_f
+    # remaining_to_assign can be negative (indicates overspending)
+    # available_income = 1000.00 + 0 (no carryover) = 1000.00
+    # remaining_to_assign = 1000.00 - 2000.00 = -1000.00
+    assert_equal -1000.00, budget2.remaining_to_assign.to_f
   end
 
   test "bank_difference should return nil if bank_balance is not set" do
@@ -716,34 +726,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal 1, user.income_events.where(income_template: template, month_year: "2026-02").count
   end
 
-  test "auto_create_income_events should handle last_payment_to_next_month deferral" do
-    user = User.create!(email: "income_defertest@example.com", password: "password123")
-    budget = MonthlyBudget.create!(
-      user: user,
-      month_year: "2026-03",
-      total_actual_income: 5000.00
-    )
-    
-    template = IncomeTemplate.create!(
-      user: user,
-      name: "Bi-weekly Pay",
-      frequency: "bi_weekly",
-      estimated_amount: 2000.00,
-      auto_create: true,
-      due_date: Date.parse("2026-03-01"),
-      last_payment_to_next_month: true
-    )
-    
-    budget.auto_create_income_events
-    
-    # Get the last event for this month
-    events = user.income_events.where(income_template: template, month_year: "2026-03").order(:received_on)
-    last_event = events.last
-    
-    # The last event should have apply_to_next_month set to true
-    assert last_event.present?
-    assert last_event.apply_to_next_month?
-  end
+  # Deferral functionality removed - replaced with automatic carryover
+  # Test removed as last_payment_to_next_month logic no longer exists
 
   # Test expected_income method
   test "expected_income should calculate from template-based events" do
@@ -785,7 +769,10 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert_equal 10000.00, budget.expected_income.to_f
   end
 
-  test "expected_income should include deferred events from previous month" do
+  # Deferral functionality removed - replaced with automatic carryover
+  # expected_income now only counts events in the current month
+  # Deferred events from previous month are handled via carryover, not expected_income
+  test "expected_income should only count events in current month" do
     user = User.create!(email: "deferred_income_test@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -801,7 +788,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       auto_create: false
     )
     
-    # Create an event in previous month that's deferred to this month
+    # Create an event in previous month (deferral no longer used)
     prev_month = "2026-04"
     IncomeEvent.create!(
       user: user,
@@ -809,7 +796,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       received_on: Date.parse("2026-04-30"),
       month_year: prev_month,
       actual_amount: 0,
-      apply_to_next_month: true
+      apply_to_next_month: false
     )
     
     # Create an event in current month
@@ -822,8 +809,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       apply_to_next_month: false
     )
     
-    # Expected income = 2 events × 5000.00 = 10000.00 (1 deferred + 1 current)
-    assert_equal 10000.00, budget.expected_income.to_f
+    # Expected income = 1 event × 5000.00 = 5000.00 (only current month events)
+    assert_equal 5000.00, budget.expected_income.to_f
   end
 
   test "expected_income should include one-off events (no template)" do

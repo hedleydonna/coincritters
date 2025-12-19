@@ -81,6 +81,7 @@ class ExpensesController < ApplicationController
     @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
     @expense = @budget.expenses.new
     @viewing_month = @budget.month_year
+    @return_to = params[:return_to]
   end
 
   def create
@@ -91,9 +92,16 @@ class ExpensesController < ApplicationController
     
     if @expense.save
       # Force a full page reload to ensure the new expense appears
-      redirect_to expenses_path(month: @budget.month_year), notice: "Expense added!", data: { turbo: false }
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path
+                      else
+                        expenses_path(month: @budget.month_year)
+                      end
+      redirect_to redirect_path, notice: "Expense added!", data: { turbo: false }
     else
       @viewing_month = @budget.month_year
+      @return_to = params[:return_to]
       render :new, status: :unprocessable_entity
     end
   end

@@ -2,11 +2,12 @@
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-900 mb-2">Log Income</h1>
     <p class="text-gray-600 mb-4">Record money you received today</p>
-    <%= link_to "← Back to Money Map", expenses_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+    <%= link_to "← Back to #{@return_to == 'money_map' ? 'Money Map' : 'Money In'}", @return_to == 'money_map' ? money_map_path : income_events_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
     <%= form_with model: @income_event, url: income_events_path, class: "space-y-6" do |f| %>
+      <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
       <%= render "form", form: f, income_event: @income_event, 
             label_text: "What is this income for?",
             required: true,
@@ -16,7 +17,7 @@
       <div class="flex gap-4 pt-4">
         <%= f.submit "Log Income", 
               class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors cursor-pointer flex-1" %>
-        <%= link_to "Cancel", expenses_path, 
+        <%= link_to "Cancel", @return_to == 'money_map' ? money_map_path : income_events_path, 
               class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg transition-colors" %>
       </div>
     <% end %>

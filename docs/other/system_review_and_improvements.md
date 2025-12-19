@@ -224,6 +224,7 @@ The current system has several strengths that should be preserved:
 - **Keyboard Shortcuts**: Power user features for desktop/web version
 - **Search/Filter**: Quick search for expenses or income events
 - **Sorting Options**: Sort expenses by amount, date, name, etc.
+- **Pagination for Large Lists**: For users with many items (30+), consider pagination or "Load More" functionality instead of showing all items at once. Current expand/collapse works well for moderate lists, but very large lists may benefit from pagination to improve performance and reduce scrolling.
 
 **Priority**: Medium  
 **Effort**: Medium

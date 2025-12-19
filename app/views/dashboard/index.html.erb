@@ -59,6 +59,19 @@
             </svg>
           </div>
         <% end %>
+        
+        <!-- Money Map Card - Link to unified view -->
+        <%= link_to money_map_path, class: "block bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-md border-2 border-purple-300/60 hover:shadow-lg hover:bg-white transition-all active:scale-98" do %>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Money Map</p>
+              <p class="text-lg font-bold text-gray-900">Complete Overview</p>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        <% end %>
       </div>
     <% end %>
 

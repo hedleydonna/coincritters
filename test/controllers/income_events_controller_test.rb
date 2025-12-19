@@ -135,18 +135,8 @@ class IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2000.00, event.actual_amount.to_f
   end
 
-  # Test toggle_defer action
-  test "should toggle deferral status" do
-    sign_in @user
-    event = income_events(:one)
-    original_status = event.apply_to_next_month
-    
-    patch toggle_defer_income_event_path(event)
-    
-    assert_redirected_to income_events_path
-    event.reload
-    assert_not_equal original_status, event.apply_to_next_month
-  end
+  # Deferral functionality removed - replaced with automatic carryover
+  # Test removed as toggle_defer action no longer exists
 
   # Test destroy action
   test "should delete one-off income event" do

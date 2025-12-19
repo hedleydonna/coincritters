@@ -35,6 +35,8 @@ Rails.application.routes.draw do
         patch :mark_received
       end
     end
+    
+    get "money_map", to: "money_map#index", as: :money_map
   end
 
   get "dashboard", to: "dashboard#index"

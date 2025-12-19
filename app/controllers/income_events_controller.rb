@@ -73,6 +73,7 @@ class IncomeEventsController < ApplicationController
     
     @current_month_str = current_month_str
     @next_month_str = next_month_str
+    @return_to = params[:return_to]
   end
 
   def edit
@@ -90,8 +91,15 @@ class IncomeEventsController < ApplicationController
     @income_event.month_year = @income_event.received_on.strftime("%Y-%m")
     
     if @income_event.save
-      redirect_to income_events_path, notice: "Income logged! #{helpers.number_to_currency(@income_event.actual_amount)} added to your budget."
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path
+                      else
+                        income_events_path
+                      end
+      redirect_to redirect_path, notice: "Income logged! #{helpers.number_to_currency(@income_event.actual_amount)} added to your budget."
     else
+      @return_to = params[:return_to]
       render :new, status: :unprocessable_entity
     end
   end
