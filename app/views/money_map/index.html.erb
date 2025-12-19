@@ -1,4 +1,4 @@
-<div class="fixed inset-0 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 overflow-y-auto px-4" style="top: 0; left: 0; right: 0; bottom: 5rem;">
+<div class="fixed inset-0 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 overflow-y-auto px-4" style="top: 0; left: 0; right: 0; bottom: 5rem;" data-controller="scroll-to-anchor">
 <div class="w-full max-w-4xl mx-auto pt-4 pb-8">
   <!-- Header -->
   <div class="mb-6">
@@ -19,79 +19,130 @@
 
   <!-- Complete Budget Overview -->
   <% if @budget %>
-    <div class="bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl p-4 sm:p-6 mb-6 shadow-sm border-2 border-purple-300">
-      <h2 class="text-xl font-bold text-gray-900 mb-4 text-center">Budget Overview - <%= @month_name %></h2>
+    <div class="bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl p-3 sm:p-6 mb-6 shadow-sm border-2 border-purple-300">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 text-center">Budget Overview - <%= @month_name %></h2>
       
-      <!-- Available Income (with carryover) -->
-      <div class="mb-4 pb-4 border-b-2 border-purple-200">
-        <p class="text-sm text-gray-600 mb-1">Available Income</p>
-        <p class="text-2xl sm:text-3xl font-bold text-gray-900">
-          <%= number_to_currency(@available_income) %>
-          <% if @carryover != 0 %>
-            <% if @carryover > 0 %>
-              <span class="text-sm font-normal text-green-700 ml-2">(includes <%= number_to_currency(@carryover) %> from last month)</span>
-            <% else %>
-              <span class="text-sm font-normal text-red-700 ml-2">(includes <%= number_to_currency(@carryover.abs) %> debt from last month)</span>
-            <% end %>
-          <% end %>
+      <!-- Bottom Line: Money Left This Month -->
+      <% money_left = @available_income - @total_spent %>
+      <div class="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b-2 border-purple-200">
+        <p class="text-xs sm:text-sm text-gray-600 mb-1">Money Left This Month</p>
+        <p class="text-2xl sm:text-4xl font-bold <%= money_left >= 0 ? 'text-green-600' : 'text-red-600' %>">
+          <%= number_to_currency(money_left.abs) %>
         </p>
+        <% if money_left < 0 %>
+          <p class="text-xs sm:text-sm text-red-600 mt-1">You're over budget</p>
+        <% elsif money_left > @available_income * 0.2 %>
+          <p class="text-xs sm:text-sm text-green-600 mt-1">You're on track</p>
+        <% else %>
+          <p class="text-xs sm:text-sm text-orange-600 mt-1">Running low</p>
+        <% end %>
       </div>
 
-      <!-- Income Summary -->
-      <div class="mb-4 pb-4 border-b border-purple-200">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Income Summary</h3>
-        <div class="grid grid-cols-3 gap-2 sm:gap-4">
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Expected</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900"><%= number_to_currency(@expected_income) %></p>
-          </div>
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Received</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900"><%= number_to_currency(@total_income) %></p>
-          </div>
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Still Coming</p>
-            <p class="text-lg sm:text-2xl font-bold <%= (@expected_income - @total_income) > 0 ? 'text-orange-600' : 'text-green-600' %>">
-              <%= number_to_currency(@expected_income - @total_income) %>
-            </p>
-          </div>
-        </div>
+      <!-- Available Income (with carryover) -->
+      <div class="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-purple-200">
+        <p class="text-xs sm:text-sm text-gray-600 mb-1">Available Income</p>
+        <p class="text-xl sm:text-2xl font-bold text-gray-900">
+          <%= number_to_currency(@available_income) %>
+        </p>
+        <% if @carryover != 0 %>
+          <p class="text-xs text-gray-500 mt-1">
+            <% if @carryover > 0 %>
+              <span class="text-green-700">+<%= number_to_currency(@carryover) %> from last month</span>
+            <% else %>
+              <span class="text-red-700"><%= number_to_currency(@carryover.abs) %> debt from last month</span>
+            <% end %>
+          </p>
+        <% end %>
       </div>
 
-      <!-- Spending Summary -->
-      <div class="mb-4 pb-4 border-b border-purple-200">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Spending Summary</h3>
-        <div class="grid grid-cols-3 gap-2 sm:gap-4">
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Allotted</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900"><%= number_to_currency(@total_allotted) %></p>
-          </div>
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Spent</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900"><%= number_to_currency(@total_spent) %></p>
-          </div>
-          <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Remaining</p>
-            <p class="text-lg sm:text-2xl font-bold <%= @remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
-              <%= number_to_currency(@remaining) %>
-            </p>
-          </div>
+      <!-- Money In Summary with Progress Bar -->
+      <% 
+        income_progress = if @expected_income > 0
+          [(@total_income.to_f / @expected_income.to_f * 100).round, 100].min
+        else
+          0
+        end
+        income_color = if income_progress > 80
+          'bg-green-500'
+        elsif income_progress > 50
+          'bg-orange-500'
+        else
+          'bg-yellow-500'
+        end
+        still_coming = @expected_income.to_f - @total_income.to_f
+      %>
+      <div class="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-purple-200">
+        <h3 class="text-sm sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Money In Summary</h3>
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-xs sm:text-sm text-gray-600">Received / Expected</p>
+          <p class="text-xs sm:text-sm font-semibold text-gray-700"><%= income_progress %>% received</p>
         </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 sm:h-4 overflow-hidden mb-2">
+          <div class="<%= income_color %> h-full rounded-full transition-all duration-300" style="width: <%= income_progress %>%"></div>
+        </div>
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs text-gray-700">Received: <span class="font-semibold"><%= number_to_currency(@total_income) %></span></span>
+          <span class="text-xs text-gray-700">Expected: <span class="font-semibold"><%= number_to_currency(@expected_income) %></span></span>
+        </div>
+        <% if still_coming > 0 %>
+          <p class="text-xs text-orange-600 font-medium">Still Coming: <%= number_to_currency(still_coming) %></p>
+        <% elsif still_coming < 0 %>
+          <p class="text-xs text-green-600 font-medium">Over Expected: <%= number_to_currency(still_coming.abs) %></p>
+        <% else %>
+          <p class="text-xs text-green-600 font-medium">All expected income received</p>
+        <% end %>
+      </div>
+
+      <!-- Spending Summary with Progress Bar -->
+      <% 
+        spending_progress = if @total_allotted > 0
+          [(@total_spent.to_f / @total_allotted.to_f * 100).round, 100].min
+        else
+          0
+        end
+        spending_color = if spending_progress > 100
+          'bg-red-500'
+        elsif spending_progress > 90
+          'bg-orange-500'
+        else
+          'bg-green-500'
+        end
+      %>
+      <div class="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-purple-200">
+        <h3 class="text-sm sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Spending Summary</h3>
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-xs sm:text-sm text-gray-600">Spent / Allotted</p>
+          <p class="text-xs sm:text-sm font-semibold text-gray-700"><%= spending_progress %>% used</p>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 sm:h-4 overflow-hidden mb-2">
+          <div class="<%= spending_color %> h-full rounded-full transition-all duration-300" style="width: <%= spending_progress %>%"></div>
+        </div>
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs text-gray-700">Spent: <span class="font-semibold"><%= number_to_currency(@total_spent) %></span></span>
+          <span class="text-xs text-gray-700">Allotted: <span class="font-semibold"><%= number_to_currency(@total_allotted) %></span></span>
+        </div>
+        <% if @remaining > 0 %>
+          <p class="text-xs text-green-600 font-medium">Remaining: <%= number_to_currency(@remaining) %></p>
+        <% elsif @remaining < 0 %>
+          <p class="text-xs text-red-600 font-medium">Over Budget: <%= number_to_currency(@remaining.abs) %></p>
+        <% else %>
+          <p class="text-xs text-gray-600 font-medium">Budget fully used</p>
+        <% end %>
       </div>
 
       <!-- Budget Health -->
       <div>
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Budget Health</h3>
+        <h3 class="text-sm sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Budget Health</h3>
         <div class="grid grid-cols-2 gap-2 sm:gap-4">
           <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Available to Assign</p>
-            <p class="text-lg sm:text-2xl font-bold <%= @remaining_to_assign >= 0 ? 'text-green-600' : 'text-orange-600' %>">
+            <p class="text-[10px] sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Available to Assign</p>
+            <p class="text-sm sm:text-2xl font-bold <%= @remaining_to_assign >= 0 ? 'text-green-600' : 'text-orange-600' %>">
               <%= number_to_currency(@remaining_to_assign) %>
             </p>
           </div>
           <div class="text-center sm:text-left">
-            <p class="text-xs sm:text-sm text-gray-600 mb-1">Status</p>
-            <p class="text-lg sm:text-2xl font-bold <%= @remaining >= 0 && @remaining_to_assign >= 0 ? 'text-green-600' : 'text-orange-600' %>">
+            <p class="text-[10px] sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Status</p>
+            <p class="text-sm sm:text-xl font-bold <%= @remaining >= 0 && @remaining_to_assign >= 0 ? 'text-green-600' : 'text-orange-600' %>">
               <%= @remaining >= 0 && @remaining_to_assign >= 0 ? '✅ On Track' : '⚠️ Review Needed' %>
             </p>
           </div>
@@ -100,41 +151,70 @@
     </div>
 
     <!-- Money In Section -->
-    <div class="mb-6" data-controller="expand" data-expand-type-value="income">
+    <div id="money-in-section" class="mb-6" data-controller="income-view-toggle">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 class="text-2xl font-bold text-gray-900">Money In</h2>
         <div class="flex items-center gap-2 flex-wrap">
-          <%= link_to "Add Custom Income", new_income_event_path(return_to: 'money_map'), 
-                class: "px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
-          <%= link_to "Manage Sources", income_templates_path(return_to: 'money_map'),
-                class: "px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
-          <% if @income_events.count > 5 %>
+          <!-- View Toggle Button -->
+          <% if @income_events.any? %>
             <button type="button" 
-                    data-expand-target="toggle"
-                    data-action="click->expand#toggle"
-                    class="px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 font-medium rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
-              View All Sources
+                    data-action="click->income-view-toggle#toggle"
+                    class="px-3 py-2 text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center">
+              <span data-income-view-toggle-target="toggleText">Group by Status</span>
             </button>
           <% end %>
+          
+          <%= link_to "Create Source", new_income_event_path(return_to: 'money_map'), 
+                class: "px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
         </div>
       </div>
       <% if @income_events.any? %>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div class="space-y-3">
-            <% @income_events.each_with_index do |event, index| %>
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 <%= 'hidden' if index >= 5 %>" 
-                   data-expand-target="item"
-                   data-expand-index="<%= index %>">
-                <div class="flex-1">
-                  <p class="font-medium text-gray-900"><%= event.display_name %></p>
-                  <p class="text-sm text-gray-500"><%= event.received_on.strftime("%B %d") %></p>
+          <!-- Group by Date View (default) -->
+          <div data-income-view-toggle-target="dateView">
+            <% grouped_events = @income_events.group_by { |e| e.received_on } %>
+            <% grouped_events.each do |date, events| %>
+              <div class="mb-3 last:mb-0">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2 px-3 py-1.5 bg-gray-100 rounded-md">
+                  <%= date.strftime("%B %d, %Y") %>
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% events.each do |event| %>
+                    <%= render partial: "money_map/income_event_item", locals: { event: event } %>
+                  <% end %>
                 </div>
-                <div class="text-right">
-                  <p class="font-semibold <%= event.actual_amount > 0 ? 'text-gray-900' : 'text-gray-400' %>">
-                    <%= number_to_currency(event.actual_amount) %>
-                  </p>
-                  <% if event.actual_amount == 0 && event.income_template %>
-                    <p class="text-xs text-gray-400">Expected: <%= number_to_currency(event.income_template.estimated_amount) %></p>
+              </div>
+            <% end %>
+          </div>
+          
+          <!-- Group by Status View -->
+          <div data-income-view-toggle-target="statusView" class="hidden">
+            <% received_events = @income_events.select { |e| e.actual_amount > 0 } %>
+            <% expected_events = @income_events.select { |e| e.actual_amount == 0 } %>
+            
+            <!-- Received Section -->
+            <% if received_events.any? %>
+              <div class="mb-4">
+                <h3 class="text-sm font-semibold text-green-700 mb-2 px-3 py-1.5 bg-green-50 rounded-md">
+                  Received
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% received_events.sort_by { |e| [e.received_on, e.display_name] }.each do |event| %>
+                    <%= render partial: "money_map/income_event_item", locals: { event: event } %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            
+            <!-- Expected Section -->
+            <% if expected_events.any? %>
+              <div class="mb-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2 px-3 py-1.5 bg-gray-100 rounded-md">
+                  Expected
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% expected_events.sort_by { |e| [e.received_on, e.display_name] }.each do |event| %>
+                    <%= render partial: "money_map/income_event_item", locals: { event: event } %>
                   <% end %>
                 </div>
               </div>
@@ -149,41 +229,149 @@
     </div>
 
     <!-- Spending Section -->
-    <div class="mb-6" data-controller="expand" data-expand-type-value="expense">
+    <div id="spending-section" class="mb-6" data-controller="expense-view-toggle">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 class="text-2xl font-bold text-gray-900">Spending</h2>
         <div class="flex items-center gap-2 flex-wrap">
-          <%= link_to "Add Custom Expense", new_expense_path(return_to: 'money_map'), 
-                class: "px-3 py-2 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
-          <%= link_to "Manage Spending", expense_templates_path(return_to: 'money_map'),
-                class: "px-3 py-2 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
-          <% if @expenses.count > 5 %>
+          <!-- View Toggle Button -->
+          <% if @expenses.any? %>
             <button type="button" 
-                    data-expand-target="toggle"
-                    data-action="click->expand#toggle"
-                    class="px-3 py-2 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 font-medium rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
-              View All Spending
+                    data-action="click->expense-view-toggle#toggle"
+                    class="px-3 py-2 text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center">
+              <span data-expense-view-toggle-target="toggleText">Group by Status</span>
             </button>
           <% end %>
+          
+          <%= link_to "Create Spending", new_expense_path(return_to: 'money_map'), 
+                class: "px-3 py-2 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center" %>
         </div>
       </div>
       <% if @expenses.any? %>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div class="space-y-3">
-            <% @expenses.each_with_index do |expense, index| %>
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 <%= 'hidden' if index >= 5 %>" 
-                   data-expand-target="item"
-                   data-expand-index="<%= index %>">
-                <div class="flex-1">
-                  <p class="font-medium text-gray-900"><%= expense.display_name %></p>
-                  <p class="text-sm text-gray-500">
-                    <%= number_to_currency(expense.spent_amount) %> of <%= number_to_currency(expense.allotted_amount) %>
-                  </p>
+          <!-- Group by Date View (default) -->
+          <div data-expense-view-toggle-target="dateView">
+            <%# Group expenses by expected_on (for recurring) or created_at date for one-offs %>
+            <% grouped_expenses = @expenses.group_by { |e| e.expected_on || e.expense_template&.due_date || e.created_at.to_date } %>
+            <%# Sort groups by date %>
+            <% sorted_groups = grouped_expenses.sort_by { |date, _| date } %>
+            <% sorted_groups.each do |date, expenses| %>
+              <div class="mb-3 last:mb-0">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2 px-3 py-1.5 bg-gray-100 rounded-md">
+                  <%= date.strftime("%B %d, %Y") %>
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% expenses.each do |expense| %>
+                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                          class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900"><%= expense.display_name %></p>
+                        <% if expense.expense_template && expense.allotted_amount > 0 %>
+                          <div class="flex flex-col sm:flex-row sm:gap-2 mt-1">
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Allotted:</span> <%= number_to_currency(expense.allotted_amount) %>
+                            </p>
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Spent:</span> <%= number_to_currency(expense.spent_amount) %>
+                            </p>
+                          </div>
+                        <% end %>
+                      </div>
+                      <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="text-right">
+                          <p class="font-semibold <%= expense.remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                            <%= number_to_currency(expense.remaining.abs) %> <%= expense.remaining >= 0 ? 'left' : 'over' %>
+                          </p>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    <% end %>
+                  <% end %>
                 </div>
-                <div class="text-right">
-                  <p class="font-semibold <%= expense.remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
-                    <%= number_to_currency(expense.remaining.abs) %> <%= expense.remaining >= 0 ? 'left' : 'over' %>
-                  </p>
+              </div>
+            <% end %>
+          </div>
+          
+          <!-- Group by Status View -->
+          <div data-expense-view-toggle-target="statusView" class="hidden">
+            <% paid_expenses = @expenses.select { |e| e.spent_amount >= e.allotted_amount && e.allotted_amount > 0 } %>
+            <% unpaid_expenses = @expenses.select { |e| e.spent_amount < e.allotted_amount || e.allotted_amount == 0 } %>
+            
+            <!-- Paid Section -->
+            <% if paid_expenses.any? %>
+              <div class="mb-4">
+                <h3 class="text-sm font-semibold text-green-700 mb-2 px-3 py-1.5 bg-green-50 rounded-md">
+                  Paid
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% paid_expenses.sort_by { |e| [e.expected_on || e.expense_template&.due_date || e.created_at.to_date, e.display_name] }.each do |expense| %>
+                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                          class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900"><%= expense.display_name %></p>
+                        <% if expense.expense_template && expense.allotted_amount > 0 %>
+                          <div class="flex flex-col sm:flex-row sm:gap-2 mt-1">
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Allotted:</span> <%= number_to_currency(expense.allotted_amount) %>
+                            </p>
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Spent:</span> <%= number_to_currency(expense.spent_amount) %>
+                            </p>
+                          </div>
+                        <% end %>
+                      </div>
+                      <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="text-right">
+                          <p class="font-semibold text-green-600">
+                            <%= number_to_currency(expense.remaining.abs) %> <%= expense.remaining >= 0 ? 'left' : 'over' %>
+                          </p>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            
+            <!-- Unpaid/Remaining Section -->
+            <% if unpaid_expenses.any? %>
+              <div class="mb-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2 px-3 py-1.5 bg-gray-100 rounded-md">
+                  Remaining
+                </h3>
+                <div class="space-y-1 ml-4">
+                  <% unpaid_expenses.sort_by { |e| [e.expected_on || e.expense_template&.due_date || e.created_at.to_date, e.display_name] }.each do |expense| %>
+                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                          class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900"><%= expense.display_name %></p>
+                        <% if expense.expense_template && expense.allotted_amount > 0 %>
+                          <div class="flex flex-col sm:flex-row sm:gap-2 mt-1">
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Allotted:</span> <%= number_to_currency(expense.allotted_amount) %>
+                            </p>
+                            <p class="text-xs sm:text-sm text-gray-500">
+                              <span class="font-medium">Spent:</span> <%= number_to_currency(expense.spent_amount) %>
+                            </p>
+                          </div>
+                        <% end %>
+                      </div>
+                      <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="text-right">
+                          <p class="font-semibold <%= expense.remaining >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                            <%= number_to_currency(expense.remaining.abs) %> <%= expense.remaining >= 0 ? 'left' : 'over' %>
+                          </p>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    <% end %>
+                  <% end %>
                 </div>
               </div>
             <% end %>

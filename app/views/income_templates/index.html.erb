@@ -1,11 +1,19 @@
 <div class="w-full max-w-4xl mx-auto">
-  <div class="flex justify-between items-center mb-6">
+  <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
     <div class="flex items-center gap-3">
       <% case @return_to %>
       <% when 'income_events' %>
         <%= link_to income_events_path,
               class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
               title: "Back to Money In" do %>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        <% end %>
+      <% when 'money_map' %>
+        <%= link_to money_map_path,
+              class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
+              title: "Back to Money Map" do %>
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -20,22 +28,35 @@
         <% end %>
       <% end %>
       <h1 class="text-3xl font-bold text-gray-900">Manage Income Sources</h1>
-    </div>
-    <%= link_to "Add New Income Source", new_income_template_path(return_to: @return_to),
-          class: "bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium",
-          title: "Add a new income source" %>
+  </div>
+    <%= link_to "Add New Income Source", new_income_event_path(return_to: @return_to),
+          class: "bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium min-h-[44px] inline-flex items-center justify-center",
+          title: "Add a new income source or one-off income" %>
   </div>
 
   <p class="text-gray-600 mb-6">
-    Add income sources to track your regular monthly income. The system will automatically create income events each month based on frequency and due dates, so you only need to set this up once.
+    Manage your recurring income sources. Click any item to edit it.
   </p>
 
+  <!-- Templates Section -->
+  <div class="mb-8">
   <% if @income_templates.any? %>
     <div class="space-y-4">
       <% @income_templates.each do |income| %>
-        <div class="bg-white shadow rounded-lg p-6 flex justify-between items-center hover:shadow-md transition-shadow">
+          <% link_path = edit_income_template_path(income, return_to: @return_to.presence) %>
+          <%= link_to link_path,
+                class: "block bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer #{!income.auto_create? ? 'opacity-75' : ''}",
+                data: { turbo: true } do %>
+            <div class="flex justify-between items-center">
           <div class="flex-1">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2"><%= income.name %></h3>
+                <div class="flex items-center gap-2 mb-2">
+                  <h3 class="text-lg font-semibold text-gray-900"><%= income.name %></h3>
+                  <% unless income.auto_create? %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      Auto-create disabled
+                    </span>
+                  <% end %>
+                </div>
             <div class="flex flex-wrap gap-3 text-sm text-gray-600">
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 <%= income.frequency.humanize %>
@@ -50,39 +71,27 @@
                   Due: <%= income.due_date.strftime("%B %d") %>
                 </span>
               <% end %>
-              <span class="text-gray-600">
-                <%= income.auto_create? ? "✓ Auto-create events" : "Manual only" %>
+                  <% if income.auto_create? %>
+                    <span class="text-green-600">
+                      ✓ Auto-create events
               </span>
-            </div>
-          </div>
-          <div class="flex gap-3 ml-4">
-            <%= link_to edit_income_template_path(income, return_to: @return_to), 
-                  class: "bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                  title: "Edit this money in source" do %>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            <% end %>
-            <%= button_to income_template_path(income, return_to: @return_to), method: :delete,
-                  data: { turbo_confirm: "WARNING: Deleting this money in source may result in loss of historical data and could be difficult to recover. This will stop it from creating events in new months. Are you really sure you want to do this?" },
-                  class: "bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
-                  title: "Delete this money in source" do %>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            <% end %>
-          </div>
-        </div>
       <% end %>
     </div>
-  <% else %>
-    <div class="bg-white shadow rounded-lg p-12 text-center">
-      <p class="text-gray-500 text-lg mb-4">No money in sources yet.</p>
-      <p class="text-gray-400 mb-6">Create your first money in source to start tracking expected income!</p>
-      <%= link_to "Add your first income source", new_income_template_path(return_to: @return_to),
-            class: "bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium inline-block",
-            title: "Create your first income source" %>
+    </div>
+              <div class="ml-4">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-white shadow rounded-lg p-8 text-center">
+        <p class="text-gray-500">No templates yet.</p>
     </div>
   <% end %>
+  </div>
 </div>
 

@@ -5,6 +5,13 @@ class MoneyMapController < ApplicationController
     # Ensure current month budget exists (creates if missing)
     @budget = current_user.current_budget!
     
+    # Auto-create income events and expenses for current month
+    @budget.auto_create_income_events
+    @budget.auto_create_expenses
+    
+    # Auto-fill actual_amount for events where due date has passed
+    auto_fill_due_income_events
+    
     # Calculate all stats
     @total_income = @budget.total_actual_income.to_f
     @available_income = @budget.available_income.to_f
@@ -25,11 +32,12 @@ class MoneyMapController < ApplicationController
       )
       .order(:received_on)
     
-    # Get expenses for current month
+    # Get expenses for current month, include template for due_date
     @expenses = @budget.expenses
       .left_joins(:expense_template)
       .where("expense_templates.deleted_at IS NULL OR expense_templates.id IS NULL")
-      .order(:name)
+      .includes(:expense_template)
+      .order("expenses.expected_on NULLS LAST, expense_templates.due_date NULLS LAST, expenses.name")
     
     # Month info
     @viewing_month = current_month_str
@@ -48,6 +56,26 @@ class MoneyMapController < ApplicationController
     @remaining_to_assign = 0
     @income_events = []
     @expenses = []
+  end
+
+  private
+
+  def auto_fill_due_income_events
+    # Find events where received_on <= today, actual_amount is 0, and there's an estimated_amount
+    current_month_str = Time.current.strftime("%Y-%m")
+    due_events = current_user.income_events
+      .joins("LEFT JOIN income_templates ON income_events.income_template_id = income_templates.id")
+      .where(
+        "month_year = ? AND received_on <= ? AND actual_amount = 0 AND income_templates.estimated_amount > 0 AND (income_templates.deleted_at IS NULL OR income_templates.id IS NULL)",
+        current_month_str,
+        Date.today
+      )
+    
+    due_events.find_each do |event|
+      if event.income_template && event.income_template.estimated_amount > 0
+        event.update_column(:actual_amount, event.income_template.estimated_amount)
+      end
+    end
   end
 end
 

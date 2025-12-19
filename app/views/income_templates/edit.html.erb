@@ -1,17 +1,42 @@
-<div class="w-full max-w-4xl mx-auto">
+<div class="w-full max-w-4xl mx-auto pb-8">
   <div class="mb-6">
     <div class="flex items-center gap-3 mb-2">
-      <%= link_to income_templates_path(return_to: @return_to),
+      <%= link_to @return_to == 'money_map' ? "#{money_map_path}?scroll_to=money-in-section" : income_templates_path(return_to: @return_to),
             class: "inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
             title: "Cancel" do %>
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
       <% end %>
-      <h1 class="text-3xl font-bold text-gray-900">Edit Income Source</h1>
+      <h1 class="text-3xl font-bold text-gray-900">Edit <%= @income_template.name %></h1>
     </div>
     <p class="text-gray-600 mt-2">Update your money in source settings</p>
   </div>
+  
+  <%# Auto-create toggle button - outside the form to avoid nested form issues %>
+  <% unless @income_template.new_record? %>
+    <div class="mb-6 bg-white shadow rounded-lg p-6 max-w-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-700 mb-1">
+            Auto-Create Events
+          </p>
+          <p class="text-sm text-gray-500">
+            <% if @income_template.auto_create? %>
+              Events are automatically created each month based on frequency and due date.
+            <% else %>
+              Events are not automatically created. You'll need to add them manually.
+            <% end %>
+          </p>
+        </div>
+        <%= button_to @income_template.auto_create? ? "Disable Auto-Create" : "Enable Auto-Create",
+              toggle_auto_create_income_template_path(@income_template, return_to: @return_to),
+              method: :patch,
+              class: "px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center justify-center #{@income_template.auto_create? ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}" %>
+      </div>
+    </div>
+  <% end %>
+  
   <%= render "form" %>
 </div>
 

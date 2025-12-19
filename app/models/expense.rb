@@ -12,28 +12,14 @@ class Expense < ApplicationRecord
   validates :allotted_amount,
             numericality: { greater_than_or_equal_to: 0 }
 
-  # Require name when no template is provided (one-off expenses)
-  validates :name,
-            presence: true,
-            if: -> { expense_template_id.nil? }
+  # Name is always required (copied from template when created, or entered for one-offs)
+  validates :name, presence: true
 
-  # Require template when name is not provided (unless it's a one-off)
-  validates :expense_template_id,
-            presence: true,
-            unless: -> { read_attribute(:name).present? }
+  # Allow multiple expenses per template per month (needed for weekly/bi-weekly expenses)
+  # Previously we only allowed one expense per template, but now we need multiple for recurring expenses
+  # with frequencies like weekly or bi-weekly
 
-  # Ensure only one expense per template per month (unless using name override or one-off)
-  # If name is overridden or it's a one-off, we allow multiple expenses
-  validates :expense_template_id,
-            uniqueness: { scope: :monthly_budget_id, 
-                         message: "already has an expense for this template in this budget",
-                         allow_nil: true },
-            unless: -> { read_attribute(:name).present? || expense_template_id.nil? }
-
-  # If using name (either override or one-off), ensure unique name per budget
-  validates :name,
-            uniqueness: { scope: :monthly_budget_id, allow_nil: true },
-            if: -> { read_attribute(:name).present? }
+  # Allow multiple expenses with the same name (removed uniqueness constraint)
 
   # ------------------------------------------------------------------
   # Scopes
@@ -90,10 +76,10 @@ class Expense < ApplicationRecord
   end
 
   # ------------------------------------------------------------------
-  # Name override - use override if present, fallback to template
+  # Name - stored directly on expense (copied from template when created)
   # ------------------------------------------------------------------
   def name
-    read_attribute(:name).presence || expense_template&.name || "Unnamed Expense"
+    read_attribute(:name).presence || "Unnamed Expense"
   end
 
   def display_name
@@ -108,7 +94,8 @@ class Expense < ApplicationRecord
   end
 
   def due_date
-    expense_template&.due_date
+    # Use expected_on if set (for weekly/bi-weekly expenses), otherwise use template's due_date
+    read_attribute(:expected_on) || expense_template&.due_date
   end
 
   def frequency_text

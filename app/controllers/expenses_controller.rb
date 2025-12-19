@@ -1,7 +1,7 @@
 # app/controllers/expenses_controller.rb
 class ExpensesController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_expense, only: [:mark_paid, :edit, :update, :destroy]
+  before_action :set_expense, only: [:mark_paid, :edit, :update, :destroy, :add_payment]
 
   def index
     # Auto-create current and next month if they don't exist
@@ -85,41 +85,146 @@ class ExpensesController < ApplicationController
   end
 
   def create
-    # Get month from params - check both expense hash and top-level month param
-    month_year = params.dig(:expense, :month_year) || params[:month] || Time.current.strftime("%Y-%m")
+    # Check if user wants to create a recurring template (frequency is not "just_once")
+    if params[:frequency].present? && params[:frequency] != "just_once"
+      # Normalize frequency value (bi_weekly -> biweekly)
+      normalized_frequency = params[:frequency]
+      normalized_frequency = "biweekly" if normalized_frequency == "bi_weekly"
+      
+      # Create template and expense
+      @expense_template = current_user.expense_templates.new(
+        name: params[:expense][:name],
+        frequency: normalized_frequency,
+        due_date: params[:due_date],
+        default_amount: params[:default_amount].present? ? params[:default_amount] : 0,
+        auto_create: true  # Always true when creating through this form
+      )
+      
+      if @expense_template.save
+        # Auto-create all expenses for the current month based on frequency
+        month_year = params[:month] || Time.current.strftime("%Y-%m")
+        @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
+        
+        # Get all due dates for this month based on frequency and due_date
+        event_dates = @expense_template.events_for_month(month_year)
+        
+        # For current month, only create expenses from today forward
+        # For future months, create all expenses
+        current_month_str = Time.current.strftime("%Y-%m")
+        if month_year == current_month_str
+          event_dates = event_dates.select { |date| date >= Date.today }
+        end
+        
+        # Count how many expenses we currently have for this template
+        current_count = @budget.expenses.where(expense_template_id: @expense_template.id).count
+        expected_count = event_dates.count
+        
+        # Create expenses until we have the expected number
+        # Each expense gets its own expected_on date from the event_dates array
+        event_dates.each_with_index do |expected_date, index|
+          # Skip if we've already created enough expenses
+          next if current_count >= expected_count
+          
+          @budget.expenses.create!(
+            expense_template: @expense_template,
+            name: @expense_template.name,  # Copy template name to expense
+            allotted_amount: @expense_template.default_amount || 0,
+            expected_on: expected_date
+          )
+          current_count += 1
+        end
+        
+        # Count how many expenses were created
+        created_count = @budget.expenses.where(expense_template_id: @expense_template.id).count
+        
+        redirect_path = case params[:return_to]
+                        when 'money_map'
+                          money_map_path(scroll_to: 'spending-section')
+                        else
+                          expenses_path(month: @budget.month_year)
+                        end
+        
+        if created_count > 1
+          redirect_to redirect_path, notice: "Recurring spending template created! #{created_count} expense#{'s' if created_count != 1} added to your budget for this month. Expenses will be automatically created each month.", status: :see_other
+        else
+          redirect_to redirect_path, notice: "Recurring spending template created! Expense added to your budget. Expenses will be automatically created each month.", status: :see_other
+        end
+      else
+        # Template validation failed
+        month_year = params[:month] || Time.current.strftime("%Y-%m")
+        @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
+        @expense = @budget.expenses.new(expense_params)
+        @expense.errors.add(:base, "Template creation failed")
+        @expense_template.errors.full_messages.each do |message|
+          @expense.errors.add(:base, message)
+        end
+        @viewing_month = @budget.month_year
+        @return_to = params[:return_to]
+        # Preserve params for form re-render
+        @preserved_params = {
+          frequency: params[:frequency],
+          due_date: params[:due_date],
+          default_amount: params[:default_amount]
+        }
+        render :new, status: :unprocessable_entity
+      end
+    else
+      # Create one-off expense only
+      month_year = params[:month] || Time.current.strftime("%Y-%m")
+      @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
+      @expense = @budget.expenses.new(expense_params)
+      # Ensure expense_template_id is nil for one-off expenses
+      @expense.expense_template_id = nil
+      
+      if @expense.save
+        redirect_path = case params[:return_to]
+                        when 'money_map'
+                          money_map_path(scroll_to: 'spending-section')
+                        else
+                          expenses_path(month: @budget.month_year)
+                        end
+        redirect_to redirect_path, notice: "Expense added!", status: :see_other
+      else
+        @viewing_month = @budget.month_year
+        @return_to = params[:return_to]
+        render :new, status: :unprocessable_entity
+      end
+    end
+  rescue => e
+    # Handle any unexpected errors
+    Rails.logger.error "Expense creation error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    month_year = params[:month] || Time.current.strftime("%Y-%m")
     @budget = current_user.monthly_budgets.find_by(month_year: month_year) || current_user.current_budget!
     @expense = @budget.expenses.new(expense_params)
-    
-    if @expense.save
-      # Force a full page reload to ensure the new expense appears
-      redirect_path = case params[:return_to]
-                      when 'money_map'
-                        money_map_path
-                      else
-                        expenses_path(month: @budget.month_year)
-                      end
-      redirect_to redirect_path, notice: "Expense added!", data: { turbo: false }
-    else
-      @viewing_month = @budget.month_year
-      @return_to = params[:return_to]
-      render :new, status: :unprocessable_entity
-    end
+    @expense.errors.add(:base, "An error occurred: #{e.message}")
+    @viewing_month = @budget.month_year
+    @return_to = params[:return_to]
+    render :new, status: :unprocessable_entity
   end
 
   def edit
     @budget = @expense.monthly_budget
     @expense_templates = current_user.expense_templates.active.order(:name)
     @viewing_month = @budget.month_year
+    @return_to = params[:return_to]
   end
 
   def update
     @budget = @expense.monthly_budget
     
     if @expense.update(expense_params)
-      redirect_to expenses_path(month: @budget.month_year), notice: "Expense updated!"
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path(scroll_to: 'spending-section')
+                      else
+                        expenses_path(month: @budget.month_year)
+                      end
+      redirect_to redirect_path, notice: "Expense updated!", status: :see_other
     else
       @expense_templates = current_user.expense_templates.active.order(:name)
       @viewing_month = @budget.month_year
+      @return_to = params[:return_to]
       render :edit, status: :unprocessable_entity
     end
   end
@@ -241,6 +346,70 @@ class ExpensesController < ApplicationController
     @expense.destroy
     redirect_to expenses_path(month: month_year), 
                 notice: "Expense deleted."
+  end
+
+  def add_payment
+    @budget = @expense.monthly_budget
+    current_month = Time.current.strftime("%Y-%m")
+    
+    # Only allow payments for current month
+    if @budget.month_year != current_month
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path(scroll_to: 'spending-section')
+                      else
+                        edit_expense_path(@expense, return_to: params[:return_to])
+                      end
+      redirect_to redirect_path, 
+                  alert: "Payments can only be added to the current month.",
+                  status: :see_other
+      return
+    end
+    
+    amount = params[:amount].to_f
+    spent_on = params[:spent_on].present? ? Date.parse(params[:spent_on]) : Date.today
+    notes = params[:notes]
+    
+    if amount <= 0
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path(scroll_to: 'spending-section')
+                      else
+                        edit_expense_path(@expense, return_to: params[:return_to])
+                      end
+      redirect_to redirect_path, 
+                  alert: "Payment amount must be greater than 0.",
+                  status: :see_other
+      return
+    end
+    
+    payment = @expense.payments.build(
+      amount: amount,
+      spent_on: spent_on,
+      notes: notes
+    )
+    
+    if payment.save
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path(scroll_to: 'spending-section')
+                      else
+                        edit_expense_path(@expense, return_to: params[:return_to])
+                      end
+      redirect_to redirect_path, 
+                  notice: "Payment of #{helpers.number_to_currency(amount)} added!",
+                  status: :see_other
+    else
+      redirect_path = case params[:return_to]
+                      when 'money_map'
+                        money_map_path(scroll_to: 'spending-section')
+                      else
+                        edit_expense_path(@expense, return_to: params[:return_to])
+                      end
+      redirect_to redirect_path, 
+                  alert: "Error adding payment: #{payment.errors.full_messages.join(', ')}",
+                  status: :see_other
+    end
   end
 
   private

@@ -97,13 +97,48 @@ class MonthlyBudget < ApplicationRecord
   # ------------------------------------------------------------------
   def auto_create_expenses
     user.expense_templates.active.auto_create.find_each do |template|
-      # Skip if expense for this template already exists in this budget
-      next if expenses.exists?(expense_template_id: template.id)
-
-      expenses.create!(
-        expense_template: template,
-        allotted_amount: template.default_amount || 0
-      )
+      begin
+        # Get all due dates for this month based on frequency and due_date
+        event_dates = template.events_for_month(month_year)
+        
+        # Skip if no events for this month
+        next if event_dates.empty?
+        
+        # For current month, only create expenses from today forward
+        # For future months, create all expenses
+        current_month_str = Time.current.strftime("%Y-%m")
+        if month_year == current_month_str
+          event_dates = event_dates.select { |date| date >= Date.today }
+        end
+        
+        # Count how many expenses we currently have for this template in this month
+        current_count = expenses.where(expense_template_id: template.id).count
+        expected_count = event_dates.count
+        
+        # Debug logging
+        Rails.logger.debug "Auto-creating expenses for template #{template.id} (#{template.name}): current=#{current_count}, expected=#{expected_count}, dates=#{event_dates.inspect}"
+        
+        # Create expenses until we have the expected number
+        # Each expense gets its own expected_on date from the event_dates array
+        event_dates.each_with_index do |expected_date, index|
+          # Skip if we've already created enough expenses
+          next if current_count >= expected_count
+          
+          expense = expenses.create!(
+            expense_template: template,
+            name: template.name,  # Copy template name to expense
+            allotted_amount: template.default_amount || 0,
+            expected_on: expected_date
+          )
+          Rails.logger.debug "Created expense #{expense.id} for template #{template.id} with expected_on #{expected_date}"
+          current_count += 1
+        end
+      rescue => e
+        Rails.logger.error "Error auto-creating expenses for template #{template.id}: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
+        # Continue with next template
+        next
+      end
     end
   end
 

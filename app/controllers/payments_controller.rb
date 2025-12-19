@@ -57,6 +57,30 @@ class PaymentsController < ApplicationController
     end
   end
 
+  def destroy
+    @payment = Payment.find(params[:id])
+    expense = @payment.expense
+    
+    # Ensure the payment belongs to the user
+    unless expense.user == current_user
+      redirect_to expenses_path, alert: "Payment not found."
+      return
+    end
+    
+    # Get return_to parameter for redirect
+    return_to = params[:return_to]
+    expense_id = expense.id
+    
+    @payment.destroy
+    
+    # Redirect back to expense edit page if return_to is provided, otherwise to expenses index
+    if return_to.present?
+      redirect_to edit_expense_path(expense, return_to: return_to), notice: "Payment deleted.", status: :see_other
+    else
+      redirect_to expenses_path(month: expense.monthly_budget.month_year), notice: "Payment deleted.", status: :see_other
+    end
+  end
+
   private
 
   def payment_params

@@ -1,0 +1,77 @@
+<%# Partial for rendering an income event item %>
+<%# Parameters: event %>
+<% if event.actual_amount == 0 && event.income_template && event.income_template.estimated_amount > 0 %>
+  <div class="relative overflow-hidden" 
+       data-controller="swipe"
+       data-action="touchstart->swipe#touchStart touchmove->swipe#touchMove touchend->swipe#touchEnd">
+    <div data-swipe-target="content" 
+         class="flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer hover:bg-gray-50 min-h-[60px] sm:min-h-0">
+      <%= link_to edit_income_event_path(event, return_to: 'money_map'),
+            class: "flex items-center justify-between flex-1",
+            data: { "swipe-edit-link-target": "" } do %>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-900"><%= event.display_name %></p>
+          <% if event.income_template %>
+            <div class="flex flex-col sm:flex-row sm:gap-2 mt-1">
+              <p class="text-xs sm:text-sm text-gray-500">
+                <span class="font-medium">Expected:</span> <%= number_to_currency(event.income_template.estimated_amount) %>
+              </p>
+              <p class="text-xs sm:text-sm text-gray-500">
+                <span class="font-medium">Received:</span> <%= number_to_currency(event.actual_amount) %>
+              </p>
+            </div>
+          <% end %>
+        </div>
+        <svg class="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      <% end %>
+    </div>
+    
+    <!-- Hidden action buttons (revealed on swipe right) -->
+    <div data-swipe-target="actions" 
+         class="hidden absolute right-0 top-0 h-full flex items-center pr-4 bg-green-600 rounded-r-lg">
+      <%= form_with url: mark_received_income_event_path(event, return_to: 'money_map'), method: :patch,
+            data: { turbo: true },
+            class: "h-full flex items-center" do |f| %>
+        <button type="submit" 
+                class="bg-white text-green-600 p-3 rounded-lg min-h-[44px] min-w-[44px] shadow-lg inline-flex items-center justify-center"
+                title="Mark as received"
+                data: { action: "click->swipe#handleButtonClick" }>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+      <% end %>
+    </div>
+  </div>
+<% else %>
+  <%# Regular clickable item (received or one-off) %>
+  <%= link_to edit_income_event_path(event, return_to: 'money_map'),
+        class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{event.income_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
+    <div class="flex-1 min-w-0">
+      <p class="font-medium text-gray-900"><%= event.display_name %></p>
+      <% if event.income_template && event.income_template.estimated_amount > 0 %>
+        <div class="flex flex-col sm:flex-row sm:gap-2 mt-1">
+          <p class="text-xs sm:text-sm text-gray-500">
+            <span class="font-medium">Expected:</span> <%= number_to_currency(event.income_template.estimated_amount) %>
+          </p>
+          <p class="text-xs sm:text-sm text-gray-500">
+            <span class="font-medium">Received:</span> <%= number_to_currency(event.actual_amount) %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <div class="text-right">
+        <p class="font-semibold <%= event.actual_amount > 0 ? 'text-gray-900' : 'text-gray-400' %>">
+          <%= number_to_currency(event.actual_amount) %>
+        </p>
+      </div>
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
+  <% end %>
+<% end %>
+

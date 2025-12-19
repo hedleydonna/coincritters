@@ -8,6 +8,26 @@ export default class extends Controller {
     this.expanded = false
     // Store the original button text based on section type
     this.viewAllText = this.typeValue === "income" ? "View All Sources" : "View All Spending"
+    // Update date group containers on initial load
+    this.updateGroupContainers()
+  }
+  
+  updateGroupContainers() {
+    // Show/hide date group containers based on whether they have any visible items
+    const groupContainers = this.element.querySelectorAll('[data-expand-group]')
+    groupContainers.forEach(container => {
+      const itemsInGroup = container.querySelectorAll('[data-expand-target="item"]')
+      // Check if any item in this group is visible
+      const hasVisibleItems = Array.from(itemsInGroup).some(item => {
+        return !item.classList.contains("hidden")
+      })
+      
+      if (hasVisibleItems) {
+        container.classList.remove("hidden")
+      } else {
+        container.classList.add("hidden")
+      }
+    })
   }
 
   toggle() {
@@ -23,6 +43,9 @@ export default class extends Controller {
         }
       }
     })
+    
+    // Update date group containers based on visible items
+    this.updateGroupContainers()
     
     // Update button text
     if (this.hasToggleTarget) {

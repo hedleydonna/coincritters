@@ -1,27 +1,31 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["content", "actions"]
-  static values = {
-    actionUrl: String,
-    actionMethod: { type: String, default: "post" }
-  }
+  static targets = ["content", "actions", "editLink"]
 
   connect() {
     this.startX = 0
     this.currentX = 0
-    this.swipeThreshold = 50 // Minimum pixels to trigger swipe
+    this.startY = 0
+    this.swipeThreshold = 50
     this.isSwiping = false
+    this.swipeOccurred = false
   }
 
   touchStart(event) {
-    // Only allow swipe if not scrolling
-    if (this.element.scrollTop === 0) {
-      this.startX = event.touches[0].clientX
-      this.isSwiping = true
-      if (this.hasContentTarget) {
-        this.contentTarget.style.transition = "none"
-      }
+    // Don't start swipe if touching a button
+    if (event.target.closest('button')) {
+      return
+    }
+    
+    this.startX = event.touches[0].clientX
+    this.startY = event.touches[0].clientY
+    this.isSwiping = true
+    this.swipeOccurred = false
+    
+    if (this.hasContentTarget) {
+      this.contentTarget.style.transition = "none"
+      this.contentTarget.style.willChange = "transform"
     }
   }
 
@@ -29,21 +33,28 @@ export default class extends Controller {
     if (!this.isSwiping) return
     
     this.currentX = event.touches[0].clientX
-    const diff = this.currentX - this.startX
+    const currentY = event.touches[0].clientY
+    const diffX = this.currentX - this.startX
+    const diffY = Math.abs(currentY - this.startY)
     
-    // Only allow right swipe (positive diff) and limit max distance
-    if (diff > 0 && diff < 150) {
+    // Only allow right swipe (positive diffX) and check if horizontal movement is dominant
+    if (diffX > 0 && diffX < 200 && Math.abs(diffX) > diffY) {
+      // Prevent scrolling and link clicks during swipe
       event.preventDefault()
+      event.stopPropagation()
+      
       if (this.hasContentTarget) {
-        this.contentTarget.style.transform = `translateX(${diff}px)`
+        this.contentTarget.style.transform = `translateX(${Math.min(diffX, 80)}px)`
       }
       
-      // Show actions when swiped enough
+      // Show/hide actions based on swipe distance
       if (this.hasActionsTarget) {
-        if (diff > this.swipeThreshold) {
+        if (diffX > this.swipeThreshold) {
           this.actionsTarget.classList.remove("hidden")
+          this.swipeOccurred = true
         } else {
           this.actionsTarget.classList.add("hidden")
+          this.swipeOccurred = false
         }
       }
     }
@@ -53,16 +64,33 @@ export default class extends Controller {
     if (!this.isSwiping) return
     
     const diff = this.currentX - this.startX
+    const diffY = Math.abs(event.changedTouches[0].clientY - this.startY)
     this.isSwiping = false
     
     if (this.hasContentTarget) {
       this.contentTarget.style.transition = "transform 0.3s ease"
+      this.contentTarget.style.willChange = "auto"
     }
     
-    if (diff > this.swipeThreshold) {
+    // Check if swipe was far enough and horizontal
+    if (diff > this.swipeThreshold && diff > diffY) {
       // Swipe completed - keep actions visible
       if (this.hasContentTarget) {
         this.contentTarget.style.transform = `translateX(80px)`
+      }
+      this.swipeOccurred = true
+      
+      // Prevent link navigation for a short time after swipe
+      if (this.hasEditLinkTarget) {
+        const preventClick = (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+        }
+        this.editLinkTarget.addEventListener("click", preventClick, { once: true, capture: true })
+        setTimeout(() => {
+          this.swipeOccurred = false
+        }, 500)
       }
     } else {
       // Swipe not far enough - snap back
@@ -77,16 +105,18 @@ export default class extends Controller {
     if (this.hasActionsTarget) {
       this.actionsTarget.classList.add("hidden")
     }
+    this.swipeOccurred = false
   }
 
-  performAction() {
-    // Find the form within this element and submit it
+  handleButtonClick(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+    
     const form = this.element.querySelector("form[data-turbo='true']")
     if (form) {
       form.requestSubmit()
-      // Reset swipe after action
-      setTimeout(() => this.reset(), 300)
+      this.reset()
     }
   }
 }
-

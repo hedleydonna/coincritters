@@ -1,4 +1,4 @@
-<%= form_with model: @income_template, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
+<%= form_with model: @income_template, local: true, class: "space-y-6 max-w-2xl bg-white shadow rounded-lg p-8" do |f| %>
   <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
   <% if @income_template.errors.any? %>
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -40,7 +40,11 @@
     <%= f.date_field :due_date, 
           class: "w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" %>
     <p class="mt-1 text-sm text-gray-500">
+      <% if @income_template.new_record? %>
+        Required. The date you typically receive this income (used to calculate how many events per month).
+      <% else %>
       Required if auto-create is enabled. The date you typically receive this income (used to calculate how many events per month).
+      <% end %>
       <br>
       <strong>Examples:</strong> Weekly on Fridays → set due_date to any Friday. Bi-weekly on the 1st and 15th → set due_date to the 1st.
     </p>
@@ -58,32 +62,11 @@
     <p class="mt-1 text-sm text-gray-500">The estimated amount you typically receive (you can override the actual amount when logging income)</p>
   </div>
 
-  <div class="space-y-4">
-    <div class="flex items-start gap-3">
-      <%= f.check_box :auto_create, 
-            { checked: @income_template.new_record? ? true : @income_template.auto_create? },
-            class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
-      <div>
-        <%= f.label :auto_create, "Automatically create income events", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
-        <p class="text-sm text-gray-500">When enabled, the system will automatically create income events in monthly budgets based on frequency and due date. You can then edit the actual amounts when money is received.</p>
-      </div>
-    </div>
-    
-    <div class="flex items-start gap-3">
-      <%= f.check_box :last_payment_to_next_month, 
-            { checked: @income_template.last_payment_to_next_month? },
-            class: "mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" %>
-      <div>
-        <%= f.label :last_payment_to_next_month, "Defer last payment to next month", class: "text-sm font-medium text-gray-700 cursor-pointer" %>
-        <p class="text-sm text-gray-500">When enabled, the last payment of each month will automatically be counted in next month's budget instead of the current month. Useful for late-month paychecks you want to hold for next month's expenses.</p>
-      </div>
-    </div>
-  </div>
 
-  <div class="flex gap-4 pt-4">
-    <%= f.submit @income_template.new_record? ? "Create Money In Source" : "Update Money In Source", 
+  <div class="flex gap-4 pt-4 pb-8">
+    <%= f.submit @income_template.new_record? ? "Create Money In Source" : "Update", 
           class: "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium cursor-pointer" %>
-    <%= link_to "Cancel", income_templates_path(return_to: @return_to), 
+    <%= link_to "Cancel", @return_to == 'money_map' ? "#{money_map_path}?scroll_to=money-in-section" : income_templates_path(return_to: @return_to), 
           class: "bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium" %>
   </div>
 <% end %>
