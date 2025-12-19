@@ -38,6 +38,8 @@ Rails.application.routes.draw do
   end
 
   get "dashboard", to: "dashboard#index"
+  post "dashboard/reset_data", to: "dashboard#reset_data", as: :reset_data
+  post "dashboard/reset_all_data", to: "dashboard#reset_all_data", as: :reset_all_data
   get "up" => "rails/health#show", as: :rails_health_check
 
   get "/credits", to: "static#credits", as: :credits

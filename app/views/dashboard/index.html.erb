@@ -61,5 +61,29 @@
         <% end %>
       </div>
     <% end %>
+
+    <!-- Admin Testing Section -->
+    <% if current_user.admin? %>
+      <div class="mt-6 pt-6 border-t-2 border-red-300">
+        <div class="bg-red-50 rounded-xl p-4 shadow-md border-2 border-red-300">
+          <h3 class="text-lg font-bold text-red-900 mb-3 text-center">⚠️ Testing Tools (Admin Only) ⚠️</h3>
+          <p class="text-xs text-red-700 mb-4 text-center">Use these buttons to reset data for testing. This action cannot be undone!</p>
+          
+          <div class="space-y-3">
+            <%= button_to reset_data_path, method: :post,
+                  class: "w-full bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center",
+                  data: { confirm: "⚠️ WARNING: This will permanently delete ALL expenses, payments, monthly budgets, and income events. This action CANNOT be undone and you will lose all financial data. Are you absolutely sure you want to proceed?" } do %>
+              Reset All Data (Keep Templates)
+            <% end %>
+            
+            <%= button_to reset_all_data_path, method: :post,
+                  class: "w-full bg-red-800 hover:bg-red-900 text-white font-semibold px-4 py-3 rounded-lg transition-colors text-center min-h-[44px] inline-flex items-center justify-center",
+                  data: { confirm: "⚠️ CRITICAL WARNING: This will permanently delete EVERYTHING - all expenses, payments, monthly budgets, income events, AND all income/expense templates. This is a complete reset and CANNOT be undone. Are you absolutely certain you want to proceed?" } do %>
+              Reset Everything (Including Templates)
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
