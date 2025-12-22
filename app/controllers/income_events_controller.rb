@@ -1,7 +1,7 @@
 # app/controllers/income_events_controller.rb
 class IncomeEventsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_income_event, only: [:edit, :update, :mark_received, :reset_to_expected, :destroy]
+  before_action :set_income_event, only: [:show, :edit, :update, :mark_received, :reset_to_expected, :destroy]
 
   def index
     # Allow viewing current or next month
@@ -74,6 +74,18 @@ class IncomeEventsController < ApplicationController
     @current_month_str = current_month_str
     @next_month_str = next_month_str
     @return_to = params[:return_to]
+  end
+
+  def show
+    # Quick action page - only show if not yet received and has template with estimated amount
+    @return_to = params[:return_to]
+    
+    # If already received, no template, or no estimated amount, redirect to edit
+    if @income_event.actual_amount > 0 || 
+       @income_event.income_template.nil? || 
+       @income_event.income_template.estimated_amount.to_f == 0
+      redirect_to edit_income_event_path(@income_event, return_to: @return_to)
+    end
   end
 
   def edit
@@ -298,7 +310,12 @@ class IncomeEventsController < ApplicationController
   private
 
   def set_income_event
-    @income_event = current_user.income_events.find(params[:id])
+    @income_event = current_user.income_events.includes(:income_template).find(params[:id])
+    # Load template even if soft-deleted (for display purposes)
+    if @income_event.income_template_id.present? && @income_event.income_template.nil?
+      @income_event.association(:income_template).target ||= 
+        IncomeTemplate.unscoped.find_by(id: @income_event.income_template_id)
+    end
   end
 
   def income_event_params

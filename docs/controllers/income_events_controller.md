@@ -21,6 +21,8 @@ All routes are under `/income_events`:
 - **GET** `/income_events/new` - Show unified income creation form (one-off or recurring)
 - **GET** `/income_events/new?return_to=money_map` - Show new form with navigation context
 - **POST** `/income_events` - Create a new income event or template
+- **GET** `/income_events/:id` - Show quick action page for marking income as received (template-based only)
+- **GET** `/income_events/:id?return_to=money_map` - Show page with navigation context
 - **GET** `/income_events/:id/edit` - Edit an income event
 - **GET** `/income_events/:id/edit?return_to=money_map` - Edit with navigation context
 - **PATCH** `/income_events/:id` - Update an income event
@@ -117,16 +119,54 @@ Creates either a one-off income event or a recurring income template with auto-c
 - `income_event[received_on]` or `due_date` - Date (name changes based on frequency)
 - `income_event[notes]` - Optional notes
 
+### `show`
+
+Shows a quick action page for marking template-based income events as received. This is the default page when clicking on an unreceived income event from the Money Map.
+
+**Purpose:**
+- Provides a focused, single-purpose page for the most common action (marking as received)
+- Separates quick action from detailed editing
+- Reduces cognitive load with clear, prominent action button
+
+**Behavior:**
+- Only shows for template-based income events that haven't been received yet (`actual_amount == 0`)
+- If already received, no template, or no estimated amount, redirects to `edit` page
+- Displays income name, expected date, and expected amount prominently
+- Large "Received $X.XX" button for quick action
+- "Edit [Event Name]" link to access full edit form
+
+**Navigation:**
+- Swipe-back gesture (left to right) navigates back to Money Map
+- Uses `swipe_back_controller.js` Stimulus controller
+- Back URL includes `scroll_to=money-in-section` parameter
+
+**Instance Variables:**
+- `@income_event` - The income event being viewed
+- `@return_to` - Navigation context parameter
+
+**Parameters:**
+- `id` - Income event ID to show
+- `return_to` (optional) - Navigation context ('money_map' to return to Money Map after action)
+
+**Views:**
+- `app/views/income_events/show.html.erb` - Quick action page with prominent "Received" button
+
 ### `edit`
 
-Shows the form to edit an existing income event with expected vs actual amount comparison.
+Shows the form to edit an existing income event. This is accessed from the show page via "Edit [Event Name]" link, or directly for events that have already been received.
 
 **Features:**
 - Edit income event details (name, amount, date, notes)
-- View comparison of expected amount vs received amount
-- "Mark as Received" button to set actual_amount to estimated_amount
-- "Reset to Expected Amount" button to set actual_amount to 0
-- Swipe-from-left-edge gesture for back navigation (mobile)
+- Amount field always visible (pre-filled with estimated amount for template-based income)
+- For template-based income: Amount field is pre-filled with estimated amount when `actual_amount == 0`
+- For one-off income: Amount field is always required
+- Swipe-back gesture (left to right) navigates back to show page (if came from show) or Money Map
+- Uses `swipe_back_controller.js` Stimulus controller
+
+**Navigation:**
+- Cancel button navigates back with `scroll_to` parameter
+- Update button navigates back with `scroll_to` parameter
+- Swipe-back navigates to show page (if came from show) or Money Map
 
 **Instance Variables:**
 - `@income_event` - The income event being edited
@@ -286,8 +326,15 @@ This preserves the integrity of the template system while allowing users to remo
 - `app/views/income_events/index.html.erb` - Income events list with month navigation
   - Uses icon-only buttons for actions (Received, Defer, Edit, Delete)
   - Supports swipe gestures for marking events as received
-- `app/views/income_events/new.html.erb` - New one-off income event form
+- `app/views/income_events/new.html.erb` - Unified income creation form (one-off or recurring)
+- `app/views/income_events/show.html.erb` - Quick action page for marking income as received
+  - Prominent "Received $X.XX" button
+  - "Edit [Event Name]" link to full edit form
+  - Swipe-back navigation support
 - `app/views/income_events/edit.html.erb` - Edit income event form
+  - Full editing capabilities
+  - Swipe-back navigation support
+  - Amount field pre-filled for template-based income
 
 ## Business Rules
 
@@ -354,11 +401,16 @@ POST /income_events/123/mark_received
 ## UI Features
 
 1. **Unified Form**: Single form with progressive disclosure for one-off and recurring income
-2. **Swipe Gestures**: Unreceived events can be swiped to reveal "Mark as received" action
-3. **Swipe-Back Navigation**: Swipe from left edge on edit form to navigate back
-4. **Expected vs Actual Display**: Visual comparison of expected and received amounts
-5. **Mobile-First Design**: Optimized for touch interactions with appropriate button sizes
-6. **Navigation Context**: Seamless return to Money Map after actions
+2. **Quick Action Page**: Dedicated `show` page for marking income as received (template-based only)
+3. **Swipe Gestures**: Unreceived events can be swiped to reveal "Mark as received" action (on Money Map)
+4. **Swipe-Back Navigation**: Swipe right from anywhere on show/edit pages to navigate back
+   - Uses `swipe_back_controller.js` Stimulus controller
+   - Works from anywhere on page (not just left edge)
+   - Doesn't interfere with buttons, links, or form inputs
+5. **Expected vs Actual Display**: Visual comparison of expected and received amounts
+6. **Mobile-First Design**: Optimized for touch interactions with appropriate button sizes
+7. **Navigation Context**: Seamless return to Money Map after actions with scroll-to-section
+8. **Turbo Integration**: All navigation uses Turbo for fast, app-like transitions
 
 ---
 

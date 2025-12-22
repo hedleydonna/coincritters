@@ -62,9 +62,39 @@
       <div class="border-t border-gray-200 pt-6 mt-6">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Administration</h3>
         <%= link_to admin_root_path, 
-              class: "block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center" do %>
+              class: "block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 text-center mb-4" do %>
           Admin Dashboard
         <% end %>
+        
+        <div class="space-y-2">
+          <%= form_with url: clear_income_events_path, method: :post, 
+                data: { turbo: true, confirm: "⚠️ WARNING: This will permanently delete ALL income events. This action CANNOT be undone. Are you sure you want to proceed?" },
+                class: "w-full" do |f| %>
+            <%= f.submit "Clear Income Events", 
+                  class: "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer bg-white border border-gray-300 rounded-lg" %>
+          <% end %>
+          
+          <%= form_with url: clear_expenses_path, method: :post,
+                data: { turbo: true, confirm: "⚠️ WARNING: This will permanently delete ALL expenses and their payments. This action CANNOT be undone. Are you sure you want to proceed?" },
+                class: "w-full" do |f| %>
+            <%= f.submit "Clear Expenses", 
+                  class: "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer bg-white border border-gray-300 rounded-lg" %>
+          <% end %>
+          
+          <%= form_with url: reset_data_path, method: :post,
+                data: { turbo: true, confirm: "⚠️ WARNING: This will permanently delete ALL expenses, payments, monthly budgets, and income events. This action CANNOT be undone and you will lose all financial data. Are you absolutely sure you want to proceed?" },
+                class: "w-full" do |f| %>
+            <%= f.submit "Reset All Data (Keep Templates)", 
+                  class: "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer bg-white border border-gray-300 rounded-lg" %>
+          <% end %>
+          
+          <%= form_with url: reset_all_data_path, method: :post,
+                data: { turbo: true, confirm: "⚠️ CRITICAL WARNING: This will permanently delete EVERYTHING - all expenses, payments, monthly budgets, income events, AND all income/expense templates. This is a complete reset and CANNOT be undone. Are you absolutely certain you want to proceed?" },
+                class: "w-full" do |f| %>
+            <%= f.submit "Reset Everything (Including Templates)", 
+                  class: "w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors cursor-pointer bg-white border border-red-300 rounded-lg" %>
+          <% end %>
+        </div>
       </div>
     <% end %>
 

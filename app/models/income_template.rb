@@ -3,7 +3,7 @@ class IncomeTemplate < ApplicationRecord
   has_many :income_events, dependent: :destroy
 
   validates :name, presence: true, uniqueness: { scope: :user_id, conditions: -> { where(deleted_at: nil) } }
-  validates :estimated_amount, numericality: { greater_than_or_equal_to: 0 }
+  validates :estimated_amount, numericality: { greater_than: 0, message: "must be greater than 0" }
 
   # Frequency options
   FREQUENCIES = %w[weekly bi_weekly monthly irregular].freeze

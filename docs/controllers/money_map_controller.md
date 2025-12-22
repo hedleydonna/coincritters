@@ -110,6 +110,19 @@ The view supports scrolling to specific sections after navigation:
 - Uses `scroll_to` query parameter (e.g., `?scroll_to=money-in-section`)
 - Stimulus controller (`scroll_to_anchor_controller.js`) handles scrolling within fixed container
 - Cleans up URL after scrolling
+- Works seamlessly with Turbo navigation
+- Uses multiple timing strategies to prevent visible "scroll to top then scroll down" jumps
+- Scrolls instantly (no smooth animation) to avoid visible movement
+
+**Implementation Details:**
+- Listens to `turbo:load`, `turbo:before-render`, and `turbo:render` events
+- Tries scrolling at multiple points: immediate, microtask, requestAnimationFrame, setTimeout
+- Uses flags to prevent duplicate scrolls
+- Properly cleans up event listeners to prevent memory leaks
+
+**Sections:**
+- `money-in-section` - Scrolls to Money In section
+- `spending-section` - Scrolls to Spending section
 
 ## Business Rules
 

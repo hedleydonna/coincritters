@@ -35,7 +35,7 @@ class DashboardController < ApplicationController
     # Delete all income events
     current_user.income_events.destroy_all
     
-    redirect_to dashboard_path, notice: "All expenses, payments, monthly budgets, and income events have been deleted.", status: :see_other
+    redirect_to money_map_path, notice: "All expenses, payments, monthly budgets, and income events have been deleted.", status: :see_other
   end
 
   def reset_all_data
@@ -49,7 +49,7 @@ class DashboardController < ApplicationController
     current_user.income_templates.unscoped.where(user_id: current_user.id).destroy_all
     current_user.expense_templates.unscoped.where(user_id: current_user.id).destroy_all
     
-    redirect_to dashboard_path, notice: "All data has been deleted, including templates.", status: :see_other
+    redirect_to money_map_path, notice: "All data has been deleted, including templates.", status: :see_other
   end
 
   def clear_income_events
@@ -60,7 +60,7 @@ class DashboardController < ApplicationController
     # Manually update all monthly budgets' total_actual_income to 0
     current_user.monthly_budgets.update_all(total_actual_income: 0.0)
     
-    redirect_to dashboard_path, notice: "Cleared #{count} income event#{'s' if count != 1}.", status: :see_other
+    redirect_to money_map_path, notice: "Cleared #{count} income event#{'s' if count != 1}.", status: :see_other
   end
 
   def clear_expenses
@@ -68,7 +68,7 @@ class DashboardController < ApplicationController
     # Can't use destroy_all on has_many :through, so find expenses directly
     Expense.where(id: current_user.expenses.pluck(:id)).destroy_all
     
-    redirect_to dashboard_path, notice: "Cleared #{count} expense#{'s' if count != 1}.", status: :see_other
+    redirect_to money_map_path, notice: "Cleared #{count} expense#{'s' if count != 1}.", status: :see_other
   end
 
   private

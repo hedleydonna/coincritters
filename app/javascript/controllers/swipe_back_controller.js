@@ -9,26 +9,24 @@ export default class extends Controller {
     this.startX = 0
     this.startY = 0
     this.startTime = 0
-    this.edgeThreshold = 50 // Pixels from left edge to detect edge swipe (increased for easier detection)
-    this.swipeThreshold = 80 // Minimum swipe distance to trigger navigation (reduced for easier triggering)
-    this.maxSwipeTime = 500 // Maximum time for a swipe in milliseconds
+    this.swipeThreshold = 100 // Minimum swipe distance to trigger navigation
+    this.maxSwipeTime = 600 // Maximum time for a swipe in milliseconds
     this.isSwiping = false
-    this.startedFromEdge = false
+    
+    // Store scroll position before navigating away (for restoring on back navigation)
+    this.storeScrollPosition()
+  }
+  
+  storeScrollPosition() {
+    // Find the scrollable container (money map page has scroll-to-anchor controller)
+    const scrollContainer = document.querySelector('[data-controller*="scroll-to-anchor"]')
+    if (scrollContainer) {
+      const scrollKey = `scroll_${window.location.pathname}`
+      sessionStorage.setItem(scrollKey, scrollContainer.scrollTop.toString())
+    }
   }
 
   touchStart(event) {
-    const touch = event.touches[0]
-    const startX = touch.clientX
-    
-    // Only start if touch begins near the left edge
-    if (startX > this.edgeThreshold) {
-      this.isSwiping = false
-      this.startedFromEdge = false
-      return
-    }
-    
-    // Allow swipe even if touching form elements, as long as it starts from the edge
-    // This prevents interference when finger drifts into inputs during swipe
     const target = event.target
     const closestLink = target.closest('a[href]')
     const closestButton = target.closest('button, input[type="submit"], input[type="button"]')
@@ -38,7 +36,6 @@ export default class extends Controller {
       const href = closestLink.getAttribute('href')
       if (href && href !== '#' && href !== 'javascript:void(0)') {
         this.isSwiping = false
-        this.startedFromEdge = false
         return
       }
     }
@@ -46,28 +43,24 @@ export default class extends Controller {
     // Don't start swipe if touching a button or submit input
     if (closestButton) {
       this.isSwiping = false
-      this.startedFromEdge = false
       return
     }
     
-    // For other form elements (input, textarea, select), allow swipe if starting from edge
-    // This way if finger drifts into an input during swipe, it still works
+    // Don't start swipe on form inputs (text, number, date, textarea, select)
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      this.isSwiping = false
+      return
+    }
     
-    this.startX = startX
+    const touch = event.touches[0]
+    this.startX = touch.clientX
     this.startY = touch.clientY
     this.startTime = Date.now()
     this.isSwiping = true
-    this.startedFromEdge = true
-    
-    // Prevent default scrolling if we're starting a swipe from the edge
-    // This helps with responsiveness
-    if (startX < 20) {
-      event.preventDefault()
-    }
   }
 
   touchMove(event) {
-    if (!this.isSwiping || !this.startedFromEdge) return
+    if (!this.isSwiping) return
     
     const touch = event.touches[0]
     const currentX = touch.clientX
@@ -76,23 +69,22 @@ export default class extends Controller {
     const diffY = Math.abs(currentY - this.startY)
     
     // Only allow rightward swipe (positive diffX) and check if horizontal movement is dominant
-    if (diffX > 0 && diffX < 400 && Math.abs(diffX) > diffY * 1.3) {
-      // Prevent scrolling and input focus during swipe
+    if (diffX > 0 && diffX < 500 && Math.abs(diffX) > diffY * 1.5) {
+      // Prevent scrolling during horizontal swipe
       event.preventDefault()
       // Prevent focus on inputs if finger drifts over them
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
         document.activeElement.blur()
       }
-    } else if (diffX < -20 || (diffY > 0 && Math.abs(diffX) < diffY * 1.3)) {
+    } else if (diffX < -30 || (diffY > 50 && Math.abs(diffX) < diffY * 1.5)) {
       // If swiping left significantly or vertical movement is dominant, cancel the swipe
       this.isSwiping = false
     }
   }
 
   touchEnd(event) {
-    if (!this.isSwiping || !this.startedFromEdge) {
+    if (!this.isSwiping) {
       this.isSwiping = false
-      this.startedFromEdge = false
       return
     }
     
@@ -102,14 +94,13 @@ export default class extends Controller {
     const swipeTime = Date.now() - this.startTime
     
     this.isSwiping = false
-    this.startedFromEdge = false
     
     // Check if swipe was:
     // 1. Far enough (threshold)
     // 2. Horizontal (more horizontal than vertical)
     // 3. Fast enough (not too slow)
     // 4. Not too long (within time limit)
-    const isHorizontal = diffX > diffY * 1.3
+    const isHorizontal = diffX > diffY * 1.5
     const isFastEnough = swipeTime < this.maxSwipeTime
     const isFarEnough = diffX > this.swipeThreshold
     
@@ -118,16 +109,52 @@ export default class extends Controller {
       event.preventDefault()
       event.stopPropagation()
       
-      // Small delay to ensure any pending events are cleared
-      setTimeout(() => {
-        // Navigate back
-        if (this.hasBackUrlValue) {
-          window.location.href = this.backUrlValue
-        } else {
-          // Fallback to browser back
-          window.history.back()
+      // Store current scroll position before navigating
+      this.storeScrollPosition()
+      
+      // Navigate back using Turbo for better integration
+      if (this.hasBackUrlValue) {
+        // Use Turbo.visit with action: 'replace' to maintain history
+        // and listen for load to restore scroll
+        const restoreScroll = () => {
+          const scrollContainer = document.querySelector('[data-controller*="scroll-to-anchor"]')
+          if (scrollContainer) {
+            const scrollKey = `scroll_${new URL(this.backUrlValue).pathname}`
+            const savedScroll = sessionStorage.getItem(scrollKey)
+            if (savedScroll) {
+              // Restore scroll position after a brief delay to ensure content is rendered
+              setTimeout(() => {
+                scrollContainer.scrollTop = parseInt(savedScroll, 10)
+                // Also trigger scroll-to-anchor if there's a scroll_to parameter
+                const url = new URL(this.backUrlValue, window.location.origin)
+                if (url.searchParams.get('scroll_to')) {
+                  // Let scroll-to-anchor controller handle it, but ensure it doesn't override our restore
+                  setTimeout(() => {
+                    const targetId = url.searchParams.get('scroll_to')
+                    const target = document.getElementById(targetId)
+                    if (target) {
+                      const targetRect = target.getBoundingClientRect()
+                      const containerRect = scrollContainer.getBoundingClientRect()
+                      const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20
+                      scrollContainer.scrollTo({
+                        top: Math.max(0, scrollTop),
+                        behavior: 'smooth'
+                      })
+                    }
+                  }, 100)
+                }
+              }, 50)
+            }
+          }
+          document.removeEventListener('turbo:load', restoreScroll)
         }
-      }, 50)
+        document.addEventListener('turbo:load', restoreScroll, { once: true })
+        
+        Turbo.visit(this.backUrlValue)
+      } else {
+        // Fallback to browser back
+        window.history.back()
+      }
     }
   }
 }

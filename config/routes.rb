@@ -35,7 +35,7 @@ Rails.application.routes.draw do
       end
     end
     get "income_events", to: "income_events#index"
-    resources :income_events, only: [:new, :create, :edit, :update, :destroy] do
+    resources :income_events, only: [:new, :create, :show, :edit, :update, :destroy] do
       member do
         patch :mark_received
         patch :reset_to_expected

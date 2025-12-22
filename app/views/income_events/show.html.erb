@@ -1,0 +1,57 @@
+<div class="max-w-2xl mx-auto py-8 px-4" 
+     data-controller="swipe-back" 
+     data-swipe-back-back-url-value="<%= case @return_to
+                                          when 'money_map'
+                                            money_map_path(scroll_to: 'money-in-section')
+                                          when 'income_templates'
+                                            income_templates_path(return_to: @return_to)
+                                          else
+                                            income_events_path
+                                          end %>"
+     data-action="touchstart->swipe-back#touchStart touchmove->swipe-back#touchMove touchend->swipe-back#touchEnd">
+  
+  <% back_path = case @return_to
+                  when 'money_map'
+                    money_map_path(scroll_to: 'money-in-section')
+                  when 'income_templates'
+                    income_templates_path(return_to: @return_to)
+                  else
+                    income_events_path
+                  end %>
+
+  <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-8 mb-6 text-center">
+    <%= form_with url: mark_received_income_event_path(@income_event), method: :patch, 
+          class: "w-full",
+          data: { turbo: true } do |f| %>
+      <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+      
+      <div class="mb-6">
+        <p class="text-white text-lg font-medium mb-2"><%= @income_event.display_name %></p>
+        <% expected_date = @income_event.income_template.due_date || @income_event.received_on %>
+        <% if expected_date %>
+          <p class="text-white text-sm opacity-90 mb-4">
+            Expected: <%= expected_date.strftime("%B %d, %Y") %>
+          </p>
+        <% end %>
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <p class="text-white text-lg font-medium mb-2">Expected Amount</p>
+        <p class="text-white text-3xl font-bold"><%= number_to_currency(@income_event.income_template.estimated_amount) %></p>
+      </div>
+      
+      <%= f.submit "Received #{number_to_currency(@income_event.income_template.estimated_amount)}", 
+            class: "w-full bg-white hover:bg-gray-50 text-green-600 font-bold text-xl px-6 py-4 rounded-lg transition-colors shadow-md mb-4" %>
+      
+      <p class="text-white text-sm opacity-90">One tap to confirm receipt</p>
+    <% end %>
+  </div>
+
+  <div class="text-center mb-8">
+    <%= link_to "Edit #{@income_event.display_name}", edit_income_event_path(@income_event, return_to: @return_to), 
+          class: "text-gray-600 hover:text-gray-900 font-medium text-sm underline" %>
+  </div>
+</div>
+
