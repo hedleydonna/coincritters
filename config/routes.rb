@@ -43,6 +43,7 @@ Rails.application.routes.draw do
     end
     
     get "money_map", to: "money_map#index", as: :money_map
+    get "settings", to: "settings#index", as: :settings
   end
 
   get "dashboard", to: "dashboard#index"

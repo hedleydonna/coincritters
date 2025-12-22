@@ -1,0 +1,36 @@
+<div class="max-w-2xl mx-auto py-8 px-4">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+    <p class="text-gray-600">Manage your account and preferences</p>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 space-y-6">
+    <div>
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Account</h2>
+      <%= link_to edit_user_registration_path, 
+            class: "block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors" do %>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-gray-900">Edit Profile</p>
+            <p class="text-sm text-gray-600">Update your email and password</p>
+          </div>
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="pt-6 border-t border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">About</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        CoinCritters helps you manage your monthly budget and track your spending.
+      </p>
+      <%= link_to credits_path, 
+            class: "text-blue-600 hover:text-blue-800 text-sm font-medium" do %>
+        View Credits →
+      <% end %>
+    </div>
+  </div>
+</div>
+
