@@ -141,6 +141,7 @@ class UserTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 300.00
     )
     
@@ -182,12 +183,14 @@ class UserTest < ActiveSupport::TestCase
     current_expense = Expense.create!(
       monthly_budget: current_budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 300.00
     )
     
     old_expense = Expense.create!(
       monthly_budget: old_budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 300.00
     )
     
@@ -226,12 +229,14 @@ class UserTest < ActiveSupport::TestCase
     expense1 = Expense.create!(
       monthly_budget: budget1,
       expense_template: template,
+      name: template.name,
       allotted_amount: 300.00
     )
     
     expense2 = Expense.create!(
       monthly_budget: budget2,
       expense_template: template,
+      name: template.name,
       allotted_amount: 300.00
     )
     
@@ -255,7 +260,8 @@ class UserTest < ActiveSupport::TestCase
       name: "Next Month Groceries",
       frequency: "monthly",
       default_amount: 500.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("#{next_month}-15")  # Need due_date for events_for_month
     )
     
     budget = user.create_next_month_budget!
@@ -310,12 +316,14 @@ class UserTest < ActiveSupport::TestCase
     expense1 = Expense.create!(
       monthly_budget: budget,
       expense_template: template1,
+      name: template1.name,
       allotted_amount: 300.00
     )
     
     expense2 = Expense.create!(
       monthly_budget: budget,
       expense_template: template2,
+      name: template2.name,
       allotted_amount: 500.00
     )
     

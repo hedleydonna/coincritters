@@ -97,30 +97,8 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert income_event.valid?
   end
 
-  test "should allow apply_to_next_month to be true" do
-    income_event = IncomeEvent.new(
-      user: @user_one,
-      custom_label: "Paycheck",
-      month_year: "2025-12",
-      received_on: Date.today,
-      apply_to_next_month: true,
-      actual_amount: 1000.00
-    )
-    assert income_event.valid?
-    assert income_event.apply_to_next_month?
-  end
-
-  test "should default apply_to_next_month to false" do
-    income_event = IncomeEvent.new(
-      user: @user_one,
-      custom_label: "Paycheck",
-      month_year: "2025-12",
-      received_on: Date.today,
-      actual_amount: 1000.00
-    )
-    assert income_event.valid?
-    assert_not income_event.apply_to_next_month?
-  end
+  # Deferral functionality removed - apply_to_next_month field may still exist for backward compatibility
+  # but is no longer used in the application logic
 
   test "should require received_on" do
     income_event = IncomeEvent.new(
@@ -252,27 +230,6 @@ class IncomeEventTest < ActiveSupport::TestCase
     assert_nil income_event.display_name
   end
 
-  test "assigned_month returns next month when apply_to_next_month is true" do
-    income_event = IncomeEvent.create!(
-      user: @user_one,
-      custom_label: "Late Paycheck",
-      month_year: "2025-12",
-      received_on: Date.parse("2025-12-28"),
-      apply_to_next_month: true,
-      actual_amount: 5000.00
-    )
-    assert_equal "2026-01", income_event.assigned_month
-  end
-
-  test "assigned_month returns month_year when apply_to_next_month is false" do
-    income_event = IncomeEvent.create!(
-      user: @user_one,
-      custom_label: "Paycheck",
-      month_year: "2025-12",
-      received_on: Date.today,
-      apply_to_next_month: false,
-      actual_amount: 5000.00
-    )
-    assert_equal "2025-12", income_event.assigned_month
-  end
+  # Deferral functionality removed - assigned_month now always returns month_year
+  # Deferred events are no longer used; automatic carryover handles month-to-month balance
 end

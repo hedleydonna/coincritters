@@ -13,7 +13,15 @@ class Expense < ApplicationRecord
             numericality: { greater_than_or_equal_to: 0 }
 
   # Name is always required (copied from template when created, or entered for one-offs)
-  validates :name, presence: true
+  # Note: The name method returns "Unnamed Expense" when attribute is nil, but validation checks the attribute
+  # We need to validate the attribute directly, not the method
+  validate :name_attribute_must_be_present
+  
+  def name_attribute_must_be_present
+    if read_attribute(:name).blank?
+      errors.add(:name, "can't be blank")
+    end
+  end
 
   # Allow multiple expenses per template per month (needed for weekly/bi-weekly expenses)
   # Previously we only allowed one expense per template, but now we need multiple for recurring expenses

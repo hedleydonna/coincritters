@@ -20,10 +20,11 @@ class IncomeTemplatesController < ApplicationController
 
   def create
     @income_template = current_user.income_templates.new(income_template_params)
+    @income_template.auto_create = true  # Default to true when creating
     if @income_template.save
       # Always return to income_templates index page after creating
       # The return_to parameter is preserved for navigation context
-      redirect_to income_templates_path(return_to: params[:return_to]), notice: "Money in source created!"
+      redirect_to income_templates_path(return_to: params[:return_to]), status: :see_other, notice: "Money in source created!"
     else
       @return_to = params[:return_to]
       render :new, status: :unprocessable_entity
@@ -40,11 +41,11 @@ class IncomeTemplatesController < ApplicationController
                       when 'income_events'
                         income_events_path
                       when 'money_map'
-                        "#{money_map_path}?scroll_to=money-in-section"
+                        money_map_path(scroll_to: 'money-in-section')
                       else
                         income_templates_path(return_to: params[:return_to])
                       end
-      redirect_to redirect_path, notice: "Income source updated!"
+      redirect_to redirect_path, status: :see_other, notice: "Income source updated!"
     else
       @return_to = params[:return_to]
       render :edit, status: :unprocessable_entity
@@ -60,12 +61,15 @@ class IncomeTemplatesController < ApplicationController
 
   def reactivate
     @income_template.restore!
-    redirect_path = if params[:return_to] == 'income_events'
-      income_events_path
-    else
-      income_templates_path(return_to: params[:return_to])
-    end
-    redirect_to redirect_path, notice: "Money in source restored!"
+    redirect_path = case params[:return_to]
+                    when 'money_map'
+                      money_map_path(scroll_to: 'money-in-section')
+                    when 'income_events'
+                      income_events_path
+                    else
+                      income_templates_path(return_to: params[:return_to])
+                    end
+    redirect_to redirect_path, status: :see_other, notice: "Money in source restored!"
   end
 
   def toggle_auto_create

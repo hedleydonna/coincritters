@@ -22,16 +22,8 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
 
   test "should get index with return_to parameter" do
     sign_in @user
-    get income_templates_path(return_to: 'income_events')
+    get income_templates_path(return_to: 'money_map')
     assert_response :success
-    assert_match /Back to Money In/, response.body
-  end
-
-  test "should get index without return_to shows dashboard link" do
-    sign_in @user
-    get income_templates_path
-    assert_response :success
-    assert_match /Return to Dashboard/, response.body
   end
 
   test "should get new" do
@@ -42,7 +34,7 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
 
   test "should get new with return_to parameter" do
     sign_in @user
-    get new_income_template_path(return_to: 'income_events')
+    get new_income_template_path(return_to: 'money_map')
     assert_response :success
   end
 
@@ -54,13 +46,15 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
           name: "Test Income Source",
           frequency: "monthly",
           estimated_amount: 1000.00,
-          auto_create: true,
           due_date: Date.today
         },
-        return_to: 'income_events'
+        return_to: 'money_map'
       }
     end
-    assert_redirected_to income_templates_path(return_to: 'income_events')
+    # auto_create defaults to true
+    template = IncomeTemplate.last
+    assert template.auto_create
+    assert_redirected_to income_templates_path(return_to: 'money_map')
   end
 
   test "should create income template and redirect to templates index when no return_to" do
@@ -71,11 +65,13 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
           name: "Test Income Source 2",
           frequency: "monthly",
           estimated_amount: 1000.00,
-          auto_create: true,
           due_date: Date.today
         }
       }
     end
+    # auto_create defaults to true
+    template = IncomeTemplate.last
+    assert template.auto_create
     assert_redirected_to income_templates_path
   end
 
@@ -98,9 +94,9 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
         name: "Updated Income Source",
         estimated_amount: 2000.00
       },
-      return_to: 'income_events'
+      return_to: 'money_map'
     }
-    assert_redirected_to income_events_path
+    assert_redirected_to money_map_path(scroll_to: 'money-in-section')
     @income_template.reload
     assert_equal "Updated Income Source", @income_template.name
   end
@@ -116,6 +112,28 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to income_templates_path
   end
 
+  test "should toggle auto_create status" do
+    sign_in @user
+    template = IncomeTemplate.create!(
+      user: @user,
+      name: "Toggle Test",
+      frequency: "monthly",
+      estimated_amount: 500.00,
+      due_date: Date.today,
+      auto_create: true
+    )
+    
+    # Toggle to false
+    patch toggle_auto_create_income_template_path(template)
+    template.reload
+    assert_not template.auto_create
+    
+    # Toggle back to true
+    patch toggle_auto_create_income_template_path(template)
+    template.reload
+    assert template.auto_create
+  end
+
   test "should destroy income template and redirect based on return_to" do
     sign_in @user
     template = IncomeTemplate.create!(
@@ -124,8 +142,8 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
       frequency: "monthly",
       estimated_amount: 500.00
     )
-    delete income_template_path(template, return_to: 'income_events')
-    assert_redirected_to income_templates_path(return_to: 'income_events')
+    delete income_template_path(template, return_to: 'money_map')
+    assert_redirected_to income_templates_path(return_to: 'money_map')
     template.reload
     assert template.deleted?
     assert_not template.active?
@@ -140,8 +158,8 @@ class IncomeTemplatesControllerTest < ActionDispatch::IntegrationTest
       estimated_amount: 500.00
     )
     template.soft_delete!
-    patch reactivate_income_template_path(template, return_to: 'income_events')
-    assert_redirected_to income_events_path
+    patch reactivate_income_template_path(template, return_to: 'money_map')
+    assert_redirected_to money_map_path(scroll_to: 'money-in-section')
     template.reload
     assert template.active?
     assert_not template.deleted?

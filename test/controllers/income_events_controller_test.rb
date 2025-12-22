@@ -64,12 +64,13 @@ class IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", income_events_path
   end
 
-  # Test create action
-  test "should create one-off income event" do
+  # Test create action - unified form
+  test "should create one-off income event with just_once frequency" do
     sign_in @user
     
     assert_difference("IncomeEvent.count", 1) do
       post income_events_path, params: {
+        frequency: "just_once",
         income_event: {
           custom_label: "Gift",
           received_on: Date.today,
@@ -83,6 +84,41 @@ class IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     assert_nil event.income_template_id
     assert_equal "Gift", event.custom_label
     assert_equal 100.00, event.actual_amount.to_f
+  end
+
+  test "should create recurring income template and auto-create events" do
+    sign_in @user
+    
+    # Use a unique name to avoid conflicts with fixtures
+    unique_name = "Monthly Salary Test #{Time.current.to_i}"
+    
+    # Use a due_date that's in the future to ensure event is created
+    due_date = Date.today + 5.days
+    
+    # Creating a recurring income should create a template and events
+    assert_difference("IncomeTemplate.count", 1) do
+      assert_difference("IncomeEvent.count", 1) do  # Monthly creates 1 event
+        post income_events_path, params: {
+          frequency: "monthly",
+          income_event: {
+            custom_label: unique_name
+          },
+          due_date: due_date.to_s,  # Pass as string at top level
+          estimated_amount: 5000.00  # Pass at top level
+        }
+      end
+    end
+    
+    # Find the template by name instead of using .last (which might return a fixture)
+    template = IncomeTemplate.find_by(name: unique_name)
+    assert_not_nil template, "Template should be created with name #{unique_name}"
+    assert_equal unique_name, template.name
+    assert_equal "monthly", template.frequency
+    
+    event = IncomeEvent.last
+    assert_equal template.id, event.income_template_id
+    # actual_amount should be 0 if received_on is in the future
+    assert_equal 0, event.actual_amount.to_f if event.received_on > Date.today
   end
 
   # Test edit action
@@ -111,6 +147,20 @@ class IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 5500.00, event.actual_amount.to_f
   end
 
+  test "should redirect to money_map when return_to is money_map on update" do
+    sign_in @user
+    event = income_events(:one)
+    
+    patch income_event_path(event), params: {
+      income_event: {
+        actual_amount: 5500.00
+      },
+      return_to: "money_map"
+    }
+    
+    assert_redirected_to money_map_path(scroll_to: 'money-in-section')
+  end
+
   # Test mark_received action
   test "should mark income event as received" do
     sign_in @user
@@ -133,6 +183,53 @@ class IncomeEventsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to income_events_path
     event.reload
     assert_equal 2000.00, event.actual_amount.to_f
+  end
+
+  test "should redirect to money_map when return_to is money_map on mark_received" do
+    sign_in @user
+    template = IncomeTemplate.create!(
+      user: @user,
+      name: "Test Template",
+      frequency: "monthly",
+      estimated_amount: 2000.00
+    )
+    event = IncomeEvent.create!(
+      user: @user,
+      income_template: template,
+      received_on: Date.today,
+      month_year: @current_month,
+      actual_amount: 0
+    )
+    
+    patch mark_received_income_event_path(event), params: {
+      return_to: "money_map"
+    }
+    
+    assert_redirected_to money_map_path(scroll_to: 'money-in-section')
+  end
+
+  # Test reset_to_expected action
+  test "should reset income event actual_amount to 0" do
+    sign_in @user
+    template = IncomeTemplate.create!(
+      user: @user,
+      name: "Test Template",
+      frequency: "monthly",
+      estimated_amount: 2000.00
+    )
+    event = IncomeEvent.create!(
+      user: @user,
+      income_template: template,
+      received_on: Date.today,
+      month_year: @current_month,
+      actual_amount: 2000.00
+    )
+    
+    patch reset_to_expected_income_event_path(event)
+    
+    assert_redirected_to income_events_path
+    event.reload
+    assert_equal 0, event.actual_amount.to_f
   end
 
   # Deferral functionality removed - replaced with automatic carryover

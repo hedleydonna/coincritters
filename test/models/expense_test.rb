@@ -17,6 +17,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense = Expense.new(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
+      name: expense_template.name,
       allotted_amount: 150.00
     )
     assert expense.valid?
@@ -31,25 +32,28 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_includes expense.errors[:monthly_budget], "must exist"
   end
 
-  test "should require either expense_template or name for one-off expenses" do
-    # Without template or name - should be invalid
+  test "should require name for all expenses" do
+    # Without name - should be invalid
+    # Note: The name method returns "Unnamed Expense" but validation checks the attribute
     expense = Expense.new(
       monthly_budget: @monthly_budget_one
     )
-    assert_not expense.valid?
-    # Should have validation errors - at least one of expense_template_id or name should have an error
-    assert expense.errors.full_messages.any?, "Should have validation errors: #{expense.errors.full_messages}"
+    # Set name attribute to nil explicitly to test validation
+    expense.write_attribute(:name, nil)
+    # Validation should fail because read_attribute(:name) is nil
+    assert_not expense.valid?, "Expense without name attribute should be invalid: #{expense.errors.full_messages}"
+    # Check that name has an error
+    assert expense.errors[:name].any?, "Should have name validation error: #{expense.errors[:name]}"
     
     # With name but no template - should be valid (one-off expense)
     one_off_expense = Expense.new(
       monthly_budget: @monthly_budget_one,
-      name: "One-off Expense Unique Test",
+      name: "One-off Expense Test",
       allotted_amount: 100.00
     )
     assert one_off_expense.valid?, "One-off expense should be valid: #{one_off_expense.errors.full_messages}"
     
-    # With template but no name - should be valid (template-based expense)
-    # Create a new template that doesn't have an expense yet in this budget
+    # With template - name is copied from template when created, but can be set manually
     new_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "New Template for Test",
@@ -58,19 +62,30 @@ class ExpenseTest < ActiveSupport::TestCase
     template_expense = Expense.new(
       monthly_budget: @monthly_budget_one,
       expense_template: new_template,
+      name: new_template.name,  # Name is copied from template
       allotted_amount: 100.00
     )
     assert template_expense.valid?, "Template-based expense should be valid: #{template_expense.errors.full_messages}"
   end
 
-  test "should enforce unique expense_template per monthly_budget" do
+  test "should allow multiple expenses per template per budget" do
     expense_template = expense_templates(:one)
-    duplicate_expense = Expense.new(
+    # Create first expense from template
+    first_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name,
+      allotted_amount: 100.00
     )
-    assert_not duplicate_expense.valid?
-    assert_includes duplicate_expense.errors[:expense_template_id], "already has an expense for this template in this budget"
+    
+    # Should be able to create another expense from same template (for weekly/bi-weekly)
+    second_expense = Expense.new(
+      monthly_budget: @monthly_budget_one,
+      expense_template: expense_template,
+      name: expense_template.name,
+      allotted_amount: 200.00
+    )
+    assert second_expense.valid?, "Should allow multiple expenses per template: #{second_expense.errors.full_messages}"
   end
 
   test "should allow creating one-off expenses without templates" do
@@ -86,31 +101,21 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_equal 50.00, one_off.allotted_amount.to_f
   end
 
-  test "should require unique name for one-off expenses per budget" do
-    # Create first one-off expense
+  test "should allow duplicate names within same budget" do
+    # Create first expense with a name
     Expense.create!(
       monthly_budget: @monthly_budget_one,
-      name: "One-off Test",
+      name: "Test Expense",
       allotted_amount: 25.00
     )
     
-    # Try to create duplicate name in same budget - should fail
+    # Should be able to create another expense with same name (no uniqueness constraint)
     duplicate = Expense.new(
       monthly_budget: @monthly_budget_one,
-      name: "One-off Test",
+      name: "Test Expense",
       allotted_amount: 30.00
     )
-    assert_not duplicate.valid?
-    assert_includes duplicate.errors[:name], "has already been taken"
-    
-    # But same name in different budget should work
-    other_budget = monthly_budgets(:two)
-    different_budget_expense = Expense.new(
-      monthly_budget: other_budget,
-      name: "One-off Test",
-      allotted_amount: 30.00
-    )
-    assert different_budget_expense.valid?
+    assert duplicate.valid?, "Should allow duplicate names: #{duplicate.errors.full_messages}"
   end
 
   test "one-off expenses should have default frequency when no template" do
@@ -150,18 +155,20 @@ class ExpenseTest < ActiveSupport::TestCase
     
     monthly_expense = Expense.new(
       monthly_budget: @monthly_budget_two,
-      expense_template: monthly_template
+      expense_template: monthly_template,
+      name: monthly_template.name
     )
     assert_equal "monthly", monthly_expense.frequency
 
     weekly_expense = Expense.new(
       monthly_budget: @monthly_budget_two,
-      expense_template: weekly_template
+      expense_template: weekly_template,
+      name: weekly_template.name
     )
     assert_equal "weekly", weekly_expense.frequency
   end
 
-  test "should get due_date from expense_template" do
+  test "should get due_date from expected_on if present, otherwise from template" do
     template_with_due_date = ExpenseTemplate.create!(
       user: @monthly_budget_two.user,
       name: "Template With Due Date",
@@ -169,11 +176,22 @@ class ExpenseTest < ActiveSupport::TestCase
       due_date: Date.new(2025, 1, 15)
     )
     
+    # Expense without expected_on should use template due_date
     expense = Expense.new(
       monthly_budget: @monthly_budget_two,
-      expense_template: template_with_due_date
+      expense_template: template_with_due_date,
+      name: template_with_due_date.name
     )
     assert_equal Date.new(2025, 1, 15), expense.due_date
+    
+    # Expense with expected_on should use expected_on
+    expense_with_date = Expense.new(
+      monthly_budget: @monthly_budget_two,
+      expense_template: template_with_due_date,
+      name: template_with_due_date.name,
+      expected_on: Date.new(2025, 1, 20)
+    )
+    assert_equal Date.new(2025, 1, 20), expense_with_date.due_date
   end
 
   test "should require allotted_amount to be greater than or equal to 0" do
@@ -201,7 +219,8 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name
     )
     assert_equal 250.00, expense.allotted_amount.to_f
   end
@@ -216,7 +235,8 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name
     )
     assert_equal 0.0, expense.allotted_amount.to_f
   end
@@ -231,6 +251,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
+      name: expense_template.name,
       allotted_amount: 500.00
     )
     assert_equal 500.00, expense.allotted_amount.to_f
@@ -259,7 +280,8 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: budget,
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name
     )
     
     assert_difference("Expense.count", -1) do
@@ -281,11 +303,13 @@ class ExpenseTest < ActiveSupport::TestCase
     
     monthly_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: monthly_template
+      expense_template: monthly_template,
+      name: monthly_template.name
     )
     weekly_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: weekly_template
+      expense_template: weekly_template,
+      name: weekly_template.name
     )
     
     monthly_expenses = Expense.by_frequency("monthly")
@@ -308,7 +332,8 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: monthly_template
+      expense_template: monthly_template,
+      name: monthly_template.name
     )
     assert_equal "Monthly", expense.frequency_text
   end
@@ -320,7 +345,8 @@ class ExpenseTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name
     )
     
     assert_difference("Expense.count", -1) do
@@ -348,6 +374,7 @@ class ExpenseTest < ActiveSupport::TestCase
     over_budget_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
+      name: expense_template.name,
       allotted_amount: 100.00
     )
     Payment.create!(
@@ -379,6 +406,7 @@ class ExpenseTest < ActiveSupport::TestCase
     empty_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
+      name: expense_template.name,
       allotted_amount: 0.00
     )
     assert_equal 0, empty_expense.spent_percentage
@@ -409,6 +437,7 @@ class ExpenseTest < ActiveSupport::TestCase
     fixed_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: fixed_template,
+      name: fixed_template.name,
       allotted_amount: 1000.00
     )
     
@@ -443,6 +472,7 @@ class ExpenseTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: template,
+      name: template.name,
       allotted_amount: 500.00
     )
     
@@ -474,12 +504,7 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_match(/#{expense.monthly_budget.name}/, to_s_string)
   end
 
-  test "name should use expense_template name by default" do
-    expense = @expense_one
-    assert_equal expense.expense_template.name, expense.name
-  end
-
-  test "name should use override when provided" do
+  test "name should be copied from template when expense is created" do
     expense_template = ExpenseTemplate.create!(
       user: @monthly_budget_one.user,
       name: "Template Name",
@@ -488,19 +513,35 @@ class ExpenseTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
-      name: "Custom Override Name"
+      name: expense_template.name  # Name is copied from template
     )
-    assert_equal "Custom Override Name", expense.name
-    assert expense.name_overridden?
+    assert_equal "Template Name", expense.name
   end
 
-  test "display_name should use expense_template or override" do
-    expense = @expense_one
-    assert_equal expense.expense_template.display_name, expense.display_name
+  test "name can be edited independently of template" do
+    expense_template = ExpenseTemplate.create!(
+      user: @monthly_budget_one.user,
+      name: "Template Name",
+      frequency: "monthly"
+    )
+    expense = Expense.create!(
+      monthly_budget: @monthly_budget_one,
+      expense_template: expense_template,
+      name: expense_template.name
+    )
+    # Update the name
+    expense.update(name: "Custom Name")
+    assert_equal "Custom Name", expense.name
+    # Template name unchanged
+    assert_equal "Template Name", expense_template.name
   end
 
   test "display_name should return the expense name" do
-    expense = expenses(:one)
+    expense = @expense_one
+    # Expense name is stored directly, not derived from template
+    # If name is not set, it returns "Unnamed Expense"
+    # For fixtures, we need to ensure name is set
+    expense.update(name: expense.expense_template.name) if expense.read_attribute(:name).blank?
     assert_equal expense.name, expense.display_name
   end
 
@@ -520,6 +561,7 @@ class ExpenseTest < ActiveSupport::TestCase
     empty_expense = Expense.create!(
       monthly_budget: @monthly_budget_one,
       expense_template: expense_template,
+      name: expense_template.name,
       allotted_amount: 0.00
     )
     assert_equal 0, empty_expense.percent_used

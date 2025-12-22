@@ -261,12 +261,14 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     Expense.create!(
       monthly_budget: budget,
       expense_template: template1,
+      name: template1.name,
       allotted_amount: 100.00
     )
     
     Expense.create!(
       monthly_budget: budget,
       expense_template: template2,
+      name: template2.name,
       allotted_amount: 200.00
     )
     
@@ -287,9 +289,10 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       default_amount: 100.00
     )
     
-    expense = Expense.create!(
+    expense =     Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 500.00
     )
     
@@ -325,6 +328,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -348,6 +352,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -374,6 +379,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -393,6 +399,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     Expense.create!(
       monthly_budget: budget2,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -431,6 +438,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -473,6 +481,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 2000.00
     )
     
@@ -512,7 +521,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "Groceries",
       frequency: "monthly",
       default_amount: 500.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-01-15")  # Need due_date for events_for_month
     )
     
     template2 = ExpenseTemplate.create!(
@@ -520,7 +530,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "Rent",
       frequency: "monthly",
       default_amount: 1200.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-01-01")  # Need due_date for events_for_month
     )
     
     # Create a template with auto_create: false (should be skipped)
@@ -541,14 +552,48 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     assert budget.expenses.exists?(expense_template_id: template2.id)
     assert_not budget.expenses.exists?(expense_template_id: template3.id)
     
-    # Check that default_amount was used
+    # Check that default_amount was used and name was copied
     expense1 = budget.expenses.find_by(expense_template: template1)
     expense2 = budget.expenses.find_by(expense_template: template2)
     assert_equal 500.00, expense1.allotted_amount
     assert_equal 1200.00, expense2.allotted_amount
+    assert_equal "Groceries", expense1.name  # Name copied from template
+    assert_equal "Rent", expense2.name  # Name copied from template
   end
 
-  test "auto_create_expenses should skip templates that already have expenses" do
+  test "auto_create_expenses should create multiple expenses for weekly templates" do
+    user = User.create!(email: "weeklytest@example.com", password: "password123")
+    budget = MonthlyBudget.create!(
+      user: user,
+      month_year: "2026-01",  # January 2026
+      total_actual_income: 5000.00
+    )
+    
+    # Create a weekly template starting Jan 1
+    template = ExpenseTemplate.create!(
+      user: user,
+      name: "Weekly Payment",
+      frequency: "weekly",
+      default_amount: 100.00,
+      auto_create: true,
+      due_date: Date.parse("2026-01-01")
+    )
+    
+    # Should create multiple expenses for the month (weekly = ~4-5 per month)
+    budget.auto_create_expenses
+    
+    weekly_expenses = budget.expenses.where(expense_template: template)
+    assert weekly_expenses.count >= 4, "Should create at least 4 weekly expenses"
+    
+    # Each expense should have template name copied
+    weekly_expenses.each do |expense|
+      assert_equal "Weekly Payment", expense.name
+      assert_equal 100.00, expense.allotted_amount.to_f
+      assert_not_nil expense.expected_on  # Each should have its own expected_on date
+    end
+  end
+
+  test "auto_create_expenses should create expenses even if some exist (for weekly/bi-weekly)" do
     user = User.create!(email: "skiptest@example.com", password: "password123")
     budget = MonthlyBudget.create!(
       user: user,
@@ -561,25 +606,26 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "Groceries",
       frequency: "monthly",
       default_amount: 500.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-02-15")  # Need due_date for events_for_month
     )
     
-    # Create an expense manually for this category
+    # Create an expense manually for this template
     existing_expense = Expense.create!(
       monthly_budget: budget,
       expense_template: template,
+      name: template.name,
       allotted_amount: 600.00
     )
     
-    # Should not create duplicate expense
-    assert_no_difference("Expense.count") do
-      budget.auto_create_expenses
-    end
+    # For monthly templates, should not create duplicate
+    # (auto_create_expenses checks for existing expenses by template and date)
+    initial_count = budget.expenses.count
+    budget.auto_create_expenses
     
-    # Should still have only one expense
-    assert_equal 1, budget.expenses.count
-    assert_equal existing_expense.id, budget.expenses.first.id
-    assert_equal 600.00, budget.expenses.first.allotted_amount
+    # Should still have only one expense for monthly template
+    assert_equal initial_count, budget.expenses.count
+    assert_equal existing_expense.id, budget.expenses.find_by(expense_template: template).id
   end
 
   test "auto_create_expenses should use default_amount of 0 if template default_amount is nil" do
@@ -595,7 +641,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "New Template",
       frequency: "monthly",
       default_amount: nil,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-03-15")  # Need due_date for events_for_month
     )
     
     budget.auto_create_expenses
@@ -603,6 +650,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
     expense = budget.expenses.find_by(expense_template: template)
     assert_not_nil expense
     assert_equal 0.0, expense.allotted_amount.to_f
+    assert_equal "New Template", expense.name  # Name copied from template
   end
 
   test "auto_create_expenses should only create expenses for the budget's user's templates" do
@@ -621,7 +669,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "User1 Template",
       frequency: "monthly",
       default_amount: 500.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-04-15")  # Need due_date for events_for_month
     )
     
     user2_template = ExpenseTemplate.create!(
@@ -629,7 +678,8 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       name: "User2 Template",
       frequency: "monthly",
       default_amount: 300.00,
-      auto_create: true
+      auto_create: true,
+      due_date: Date.parse("2026-04-15")  # Need due_date for events_for_month
     )
     
     budget.auto_create_expenses
@@ -752,8 +802,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       income_template: template,
       received_on: Date.parse("2026-04-01"),
       month_year: "2026-04",
-      actual_amount: 0,
-      apply_to_next_month: false
+      actual_amount: 0
     )
     
     IncomeEvent.create!(
@@ -761,8 +810,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       income_template: template,
       received_on: Date.parse("2026-04-15"),
       month_year: "2026-04",
-      actual_amount: 0,
-      apply_to_next_month: false
+      actual_amount: 0
     )
     
     # Expected income = 2 events × 5000.00 = 10000.00
@@ -795,8 +843,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       income_template: template,
       received_on: Date.parse("2026-04-30"),
       month_year: prev_month,
-      actual_amount: 0,
-      apply_to_next_month: false
+      actual_amount: 0
     )
     
     # Create an event in current month
@@ -805,8 +852,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       income_template: template,
       received_on: Date.parse("2026-05-15"),
       month_year: "2026-05",
-      actual_amount: 0,
-      apply_to_next_month: false
+      actual_amount: 0
     )
     
     # Expected income = 1 event × 5000.00 = 5000.00 (only current month events)
@@ -828,8 +874,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       custom_label: "Bonus",
       received_on: Date.parse("2026-06-10"),
       month_year: "2026-06",
-      actual_amount: 1000.00,
-      apply_to_next_month: false
+      actual_amount: 1000.00
     )
     
     # Expected income = 1000.00 (from one-off event)
@@ -858,8 +903,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       income_template: template,
       received_on: Date.parse("2026-07-15"),
       month_year: "2026-07",
-      actual_amount: 0,
-      apply_to_next_month: false
+      actual_amount: 0
     )
     
     # Create one-off event
@@ -869,8 +913,7 @@ class MonthlyBudgetTest < ActiveSupport::TestCase
       custom_label: "Bonus",
       received_on: Date.parse("2026-07-20"),
       month_year: "2026-07",
-      actual_amount: 1000.00,
-      apply_to_next_month: false
+      actual_amount: 1000.00
     )
     
     # Expected income = 5000.00 (template) + 1000.00 (one-off) = 6000.00

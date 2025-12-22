@@ -81,6 +81,7 @@ class PaymentTest < ActiveSupport::TestCase
     expense = Expense.create!(
       monthly_budget: monthly_budgets(:one),
       expense_template: expense_template,
+      name: expense_template.name
     )
     payment = Payment.create!(
       expense: expense,

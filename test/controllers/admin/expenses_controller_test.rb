@@ -73,6 +73,7 @@ class Admin::ExpensesControllerTest < ActionDispatch::IntegrationTest
         expense: {
           monthly_budget_id: monthly_budget.id,
           expense_template_id: expense_template.id,
+          name: expense_template.name,
           allotted_amount: 150.00
         }
       }
@@ -133,7 +134,8 @@ class Admin::ExpensesControllerTest < ActionDispatch::IntegrationTest
       expense: {
         allotted_amount: 600.00,
         monthly_budget_id: @expense.monthly_budget_id,
-        expense_template_id: @expense.expense_template_id
+        expense_template_id: @expense.expense_template_id,
+        name: @expense.name
       }
     }
     assert_redirected_to admin_expense_path(@expense)

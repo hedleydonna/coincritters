@@ -179,7 +179,8 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
     )
     expense = Expense.create!(
       monthly_budget: monthly_budgets(:one),
-      expense_template: expense_template
+      expense_template: expense_template,
+      name: expense_template.name  # Name is required and copied from template
     )
     
     assert_difference("Expense.count", -1) do
@@ -234,7 +235,7 @@ class ExpenseTemplateTest < ActiveSupport::TestCase
       name: "Biweekly Test",
       frequency: "biweekly"
     )
-    assert_equal "Biweekly", biweekly_template.frequency_text
+    assert_equal "Bi-weekly", biweekly_template.frequency_text
 
     yearly_template = ExpenseTemplate.create!(
       user: @user_one,
