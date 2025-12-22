@@ -9,7 +9,7 @@ Rails.application.routes.draw do
 
   # THIS LINE IS THE ONLY THING THAT MATTERS
   authenticated :user do
-    root "dashboard#index", as: :authenticated_root
+    root "money_map#index", as: :authenticated_root
     
     resources :expense_templates, except: [:show] do
       member do
