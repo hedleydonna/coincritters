@@ -156,12 +156,18 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ### Expense Management Methods
 
-- `auto_create_expenses` - Automatically creates expenses from active expense templates with `auto_create: true` that don't already have an expense in this budget. Called automatically when viewing the expenses page to ensure newly created templates appear immediately.
+- `auto_create_expenses` - Automatically creates expenses from active expense templates with `auto_create: true` for this month based on frequency
   ```ruby
   budget.auto_create_expenses
   # Creates expenses for each expense template with auto_create: true
-  # Uses template.default_amount for the expense's allotted_amount
-  # Skips templates that already have an expense in this budget
+  # Uses template.events_for_month to calculate all due dates for the month
+  # For weekly/bi-weekly templates, creates multiple expense records
+  # Each expense gets:
+  #   - Template name copied to expense.name
+  #   - Template default_amount as allotted_amount
+  #   - Individual expected_on date (for weekly/bi-weekly)
+  # Only creates expenses from today forward for current month
+  # For future months, creates all expenses
   ```
 
 - `auto_create_income_events` - Automatically creates income events from active income templates with `auto_create: true` for this month
@@ -170,7 +176,7 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   # Creates income events for each income template with auto_create: true
   # Calculates event dates based on frequency and due_date
   # Only creates events from today forward for current month
-  # Handles last_payment_to_next_month deferral logic
+  # Sets actual_amount to estimated_amount if received_on is today, otherwise 0
   ```
 
 ### Income Calculation Methods
@@ -181,7 +187,7 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
   # Returns total expected income:
   # - Template-based events: count × template.estimated_amount
   # - One-off events: sum of actual_amount
-  # Includes deferred events from previous month
+  # Only counts events for current month (deferral functionality removed)
   ```
 
 ## Business Rules
@@ -327,10 +333,10 @@ The `month_year` field uses the format `YYYY-MM` (e.g., "2025-12" for December 2
 
 ## Relationship to Income Events
 
-Monthly budgets are related to income events through the `apply_to_next_month` field:
-- An `IncomeEvent` with `apply_to_next_month: false` counts in its `month_year`
-- An `IncomeEvent` with `apply_to_next_month: true` counts in the next month from its `month_year`
+Monthly budgets are related to income events through the `month_year` field:
+- An `IncomeEvent` counts in its `month_year` (deferral functionality removed)
 - The `total_actual_income` in a monthly budget should ideally match the sum of `actual_amount` from income events assigned to that month
+- Automatic carryover from previous month handles month-to-month balance (calculated via `carryover_from_previous_month`)
 
 ## Admin Dashboard
 
@@ -364,5 +370,12 @@ The admin dashboard displays:
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: December 2025
+
+**Recent Changes (December 2025)**:
+- Updated `auto_create_expenses` to support multiple expenses per template (weekly/bi-weekly)
+- Added `expected_on` date support for individual expense records
+- Template names are now copied to `expense.name` when creating expenses
+- Removed deferral logic from `auto_create_income_events`
+- Updated `expected_income` to only count current month events
 

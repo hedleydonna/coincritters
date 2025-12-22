@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ExpensesController` provides the main user interface for viewing and managing expenses in the Money Map. It automatically creates current and next month budgets, provides tab navigation between months, and handles creating both template-based and one-off expenses.
+The `ExpensesController` provides the main user interface for viewing and managing expenses. It handles creating both one-off and recurring expenses through a unified form, manages payments for expenses, and supports navigation context via `return_to` parameters. The controller automatically creates current and next month budgets and handles expense creation from templates.
 
 ## Location
 
@@ -16,15 +16,16 @@ The `ExpensesController` provides the main user interface for viewing and managi
 ## Routes
 
 All routes are under `/expenses`:
-- **GET** `/expenses` - View Money Map (index)
-- **GET** `/expenses?month=YYYY-MM` - View specific month's Money Map
-- **GET** `/expenses/new` - Show new expense form
-- **GET** `/expenses/new?month=YYYY-MM` - Show new expense form for specific month
-- **POST** `/expenses` - Create a new expense
-- **GET** `/expenses/:id/edit` - Show edit expense form
-- **GET** `/expenses/:id/edit?month=YYYY-MM` - Show edit expense form for specific month
+- **GET** `/expenses` - View expenses index (current month by default)
+- **GET** `/expenses?month=YYYY-MM` - View specific month's expenses
+- **GET** `/expenses/new` - Show unified expense creation form (one-off or recurring)
+- **GET** `/expenses/new?month=YYYY-MM&return_to=money_map` - Show new expense form with navigation context
+- **POST** `/expenses` - Create a new expense (one-off or recurring template)
+- **GET** `/expenses/:id/edit` - Show edit expense form with payment management
+- **GET** `/expenses/:id/edit?return_to=money_map` - Show edit form with navigation context
 - **PATCH** `/expenses/:id` - Update an expense
 - **DELETE** `/expenses/:id` - Delete a one-off expense (template-based expenses cannot be deleted)
+- **POST** `/expenses/:id/add_payment` - Add a payment to an expense
 - **POST** `/expenses/:id/mark_paid` - Mark expense as fully paid (creates payment for remaining amount)
 - **POST** `/expenses/:expense_id/sweep_to_savings` - Sweep flex fund to savings expense
 - **POST** `/expenses/start_next_month` - Create next month's budget (deprecated - auto-created now)
@@ -76,70 +77,99 @@ The main Money Map view. Automatically creates current and next month budgets if
 
 ### `new`
 
-Shows the form to create a new **one-off expense** (not template-based).
+Shows the unified form to create either a **one-off expense** or a **recurring expense template** with progressive disclosure.
 
-**Note:** This form is specifically for creating one-off expenses. Template-based expenses are automatically created from expense templates with `auto_create: true` when viewing the expenses page.
+**Form Behavior:**
+- Single form handles both one-off and recurring expenses
+- "How often?" dropdown with "Just once" option for one-offs
+- When "Just once" is selected: creates a one-off expense
+- When frequency is selected (weekly, biweekly, monthly, yearly): creates an expense template and auto-creates expenses for the month
+- Progressive disclosure shows/hides fields based on selection
 
 **Instance Variables:**
 - `@budget` - The monthly budget to create expense in (from params or current)
 - `@expense` - New, unsaved Expense instance
 - `@viewing_month` - Month being viewed (for navigation)
+- `@return_to` - Navigation context parameter ('money_map' or nil)
 
 **Parameters:**
 - `month` (optional) - Month to create expense for (YYYY-MM format)
+- `return_to` (optional) - Navigation context ('money_map' to return to Money Map after creation)
 
 **Form Fields:**
-- `name` (required) - Name of the one-off expense
-- `allotted_amount` (required) - Amount to allocate
+- `name` (required) - Name of the expense
+- `allotted_amount` / `default_amount` (required) - Amount (label changes based on one-off vs recurring)
+- `expected_on` / `due_date` (optional) - Date field (label changes based on one-off vs recurring)
+- `frequency` (required for recurring) - How often the expense occurs (weekly, biweekly, monthly, yearly)
 
 ### `create`
 
-Creates a new one-off expense.
+Creates either a one-off expense or a recurring expense template with auto-created expenses.
+
+**Behavior:**
+- If `frequency == "just_once"`: Creates a one-off expense with the provided name and allotted_amount
+- If `frequency` is set (weekly, biweekly, monthly, yearly):
+  1. Creates an `ExpenseTemplate` with the provided name, frequency, due_date, and default_amount
+  2. Auto-creates expense records for the current month based on frequency
+  3. Each expense gets the template name copied to `expense.name`
+  4. Each expense gets its own `expected_on` date for weekly/bi-weekly expenses
 
 **Success:**
-- Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense added!"
-- Uses `data: { turbo: false }` to force full page reload, ensuring the new expense appears immediately
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'spending-section')`
+- Otherwise: Redirects to `expenses_path(month: @budget.month_year)` with notice
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
-- Re-sets `@viewing_month` for the form
+- Re-sets `@viewing_month` and `@return_to` for the form
 
 **Parameters:**
-- `expense[month_year]` or `month` - Month to create expense for
-- `expense[name]` - Expense name (required for one-off expenses)
-- `expense[allotted_amount]` - Amount to allocate
-
-**Note:** The `expense_template_id` parameter is not used in the new expense form - this form is specifically for one-off expenses only.
+- `month` (optional) - Month to create expense for (YYYY-MM format)
+- `return_to` (optional) - Navigation context
+- `frequency` (required) - "just_once" for one-off, or frequency string for recurring
+- `expense[name]` - Expense name (required)
+- `allotted_amount` or `default_amount` - Amount (name changes based on frequency)
+- `due_date` or `expected_on` - Date (name changes based on frequency)
 
 ### `edit`
 
-Shows the form to edit an existing expense.
+Shows the form to edit an existing expense, including payment management.
+
+**Features:**
+- Edit expense name and allotted amount
+- View payment summary (Allotted | Spent | Remaining) with progress bar
+- Add payments via quick payment form
+- View and delete payment history
+- "Pay Full Amount" button for convenience
 
 **Instance Variables:**
 - `@expense` - The expense being edited
 - `@budget` - The monthly budget the expense belongs to
-- `@expense_templates` - All active expense templates for user selection
+- `@expense_templates` - All active expense templates (for reference, not used in form)
 - `@viewing_month` - Month being viewed (for navigation)
+- `@return_to` - Navigation context parameter
 
 **Parameters:**
 - `id` - Expense ID to edit
-- `month` (optional) - Month being viewed (YYYY-MM format)
+- `return_to` (optional) - Navigation context ('money_map' to return to Money Map after update)
 
 ### `update`
 
 Updates an existing expense.
 
 **Success:**
-- Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense updated!"
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'spending-section')`
+- Otherwise: Redirects to `expenses_path(month: @budget.month_year)` with notice: "Expense updated!"
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `edit` template with `:unprocessable_entity` status
-- Re-sets `@expense_templates` and `@viewing_month` for the form
+- Re-sets `@expense_templates`, `@viewing_month`, and `@return_to` for the form
 
 **Parameters:**
 - `id` - Expense ID to update
-- `expense[expense_template_id]` - Template ID (optional)
-- `expense[name]` - Expense name
+- `return_to` (optional) - Navigation context
+- `expense[name]` - Expense name (required)
 - `expense[allotted_amount]` - Amount to allocate
 
 ### `mark_paid`
@@ -211,7 +241,7 @@ Deletes a one-off expense (hard delete). Template-based expenses cannot be delet
 - `month` (optional) - Month parameter for redirect
 
 **Deletion Strategy:**
-The system only allows deletion of one-off expenses to prevent auto-recreation issues. When a template-based expense is deleted, the auto-creation logic (`auto_create_expenses`) would immediately recreate it on the next page view because it checks `expenses.exists?(expense_template_id: template.id)`. 
+The system only allows deletion of one-off expenses to prevent auto-recreation issues. When a template-based expense is deleted, the auto-creation logic (`auto_create_expenses`) would immediately recreate it on the next page view because it checks for existing expenses by template ID and date.
 
 For template-based expenses users don't want:
 - Edit the template (turn off auto-create, delete the template, etc.)
@@ -230,9 +260,10 @@ This action is kept for backward compatibility but is no longer needed since nex
 
 Permits the following parameters:
 
-- `expense_template_id` - The expense template this expense is based on (optional - can be null for one-off expenses)
+- `name` - Expense name (always required)
 - `allotted_amount` - Amount allocated to this expense (decimal, default: 0.0)
-- `name` - Expense name (required for one-off expenses, optional override for template-based expenses)
+
+**Note:** `expense_template_id` is no longer used in the form. Template-based expenses are created through the unified form which creates the template first, then auto-creates the expense records.
 
 ## Access Control
 
@@ -308,23 +339,31 @@ PATCH /expenses/123
 
 ## Key Features
 
-1. **Auto-Creation**: Automatically creates current and next month budgets on first view
-2. **Tab Navigation**: Easy switching between current and next month
-3. **Month Restrictions**:
+1. **Unified Expense Creation**: Single form handles both one-off and recurring expenses with progressive disclosure
+2. **Payment Management**: Integrated payment tracking in expense edit form with quick payment entry and history
+3. **Navigation Context**: `return_to` parameter support for seamless navigation back to Money Map
+4. **Auto-Creation**: Automatically creates current and next month budgets on first view
+5. **Multiple Expenses Per Template**: Supports weekly/bi-weekly templates that create multiple expense records per month, each with its own `expected_on` date
+6. **Month Restrictions**:
    - Current month: Full access (edit expenses, add payments, delete one-offs)
    - Next month: Planning mode (edit allotted amounts, delete one-offs, no payments)
    - Past months: View-only
-4. **Two Expense Types**:
+7. **Two Expense Types**:
    - Template-based: Created from expense templates (recurring, cannot be deleted)
    - One-off: Created without template (unique, non-recurring, can be deleted)
-5. **Deletion Policy**: Only one-off expenses can be deleted to prevent auto-recreation conflicts
+8. **Deletion Policy**: Only one-off expenses can be deleted to prevent auto-recreation conflicts
+9. **Name Methodology**: Template names are copied to `expense.name` when created, allowing individual customization
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: December 2025
 
-**Recent Changes (January 2026)**:
-- Added `destroy` action for one-off expenses only
-- Template-based expenses cannot be deleted (prevents auto-recreation conflicts)
-- Delete button only appears for one-off expenses in the UI
+**Recent Changes (December 2025)**:
+- Unified expense creation form for one-off and recurring expenses
+- Added `add_payment` action for payment management
+- Added `return_to` parameter support for navigation context
+- Removed uniqueness constraints on expense names and template associations
+- Added `expected_on` field for weekly/bi-weekly expenses
+- Payment management integrated into expense edit form
+- Template names are now copied to `expense.name` when creating expenses
 

@@ -16,16 +16,16 @@ The Expense model represents payment categories within a monthly budget in the C
 | `monthly_budget_id` | bigint | NOT NULL | References the monthly budget this expensebelongs to (referential integrity enforced at model level) |
 | `expense_template_id` | bigint | Nullable | References the expensetemplate this expenseis based on (nullable for one-off expenses, referential integrity enforced at model level) |
 | `allotted_amount` | decimal(12,2) | NOT NULL, Default: 0.0 | How much the user assigned to this expensethis month |
-| `name` | string | Conditionally Required | Custom name for one-off expenses, or override name for template-based expenses (required if expense_template_id is null) |
+| `name` | string | Required | Expense name (copied from template when created from template, or user-provided for one-off expenses) |
+| `expected_on` | date | Nullable | Expected date for this expense (used for weekly/bi-weekly expenses to track individual payment dates) |
 | `created_at` | datetime | NOT NULL | Record creation timestamp |
 | `updated_at` | datetime | NOT NULL | Last update timestamp |
 
 ### Indexes
 
-- **Monthly Budget ID + ExpenseTemplate ID Index**: Partial unique index on `[monthly_budget_id, expense_template_id]` (only when expense_template_id IS NOT NULL) - ensures one expense per template per budget (unless name override is used)
 - **Monthly Budget ID Index**: Index on `monthly_budget_id` for fast budget lookups
-- **ExpenseTemplate ID Index**: Index on `expense_template_id` for fast template lookups
-- **Monthly Budget ID + Name Index**: Composite index on `[monthly_budget_id, name]` - ensures unique names per budget (used for one-off expenses and name overrides)
+- **ExpenseTemplate ID Index**: Index on `expense_template_id` for fast template lookups (non-unique - allows multiple expenses per template)
+- **Expected On Index**: Index on `expected_on` for date-based queries
 
 ### Referential Integrity
 
@@ -86,24 +86,14 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ### Presence Validations
 
-- `validates :name, presence: true, if: -> { expense_template_id.nil? }`:
-  - Name is required when creating a one-off expense (no template).
-- `validates :expense_template_id, presence: true, unless: -> { name.present? }`:
-  - Template is required when name is not provided (must have either template or name).
+- `validates :name, presence: true`:
+  - Name is always required for all expenses.
+  - For template-based expenses, the template name is automatically copied to `expense.name` when the expense is created.
+  - For one-off expenses, the user must provide a name.
 
 ### Uniqueness Validations
 
-- `validates :expense_template_id, uniqueness: { scope: :monthly_budget_id, allow_nil: true }` (when template is present and no name override):
-  - A monthly budget can only have one expense for each expensetemplate (unless name override is used).
-  - Prevents duplicate templates within the same budget.
-  - Does not apply to one-off expenses (null expense_template_id).
-- `validates :name, uniqueness: { scope: :monthly_budget_id }` (when name is provided):
-  - If using a name (either for one-off or as override), the name must be unique within the monthly budget.
-
-### Database Constraints
-
-- **Partial Unique Index**: The database enforces uniqueness on `[monthly_budget_id, expense_template_id]` when `expense_template_id IS NOT NULL` - a monthly budget can only have one expense per template (unless name override is used).
-- **Name Unique Index**: The database enforces uniqueness on `[monthly_budget_id, name]` - ensures unique names per budget for one-off expenses and name overrides.
+- **No uniqueness constraints**: Multiple expenses can share the same name within a budget, and multiple expenses can be created from the same template within a budget (needed for weekly/bi-weekly expenses that create multiple expense records per month).
 
 ## Callbacks
 
@@ -123,16 +113,11 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
 
 ### Accessing Template Properties
 
-- `name`: Returns the override name if present, otherwise returns the template name.
-- `display_name`: Returns a friendly display name.
+- `name`: Returns the expense's stored name (copied from template when created, or user-provided for one-offs). No longer falls back to template name.
+- `display_name`: Returns a friendly display name (same as `name`).
 - `frequency`: Returns the expense template's frequency (always from template).
-- `due_date`: Returns the expense template's due date (always from template).
+- `due_date`: Returns `expected_on` if present (for weekly/bi-weekly expenses), otherwise returns the expense template's `due_date`.
 - `frequency_text`: Returns a human-readable text description of the frequency ("Monthly", "Weekly", etc.).
-
-### Name Override Checking
-
-- `has_overrides?`: Returns `true` if the expensehas a name override.
-- `name_overridden?`: Returns `true` if the name is overridden.
 
 ### Financial Calculations
 
@@ -156,19 +141,22 @@ Cascade deletion is handled via `dependent: :destroy` in model associations, not
    - **Template-based expenses**: Created from an expense template (recurring expenses like "Rent", "Groceries")
    - **One-off expenses**: Created without a template for unique, non-recurring expenses (e.g., "Birthday Gift", "Car Repair")
 
-2. **One Expense Per Payment Category Per Budget**: 
-   - For template-based expenses: Each monthly budget can only have one expense for each expense template (unless name override is used)
-   - For one-off expenses: Each name must be unique within the monthly budget
+2. **Name Methodology**:
+   - **Template-based expenses**: When created from a template, the template's name is automatically copied into `expense.name`. This allows each expense to have its own editable name that can be customized independently of the template.
+   - **One-off expenses**: User must provide a name when creating the expense.
+   - **Multiple expenses with same name**: Multiple expenses can share the same name within a budget (no uniqueness constraint).
+   - **Multiple expenses per template**: Multiple expenses can be created from the same template within a budget (needed for weekly/bi-weekly templates that create multiple expense records per month).
 
 3. **Name Requirements**:
-   - **One-off expenses**: `name` is required (expense_template_id must be null)
-   - **Template-based expenses**: `name` is optional (uses template name if not provided)
-   - If `name` is provided as an override, it must be unique within the budget
+   - **All expenses**: `name` is always required
+   - **Template-based expenses**: Name is automatically copied from template when expense is created, but can be edited later
+   - **One-off expenses**: User must provide a name when creating
 
 4. **Template Association**:
    - Template-based expenses: Must have an `expense_template_id`
    - One-off expenses: `expense_template_id` is null
    - Frequency and due_date come from the template (for template-based expenses) or default to "monthly" and nil (for one-off expenses)
+   - For weekly/bi-weekly expenses, each expense record has its own `expected_on` date to track individual payment dates
 
 5. **Spent Amount is Calculated**: The `spent_amount` is calculated from the sum of all related payment records. It is not stored in the database and updates automatically as payment records are added or removed.
 
@@ -215,14 +203,16 @@ expense.name  # => "Groceries"
 expense.display_name  # => "Groceries"
 expense.frequency  # => "monthly" (from template)
 
-# Create expense with name override
-custom_expense = budget.expenses.create(
+# Template name is automatically copied to expense.name
+expense = budget.expenses.create(
   expense_template: groceries_template,
-  name: "Custom Groceries",  # Override template name
   allotted_amount: 600.00
 )
-custom_expense.name  # => "Custom Groceries" (override)
-custom_expense.frequency  # => "monthly" (from template - cannot override)
+expense.name  # => "Groceries" (copied from template)
+# Name can be edited later if needed
+expense.update(name: "Custom Groceries")
+expense.name  # => "Custom Groceries" (now customized)
+expense.frequency  # => "monthly" (from template - cannot override)
 ```
 
 ### Creating a One-Off Expense

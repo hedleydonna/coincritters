@@ -17,13 +17,14 @@ The `IncomeTemplatesController` provides CRUD functionality for users to manage 
 
 All routes are under `/income_templates`:
 - **GET** `/income_templates` - List all income templates (index)
-- **GET** `/income_templates?return_to=income_events` - List templates with return navigation context
+- **GET** `/income_templates?return_to=money_map` - List templates with return navigation context
 - **GET** `/income_templates/new` - Show new template form
-- **GET** `/income_templates/new?return_to=income_events` - Show new template form with return navigation
+- **GET** `/income_templates/new?return_to=money_map` - Show new template form with return navigation
 - **POST** `/income_templates` - Create a new template
 - **GET** `/income_templates/:id/edit` - Show edit template form
-- **GET** `/income_templates/:id/edit?return_to=income_events` - Show edit template form with return navigation
+- **GET** `/income_templates/:id/edit?return_to=money_map` - Show edit template form with return navigation
 - **PATCH/PUT** `/income_templates/:id` - Update a template
+- **PATCH** `/income_templates/:id/toggle_auto_create` - Toggle auto-create status
 - **DELETE** `/income_templates/:id` - Soft delete a template (sets `deleted_at`)
 - **PATCH** `/income_templates/:id/reactivate` - Restore a deleted template
 
@@ -35,11 +36,12 @@ Lists all active income templates for the current user. Deleted templates are hi
 
 **Instance Variables:**
 - `@income_templates` - All active (non-deleted) templates for the current user, ordered by name
-- `@return_to` - Navigation context parameter ('income_events', 'settings', or nil)
+- `@return_to` - Navigation context parameter ('money_map' or nil)
 
 **Behavior:**
 - Shows only active templates (where `deleted_at IS NULL`)
-- Deleted templates are not shown in the main list
+- Displays all active templates (both auto-create enabled and disabled)
+- Shows current month one-off income events (removed - now managed on Money Map)
 - Supports `return_to` parameter for context-aware navigation
 
 ### `new`
@@ -50,7 +52,7 @@ Shows the form to create a new income template.
 - `@income_template` - New IncomeTemplate instance for the current user
 - `@return_to` - Navigation context parameter for redirect after creation
 - Defaults `frequency` to "monthly"
-- Defaults `auto_create` to `false`
+- Defaults `auto_create` to `true` (templates auto-create by default)
 
 ### `create`
 
@@ -59,6 +61,7 @@ Creates a new income template from form parameters.
 **Success:**
 - Always redirects to `income_templates_path(return_to: params[:return_to])` with notice: "Money in source created!"
 - Preserves `return_to` parameter for navigation context
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
@@ -76,8 +79,9 @@ Shows the form to edit an existing income template.
 Updates an existing income template from form parameters.
 
 **Success:**
-- If `return_to == 'income_events'`, redirects to `income_events_path`
+- If `return_to == 'money_map'`, redirects to `money_map_path(scroll_to: 'money-in-section')`
 - Otherwise, redirects to `income_templates_path(return_to: params[:return_to])` with notice: "Income source updated!"
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `edit` template with `:unprocessable_entity` status
@@ -93,6 +97,24 @@ Soft deletes an income template by setting `deleted_at` timestamp.
 - Preserves `return_to` parameter for navigation context
 - Uses Turbo confirmation dialog with strong warning about data loss
 
+### `toggle_auto_create`
+
+Toggles the auto-create status of an income template.
+
+**Behavior:**
+- Toggles `auto_create` boolean (true ↔ false)
+- When disabling auto-create: Deletes next month's preview events (if `actual_amount == 0`)
+- Button text changes dynamically: "Disable Auto-Create" when enabled, "Enable Auto-Create" when disabled
+- Button is shown on edit page, outside the main form
+
+**Success:**
+- Redirects to `income_templates_path(return_to: params[:return_to])` with notice about new status
+- Uses `status: :see_other` for Turbo compatibility
+
+**Parameters:**
+- `id` - Income template ID to toggle
+- `return_to` (optional) - Navigation context
+
 ### `reactivate`
 
 Restores a deleted income template by clearing `deleted_at`.
@@ -100,7 +122,7 @@ Restores a deleted income template by clearing `deleted_at`.
 **Behavior:**
 - Uses `restore!` method (sets `deleted_at` to `nil`)
 - Uses `with_deleted` scope to find the template
-- If `return_to == 'income_events'`, redirects to `income_events_path`
+- If `return_to == 'money_map'`, redirects to `money_map_path(scroll_to: 'money-in-section')`
 - Otherwise, redirects to `income_templates_path(return_to: params[:return_to])` with notice: "Money in source restored!"
 
 ## Callbacks
@@ -138,14 +160,14 @@ end
 Permits the following parameters:
 
 - `name` - The template name (required, unique per user among active templates)
-- `frequency` - Income frequency: "weekly", "bi_weekly", "monthly", or "irregular"
-- `due_date` - Date when income is typically received (required if `auto_create: true`)
-- `estimated_amount` - Estimated amount for this income source (decimal, required, >= 0)
-- `auto_create` - Whether to automatically create income events from this template when creating monthly budgets (boolean)
-- `active` - Whether the template is active (boolean, legacy field - not used for soft deletion)
-- `last_payment_to_next_month` - Whether the last payment of the month should be deferred to next month (boolean)
+- `frequency` - Income frequency: "weekly", "biweekly", "monthly", or "yearly"
+- `due_date` - Date when income is typically received (optional)
+- `estimated_amount` - Estimated amount for this income source (decimal, optional, >= 0)
 
-**Note:** `deleted_at` is not permitted - users can only soft delete via the destroy action.
+**Note:** 
+- `auto_create` is not permitted in the form - it defaults to `true` when creating templates, and can be toggled via the `toggle_auto_create` action
+- `last_payment_to_next_month` has been removed (deferral functionality removed)
+- `deleted_at` is not permitted - users can only soft delete via the destroy action
 
 ## Access Control
 
@@ -181,63 +203,71 @@ Permits the following parameters:
 ### Creating an Income Template
 
 ```ruby
-POST /income_templates?return_to=income_events
+POST /income_templates?return_to=money_map
 {
   income_template: {
     name: "Monthly Salary",
     frequency: "monthly",
     due_date: Date.today,
-    estimated_amount: 5000.00,
-    auto_create: true,
-    last_payment_to_next_month: false
+    estimated_amount: 5000.00
   },
-  return_to: "income_events"
+  return_to: "money_map"
 }
-# Redirects to income_templates_path(return_to: "income_events")
+# auto_create defaults to true
+# Redirects to income_templates_path(return_to: "money_map")
 ```
 
 ### Updating an Income Template
 
 ```ruby
-PATCH /income_templates/1
+PATCH /income_templates/1?return_to=money_map
 {
   income_template: {
     name: "Monthly Salary",
     frequency: "monthly",
     due_date: 1,
-    estimated_amount: 5500.00,
-    auto_create: true,
-    last_payment_to_next_month: true
-  }
+    estimated_amount: 5500.00
+  },
+  return_to: "money_map"
 }
+# Redirects to money_map_path(scroll_to: 'money-in-section') if return_to is 'money_map'
+```
+
+### Toggling Auto-Create
+
+```ruby
+PATCH /income_templates/1/toggle_auto_create?return_to=money_map
+# Toggles auto_create status
+# Deletes next month's preview events if disabling
+# Redirects to income_templates_path(return_to: "money_map")
 ```
 
 ### Soft Deleting a Template
 
 ```ruby
-DELETE /income_templates/1?return_to=income_events
+DELETE /income_templates/1?return_to=money_map
 # Soft deletes by setting deleted_at timestamp
-# Redirects to income_templates_path(return_to: "income_events")
+# Redirects to income_templates_path(return_to: "money_map")
 ```
 
 ### Restoring a Deleted Template
 
 ```ruby
-PATCH /income_templates/1/reactivate?return_to=income_events
+PATCH /income_templates/1/reactivate?return_to=money_map
 # Clears deleted_at (sets to nil)
-# Redirects based on return_to parameter
+# Redirects to money_map_path(scroll_to: 'money-in-section') if return_to is 'money_map'
 ```
 
 ## Key Features
 
 1. **Soft Delete with `deleted_at`**: Templates are soft deleted using `deleted_at` timestamp to preserve historical data
-2. **Context-Aware Navigation**: Supports `return_to` parameter for returning to originating page (Money In, Dashboard, or Settings)
-3. **Auto-Create**: Templates with `auto_create: true` automatically create income events in new monthly budgets
-4. **User Scoped**: All operations are scoped to the current user
-5. **Turbo Integration**: Forms and delete actions use Turbo for seamless interactions
-6. **Icon-Based UI**: Action buttons use icons with tooltips for better UX
-7. **Filtered Views**: Income events from deleted templates are automatically filtered out from the money-in list
-8. **Deferral Support**: Templates can have `last_payment_to_next_month` to defer last payment of month
+2. **Context-Aware Navigation**: Supports `return_to` parameter for returning to Money Map or other pages
+3. **Auto-Create Toggle**: Templates default to `auto_create: true` and can be toggled via dedicated action
+4. **Auto-Create Behavior**: Templates with `auto_create: true` automatically create income events in monthly budgets
+5. **User Scoped**: All operations are scoped to the current user
+6. **Turbo Integration**: Forms and actions use Turbo with `status: :see_other` for seamless interactions
+7. **Icon-Based UI**: Action buttons use icons with tooltips for better UX
+8. **Filtered Views**: Income events from deleted templates are automatically filtered out from the money-in list
 
 ## Terminology
 
@@ -248,5 +278,14 @@ PATCH /income_templates/1/reactivate?return_to=income_events
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: December 2025
+
+**Recent Changes (December 2025)**:
+- Added `toggle_auto_create` action for toggling auto-create status
+- Removed `auto_create` and `last_payment_to_next_month` from form parameters
+- `auto_create` now defaults to `true` when creating templates
+- Updated `return_to` parameter to support 'money_map' instead of 'income_events'
+- Removed one-off income events from index page (now managed on Money Map)
+- Updated redirects to use `money_map_path(scroll_to: 'money-in-section')` when `return_to == 'money_map'`
+- Removed deferral functionality (`last_payment_to_next_month`)
 

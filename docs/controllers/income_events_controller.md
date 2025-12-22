@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `IncomeEventsController` provides functionality for users to view and manage income events. It supports viewing current and next month, creating one-off income events, editing auto-created events, and managing income deferral.
+The `IncomeEventsController` provides functionality for users to view and manage income events. It supports a unified form for creating both one-off and recurring income, editing income events with actual vs expected amount tracking, and managing income receipt status. The controller handles navigation context via `return_to` parameters for seamless integration with the Money Map.
 
 ## Location
 
@@ -18,12 +18,14 @@ The `IncomeEventsController` provides functionality for users to view and manage
 All routes are under `/income_events`:
 - **GET** `/income_events` - View income events (current month by default)
 - **GET** `/income_events?month=YYYY-MM` - View income events for specific month (current or next only)
-- **GET** `/income_events/new` - Show new one-off income event form
-- **POST** `/income_events` - Create a new one-off income event
+- **GET** `/income_events/new` - Show unified income creation form (one-off or recurring)
+- **GET** `/income_events/new?return_to=money_map` - Show new form with navigation context
+- **POST** `/income_events` - Create a new income event or template
 - **GET** `/income_events/:id/edit` - Edit an income event
+- **GET** `/income_events/:id/edit?return_to=money_map` - Edit with navigation context
 - **PATCH** `/income_events/:id` - Update an income event
-- **POST** `/income_events/:id/toggle_defer` - Toggle deferral to next month
-- **POST** `/income_events/:id/mark_received` - Mark event as received (sets actual_amount to estimated_amount)
+- **PATCH** `/income_events/:id/mark_received` - Mark event as received (sets actual_amount to estimated_amount)
+- **PATCH** `/income_events/:id/reset_to_expected` - Reset actual_amount to 0
 - **DELETE** `/income_events/:id` - Delete a one-off income event (template-based events cannot be deleted)
 
 ## Actions
@@ -43,8 +45,9 @@ Displays income events for current or next month.
 - Regenerates income events for next month if budget exists
 
 **Income Event Logic:**
-- **Current month**: Shows events from current month (not deferred) + deferred events from previous month
-- **Next month**: Shows events from next month (not deferred) + deferred events from current month
+- **Current month**: Shows all events for current month
+- **Next month**: Shows all events for next month
+- **Note**: Deferral functionality has been removed. Income events always count in their `month_year`. Automatic carryover handles month-to-month balance.
 
 **Filtering:**
 - Income events from deleted templates (where `income_template.deleted_at IS NOT NULL`) are automatically filtered out
@@ -67,56 +70,71 @@ Displays income events for current or next month.
 
 ### `new`
 
-Shows the form to create a new one-off income event.
+Shows the unified form to create either a **one-off income event** or a **recurring income template** with progressive disclosure.
 
-**Behavior:**
-- Creates one-off income events (not linked to income templates)
-- Sets `income_template_id` to `nil` and `apply_to_next_month` to `false`
-- Sets `month_year` from `received_on` date
-- Defaults `received_on` to today
+**Form Behavior:**
+- Single form handles both one-off and recurring income
+- "How often?" dropdown with "Just once" option for one-offs
+- When "Just once" is selected: creates a one-off income event
+- When frequency is selected (weekly, biweekly, monthly, yearly): creates an income template and auto-creates income events for the month
+- Progressive disclosure shows/hides fields based on selection
+- Amount field label changes dynamically ("Amount" for one-off, "Estimated Amount" for recurring)
+- Date field is always visible and label changes based on selection
 
 **Instance Variables:**
-- `@income_event` - New IncomeEvent instance
-- `@apply_to_month` - Which month to apply to ("current" or "next")
-- `@current_month_str` - Current month string
-- `@next_month_str` - Next month string
+- `@income_event` - New IncomeEvent instance (for one-off) or placeholder
+- `@return_to` - Navigation context parameter ('money_map' or nil)
 
 **Parameters:**
-- `income_event_id` (optional) - If provided, redirects to edit that event instead
-- `apply_to` (optional) - Which month to apply to ("current" or "next", defaults to "current")
+- `return_to` (optional) - Navigation context ('money_map' to return to Money Map after creation)
 
 ### `create`
 
-Creates a new one-off income event.
+Creates either a one-off income event or a recurring income template with auto-created events.
 
 **Behavior:**
-- Always creates one-off events (no income_template_id)
-- Sets `apply_to_next_month` to `false` (one-off income always counts in month received)
-- Sets `month_year` from `received_on` date
+- If `frequency == "just_once"`: Creates a one-off income event with the provided name, amount, and date
+- If `frequency` is set (weekly, biweekly, monthly, yearly):
+  1. Creates an `IncomeTemplate` with the provided name, frequency, due_date, and estimated_amount
+  2. Auto-creates income event records for the current month based on frequency
+  3. Sets `actual_amount` to `estimated_amount` only if `received_on` is today, otherwise sets to 0
+  4. Sets `month_year` from each event's `received_on` date
 
 **Success:**
-- Redirects to `income_events_path` with notice showing amount added
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'money-in-section')`
+- Otherwise: Redirects to `income_events_path` or `income_templates_path` with notice
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `new` template with `:unprocessable_entity` status
+- Re-sets `@return_to` for the form
 
 **Parameters:**
-- `income_event[custom_label]` - Label for the income event (required for one-off)
-- `income_event[received_on]` - Date income was received
-- `income_event[actual_amount]` - Amount received
+- `return_to` (optional) - Navigation context
+- `frequency` (required) - "just_once" for one-off, or frequency string for recurring
+- `income_event[custom_label]` or template name - Income name (required)
+- `income_event[actual_amount]` or `estimated_amount` - Amount (name changes based on frequency)
+- `income_event[received_on]` or `due_date` - Date (name changes based on frequency)
 - `income_event[notes]` - Optional notes
 
 ### `edit`
 
-Shows the form to edit an existing income event.
+Shows the form to edit an existing income event with expected vs actual amount comparison.
+
+**Features:**
+- Edit income event details (name, amount, date, notes)
+- View comparison of expected amount vs received amount
+- "Mark as Received" button to set actual_amount to estimated_amount
+- "Reset to Expected Amount" button to set actual_amount to 0
+- Swipe-from-left-edge gesture for back navigation (mobile)
 
 **Instance Variables:**
 - `@income_event` - The income event being edited
-- `@income_templates` - All active income templates (for template-based events)
-- `@income_data` - JSON hash of template IDs to estimated amounts (for JavaScript)
+- `@return_to` - Navigation context parameter
 
 **Parameters:**
 - `id` - Income event ID to edit
+- `return_to` (optional) - Navigation context ('money_map' to return to Money Map after update)
 
 ### `update`
 
@@ -124,36 +142,63 @@ Updates an existing income event.
 
 **Behavior:**
 - Updates `month_year` if `received_on` changed
-- Allows updating template link, deferral status, and amounts
+- Allows updating name, amounts, date, and notes
+- Validates that actual_amount can differ from estimated_amount
 
 **Success:**
-- Redirects to `income_events_path` with notice showing updated amount
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'money-in-section')`
+- Otherwise: Redirects to `income_events_path` or `income_templates_path` with notice
+- Uses `status: :see_other` for Turbo compatibility
 
 **Failure:**
 - Re-renders the `edit` template with `:unprocessable_entity` status
+- Re-sets `@return_to` for the form
 
 **Parameters:**
 - `id` - Income event ID to update
-- `income_event[income_template_id]` - Template ID (optional, for template-based events)
-- `income_event[custom_label]` - Custom label (for one-off events)
+- `return_to` (optional) - Navigation context
+- `income_event[custom_label]` - Custom label (for one-off events) or name
 - `income_event[received_on]` - Date received
-- `income_event[actual_amount]` - Amount received
-- `income_event[apply_to_next_month]` - Whether to defer to next month
+- `income_event[actual_amount]` - Amount received (can differ from estimated)
 - `income_event[notes]` - Optional notes
 
-### `toggle_defer`
+### `mark_received`
 
-Toggles whether an income event counts toward current or next month.
+Marks an income event as received by setting actual_amount to estimated_amount.
 
 **Behavior:**
-- Toggles `apply_to_next_month` boolean
-- Updates the monthly budget's total_actual_income automatically
+- Only works for events linked to income templates
+- Sets `actual_amount` to template's `estimated_amount` (or 0 if no estimated amount)
+- Uses `update` method to trigger validations and callbacks
 
 **Success:**
-- Redirects to `income_events_path` with notice about new status
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'money-in-section')`
+- Otherwise: Redirects to `income_events_path` with notice
+- Uses `status: :see_other` for Turbo compatibility
+
+**Failure:**
+- Redirects with alert if no expected amount is set
 
 **Parameters:**
-- `id` - Income event ID to toggle
+- `id` - Income event ID to mark as received
+- `return_to` (optional) - Navigation context
+
+### `reset_to_expected`
+
+Resets the actual_amount to 0 (unmarks as received).
+
+**Behavior:**
+- Sets `actual_amount` to 0
+- Allows user to reset if they marked as received by mistake
+
+**Success:**
+- If `return_to == 'money_map'`: Redirects to `money_map_path(scroll_to: 'money-in-section')`
+- Otherwise: Redirects to `income_events_path` with notice
+- Uses `status: :see_other` for Turbo compatibility
+
+**Parameters:**
+- `id` - Income event ID to reset
+- `return_to` (optional) - Navigation context
 
 ### `mark_received`
 
@@ -211,18 +256,18 @@ This preserves the integrity of the template system while allowing users to remo
 ### `income_event_params`
 
 **For `create` action:**
-- `custom_label` - Label for one-off income (required)
+- `custom_label` - Label for one-off income (required for one-off)
 - `received_on` - Date income was received
-- `actual_amount` - Amount received
+- `actual_amount` - Amount received (for one-off)
 - `notes` - Optional notes
 
 **For `update` action:**
-- `income_template_id` - Template ID (optional)
-- `custom_label` - Custom label (for one-off events)
+- `custom_label` - Custom label or name
 - `received_on` - Date received
-- `actual_amount` - Amount received
-- `apply_to_next_month` - Whether to defer to next month
+- `actual_amount` - Amount received (can differ from estimated)
 - `notes` - Optional notes
+
+**Note:** `apply_to_next_month` and `income_template_id` are no longer used. Deferral functionality has been removed in favor of automatic carryover.
 
 ## Access Control
 
@@ -247,11 +292,13 @@ This preserves the integrity of the template system while allowing users to remo
 ## Business Rules
 
 1. **Month Restrictions**: Only current and next month can be viewed
-2. **One-Off Events**: New events created through controller are always one-off (no template)
+2. **Unified Creation**: Single form creates either one-off events or recurring templates
 3. **Auto-Creation**: Income events are auto-created from templates when viewing a month
-4. **Deferral**: Income can be deferred to next month using `apply_to_next_month`
-5. **Budget Updates**: Monthly budget totals update automatically when events change
-6. **Deletion Policy**: Only one-off income events can be deleted to prevent auto-recreation conflicts
+4. **Auto-Fill Logic**: When income events are created, `actual_amount` is set to `estimated_amount` only if `received_on` is today, otherwise set to 0
+5. **Expected vs Actual**: Users can track when actual amount received differs from expected amount
+6. **Budget Updates**: Monthly budget totals update automatically when events change
+7. **Deletion Policy**: Only one-off income events can be deleted to prevent auto-recreation conflicts
+8. **Navigation Context**: `return_to` parameter supports seamless navigation back to Money Map
 
 ## Usage Examples
 
@@ -283,11 +330,18 @@ POST /income_events
 }
 ```
 
-### Toggling Deferral
+### Marking as Received
 
 ```ruby
-POST /income_events/123/toggle_defer
-# Toggles whether income counts in current or next month
+PATCH /income_events/123/mark_received?return_to=money_map
+# Sets actual_amount to estimated_amount
+```
+
+### Resetting to Expected
+
+```ruby
+PATCH /income_events/123/reset_to_expected?return_to=money_map
+# Sets actual_amount to 0
 ```
 
 ### Marking as Received
@@ -299,16 +353,23 @@ POST /income_events/123/mark_received
 
 ## UI Features
 
-1. **Icon-Based Actions**: All action buttons (Received, Defer, Edit, Delete) use icons with tooltips
+1. **Unified Form**: Single form with progressive disclosure for one-off and recurring income
 2. **Swipe Gestures**: Unreceived events can be swiped to reveal "Mark as received" action
-3. **Mobile-First Design**: Optimized for touch interactions with appropriate button sizes
+3. **Swipe-Back Navigation**: Swipe from left edge on edit form to navigate back
+4. **Expected vs Actual Display**: Visual comparison of expected and received amounts
+5. **Mobile-First Design**: Optimized for touch interactions with appropriate button sizes
+6. **Navigation Context**: Seamless return to Money Map after actions
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: December 2025
 
-**Recent Changes (January 2026)**:
-- Updated `destroy` action to only allow deletion of one-off income events
-- Template-based income events cannot be deleted (prevents auto-recreation conflicts)
-- Delete button only appears for one-off income events in the UI
+**Recent Changes (December 2025)**:
+- Unified income creation form for one-off and recurring income
+- Added `mark_received` and `reset_to_expected` actions
+- Removed `toggle_defer` action (deferral functionality removed)
+- Added `return_to` parameter support for navigation context
+- Auto-fill `actual_amount` logic based on `received_on` date
+- Swipe-back navigation on edit form
+- Expected vs actual amount comparison in edit form
 

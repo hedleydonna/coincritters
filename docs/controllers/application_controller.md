@@ -17,15 +17,15 @@ The `ApplicationController` is the base controller for all controllers in the Co
 
 ### Authentication Redirect
 
-After a user signs in, they are automatically redirected to the dashboard:
+After a user signs in, they are automatically redirected to the Money Map:
 
 ```ruby
 def after_sign_in_path_for(resource)
-  dashboard_path
+  money_map_path
 end
 ```
 
-This ensures users land on their dashboard after authentication.
+This ensures users land on the Money Map (the main dashboard) after authentication, which provides a complete overview of their financial situation.
 
 ### Devise Parameter Configuration
 
@@ -63,4 +63,8 @@ All controllers inherit from `ApplicationController`:
 ---
 
 **Last Updated**: December 2025
+
+**Recent Changes (December 2025)**:
+- Changed `after_sign_in_path_for` to redirect to `money_map_path` instead of `dashboard_path`
+- Money Map is now the main landing page after login
 
