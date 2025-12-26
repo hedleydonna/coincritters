@@ -1,0 +1,107 @@
+<div class="max-w-2xl mx-auto py-8 px-4" 
+     data-controller="swipe-back payment-confirmation" 
+     data-swipe-back-back-url-value="<%= case @return_to
+                                          when 'money_map'
+                                            money_map_path(scroll_to: 'spending-section')
+                                          else
+                                            expenses_path(month: @viewing_month)
+                                          end %>"
+     data-action="touchstart->swipe-back#touchStart touchmove->swipe-back#touchMove touchend->swipe-back#touchEnd">
+  
+  <% back_path = case @return_to
+                  when 'money_map'
+                    money_map_path(scroll_to: 'spending-section')
+                  else
+                    expenses_path(month: @viewing_month)
+                  end %>
+
+  <div class="mb-4">
+    <%= link_to back_path, 
+          class: "text-gray-600 hover:text-gray-900 font-medium text-sm inline-flex items-center gap-1" do %>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Cancel
+    <% end %>
+  </div>
+
+  <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-lg p-8 mb-6 text-center">
+    <%= form_with url: add_payment_expense_path(@expense), method: :post, 
+          class: "w-full",
+          data: { 
+            turbo: true,
+            payment_confirmation_target: "form"
+          } do |f| %>
+      <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+      
+      <div class="mb-6">
+        <p class="text-white text-lg font-medium mb-2"><%= @expense.display_name %></p>
+        <% if @expense.expected_on || @expense.expense_template&.due_date %>
+          <% due_date = @expense.expected_on || @expense.expense_template.due_date %>
+          <p class="text-white text-sm opacity-90 mb-4">
+            Due: <%= due_date.strftime("%B %d, %Y") %>
+          </p>
+        <% end %>
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
+          <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </div>
+        <p class="text-white text-lg font-medium mb-2">Add Payment</p>
+        <p class="text-white text-3xl font-bold"><%= number_to_currency(@expense.remaining) %> left</p>
+        <% if @expense.allotted_amount > 0 %>
+          <p class="text-white text-sm opacity-90 mt-2">
+            Allotted: <%= number_to_currency(@expense.allotted_amount) %> • 
+            Spent: <%= number_to_currency(@expense.spent_amount) %>
+          </p>
+        <% end %>
+      </div>
+      
+      <div class="mb-4 space-y-3">
+        <div>
+          <label for="amount" class="block text-white text-sm font-medium mb-2 text-left">Amount</label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-gray-500">$</span>
+            <%= number_field_tag :amount, 
+                  @expense.remaining > 0 ? @expense.remaining : nil,
+                  step: "0.01", 
+                  min: "0.01",
+                  max: @expense.remaining > 0 ? @expense.remaining : nil,
+                  placeholder: "0.00",
+                  required: true,
+                  autofocus: true,
+                  data: { payment_confirmation_target: "amount" },
+                  class: "w-full px-4 py-3 pl-8 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" %>
+          </div>
+        </div>
+        
+        <div>
+          <label for="spent_on" class="block text-white text-sm font-medium mb-2 text-left">Date</label>
+          <%= date_field_tag :spent_on, 
+                Date.today,
+                required: true,
+                class: "w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" %>
+        </div>
+        
+        <div>
+          <label for="notes" class="block text-white text-sm font-medium mb-2 text-left">Notes (optional)</label>
+          <%= text_field_tag :notes, 
+                nil,
+                placeholder: "e.g., Groceries, Gas, etc.",
+                class: "w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" %>
+        </div>
+      </div>
+      
+      <%= f.submit "Add Payment", 
+            class: "w-full bg-white hover:bg-gray-50 text-amber-600 font-bold text-xl px-6 py-4 rounded-lg transition-colors shadow-md mb-4" %>
+      
+      <p class="text-white text-sm opacity-90">One tap to add payment</p>
+    <% end %>
+  </div>
+
+  <div class="text-center mb-8">
+    <%= link_to "Edit #{@expense.display_name}", edit_expense_path(@expense, return_to: @return_to), 
+          class: "text-gray-600 hover:text-gray-900 font-medium text-sm underline" %>
+  </div>
+</div>
+

@@ -254,7 +254,7 @@
                 </h3>
                 <div class="space-y-1 ml-4">
                   <% expenses.each do |expense| %>
-                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                    <%= link_to expense_path(expense, return_to: 'money_map'),
                           class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
                       <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900"><%= expense.display_name %></p>
@@ -299,7 +299,7 @@
                 </h3>
                 <div class="space-y-1 ml-4">
                   <% paid_expenses.sort_by { |e| [e.expected_on || e.expense_template&.due_date || e.created_at.to_date, e.display_name] }.each do |expense| %>
-                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                    <%= link_to expense_path(expense, return_to: 'money_map'),
                           class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
                       <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900"><%= expense.display_name %></p>
@@ -338,7 +338,7 @@
                 </h3>
                 <div class="space-y-1 ml-4">
                   <% unpaid_expenses.sort_by { |e| [e.expected_on || e.expense_template&.due_date || e.created_at.to_date, e.display_name] }.each do |expense| %>
-                    <%= link_to edit_expense_path(expense, return_to: 'money_map'),
+                    <%= link_to expense_path(expense, return_to: 'money_map'),
                           class: "flex items-center justify-between py-3 sm:py-2 px-2 border-b border-gray-100 last:border-0 transition-colors cursor-pointer #{expense.expense_template_id.nil? ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'} min-h-[60px] sm:min-h-0" do %>
                       <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900"><%= expense.display_name %></p>

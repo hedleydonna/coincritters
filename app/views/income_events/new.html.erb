@@ -1,8 +1,16 @@
-<div class="max-w-2xl mx-auto py-8 px-4" data-controller="recurring-toggle">
+<div class="max-w-2xl mx-auto py-8 px-4" 
+     data-controller="recurring-toggle swipe-back"
+     data-swipe-back-back-url-value="<%= case @return_to
+                                          when 'money_map'
+                                            money_map_path(scroll_to: 'money-in-section')
+                                          else
+                                            income_events_path
+                                          end %>"
+     data-action="touchstart->swipe-back#touchStart touchmove->swipe-back#touchMove touchend->swipe-back#touchEnd">
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-900 mb-2">Add Income</h1>
     <p class="text-gray-600 mb-4">Record money you received or create a recurring income source</p>
-    <%= link_to "← Back to #{@return_to == 'money_map' ? 'Money Map' : 'Money In'}", @return_to == 'money_map' ? money_map_path : income_events_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
+    <%= link_to "← Back to #{@return_to == 'money_map' ? 'Money Map' : 'Money In'}", @return_to == 'money_map' ? money_map_path(scroll_to: 'money-in-section') : income_events_path, class: "text-gray-600 hover:text-gray-900 font-medium" %>
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
@@ -115,7 +123,7 @@
       <div class="flex gap-4 pt-4">
         <%= f.submit "Add Income", 
               class: "bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors cursor-pointer flex-1" %>
-        <%= link_to "Cancel", @return_to == 'money_map' ? money_map_path : income_events_path, 
+        <%= link_to "Cancel", @return_to == 'money_map' ? money_map_path(scroll_to: 'money-in-section') : income_events_path, 
               class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg transition-colors" %>
       </div>
     <% end %>

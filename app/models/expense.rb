@@ -11,6 +11,10 @@ class Expense < ApplicationRecord
   # ------------------------------------------------------------------
   validates :allotted_amount,
             numericality: { greater_than_or_equal_to: 0 }
+  validates :allotted_amount,
+            numericality: { greater_than: 0 },
+            presence: true,
+            if: -> { expense_template_id.nil? }
 
   # Name is always required (copied from template when created, or entered for one-offs)
   # Note: The name method returns "Unnamed Expense" when attribute is nil, but validation checks the attribute

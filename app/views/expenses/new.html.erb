@@ -1,10 +1,18 @@
-<div class="max-w-2xl mx-auto py-8 px-4" data-controller="recurring-toggle">
+<div class="max-w-2xl mx-auto py-8 px-4" 
+     data-controller="recurring-toggle swipe-back"
+     data-swipe-back-back-url-value="<%= case @return_to
+                                          when 'money_map'
+                                            money_map_path(scroll_to: 'spending-section')
+                                          else
+                                            expenses_path(month: @viewing_month)
+                                          end %>"
+     data-action="touchstart->swipe-back#touchStart touchmove->swipe-back#touchMove touchend->swipe-back#touchEnd">
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-900 mb-2">Add Spending</h1>
     <p class="text-gray-600 mb-4">Record an expense or create a recurring spending template</p>
     <% back_path = case @return_to
                     when 'money_map'
-                      money_map_path
+                      money_map_path(scroll_to: 'spending-section')
                     else
                       expenses_path(month: @viewing_month)
                     end %>

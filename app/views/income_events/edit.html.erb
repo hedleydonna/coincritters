@@ -1,6 +1,13 @@
 <div class="max-w-2xl mx-auto py-8 px-4 w-full overflow-x-hidden" 
      data-controller="swipe-back" 
-     data-swipe-back-back-url-value="<%= income_event_path(@income_event, return_to: @return_to) %>"
+     data-swipe-back-back-url-value="<%= case @return_to
+                                          when 'money_map'
+                                            money_map_path(scroll_to: 'money-in-section')
+                                          when 'income_templates'
+                                            income_templates_path(return_to: @return_to)
+                                          else
+                                            income_events_path
+                                          end %>"
      data-action="touchstart->swipe-back#touchStart touchmove->swipe-back#touchMove touchend->swipe-back#touchEnd">
   
   <% back_path = case @return_to

@@ -57,6 +57,45 @@ class PaymentsController < ApplicationController
     end
   end
 
+  def edit
+    @payment = Payment.find(params[:id])
+    expense = @payment.expense
+    
+    # Ensure the payment belongs to the user
+    unless expense.user == current_user
+      redirect_to expenses_path, alert: "Payment not found."
+      return
+    end
+    
+    @expense = expense
+    @return_to = params[:return_to]
+  end
+
+  def update
+    @payment = Payment.find(params[:id])
+    expense = @payment.expense
+    
+    # Ensure the payment belongs to the user
+    unless expense.user == current_user
+      redirect_to expenses_path, alert: "Payment not found."
+      return
+    end
+    
+    if @payment.update(payment_params)
+      return_to = params[:return_to]
+      redirect_path = if return_to.present?
+        edit_expense_path(expense, return_to: return_to)
+      else
+        expenses_path(month: expense.monthly_budget.month_year)
+      end
+      redirect_to redirect_path, notice: "Payment updated!", status: :see_other
+    else
+      @expense = expense
+      @return_to = params[:return_to]
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
   def destroy
     @payment = Payment.find(params[:id])
     expense = @payment.expense

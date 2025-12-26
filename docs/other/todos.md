@@ -1,18 +1,113 @@
 # Todos
 
-## Fixed: One-off expense form
 
-**Problem**: The "Add One-Off Expense" form included a template dropdown, which shouldn't be needed for one-off expenses.
 
-**Solution**:
-- Removed the template dropdown from the new expense form
-- Simplified the form to only show:
-  - Expense Name (required)
-  - Amount (required)
-- Updated the controller to remove unnecessary `@expense_templates` loading
-- Updated documentation to reflect that this form is specifically for one-off expenses
 
-**Note**: The edit form still includes the template dropdown, which is fine for editing existing expenses (allows linking/unlinking from templates).
+
+ ────────────────────────────────────────────────────────────
+                        December 2025
+
+          Income this month                Spent so far
+               $5,200                           $4,800
+
+          Remaining to assign
+                 $400
+        (Extra this month — nice!)
+
+────────────────────────────────────────────────────────────
+
+Money In
+────────────────────────────────────────────────────────────
+Paycheck (Dec 15)                     $2,600 received ✓
+Paycheck (Dec 29)                     $2,600 received ✓
+Birthday gift                         $100 received ✓
+────────────────────────────────────────────────────────────
+Total received: $5,200     Expected was $5,000 — you’re ahead!
+
+────────────────────────────────────────────────────────────
+
+Spending
+────────────────────────────────────────────────────────────
+Rent                                  $1,200 allotted
+                                      $1,200 spent     Paid ✓
+
+Groceries                             $600 allotted
+                                      $420 spent       $180 left
+                                      [████████░░░░] 70%
+
+Netflix                               $16 allotted
+                                      $0 spent         $16 left
+                                      [░░░░░░░░░░░░] 0%
+
+Savings                               $300 allotted
+                                      $100 swept       $200 left
+                                      [███░░░░░░░░░] 33%
+
+Emergency Fund                        $200 allotted
+                                      $0 spent         $200 left
+                                      [░░░░░░░░░░░░] 0%
+
+
+
+
+With flex and bank balance
+ ────────────────────────────────────────────────────────────
+                        December 2025
+
+          Income this month                Spent so far
+               $5,200                           $4,800
+
+          Remaining to assign
+                 $400
+        (Extra this month — nice!)
+
+────────────────────────────────────────────────────────────
+
+Money In
+────────────────────────────────────────────────────────────
+Paycheck (Dec 15)                     $2,600 received ✓
+Paycheck (Dec 29)                     $2,600 received ✓
+Birthday gift                         $100 received ✓
+────────────────────────────────────────────────────────────
+Total received: $5,200     Expected was $5,000 — you’re ahead!
+
+────────────────────────────────────────────────────────────
+
+Spending
+────────────────────────────────────────────────────────────
+Rent                                  $1,200 allotted
+                                      $1,200 spent     Paid ✓
+
+Groceries                             $600 allotted
+                                      $420 spent       $180 left
+                                      [████████░░░░] 70%
+
+Netflix                               $16 allotted
+                                      $0 spent         $16 left
+                                      [░░░░░░░░░░░░] 0%
+
+Savings                               $300 allotted
+                                      $100 swept       $200 left
+                                      [███░░░░░░░░░] 33%
+
+Emergency Fund                        $200 allotted
+                                      $0 spent         $200 left
+                                      [░░░░░░░░░░░░] 0%
+
+────────────────────────────────────────────────────────────
+Unassigned (flex fund): $400
+                     Sweep to savings →
+
+────────────────────────────────────────────────────────────
+
+Bank balance check
+────────────────────────────────────────────────────────────
+Your bank says: $1,580
+App shows: $1,600
+Close enough ✓ (off by $20)
+
+────────────────────────────────────────────────────────────
++ Add payment          + Add one-off expense
 
 ## Priority recommendations
 

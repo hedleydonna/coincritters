@@ -28,8 +28,8 @@ Rails.application.routes.draw do
     post "expenses/start_next_month", to: "expenses#start_next_month", as: :start_next_month
     post "expenses/:expense_id/sweep_to_savings", to: "expenses#sweep_to_savings", as: :sweep_to_savings
     post "expenses/:id/mark_paid", to: "expenses#mark_paid", as: :mark_expense_paid
-    resources :payments, only: [:new, :create, :destroy]
-    resources :expenses, only: [:new, :create, :edit, :update, :destroy] do
+    resources :payments, only: [:new, :create, :edit, :update, :destroy]
+    resources :expenses, only: [:new, :create, :show, :edit, :update, :destroy] do
       member do
         post :add_payment
       end

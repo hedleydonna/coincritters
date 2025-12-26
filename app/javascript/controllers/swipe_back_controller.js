@@ -52,7 +52,13 @@ export default class extends Controller {
       return
     }
     
+    // Start swipe from anywhere on the left side of screen (first 50px) - less restrictive
     const touch = event.touches[0]
+    if (touch.clientX > 50) {
+      this.isSwiping = false
+      return
+    }
+    
     this.startX = touch.clientX
     this.startY = touch.clientY
     this.startTime = Date.now()
@@ -114,41 +120,69 @@ export default class extends Controller {
       
       // Navigate back using Turbo for better integration
       if (this.hasBackUrlValue) {
-        // Use Turbo.visit with action: 'replace' to maintain history
-        // and listen for load to restore scroll
-        const restoreScroll = () => {
-          const scrollContainer = document.querySelector('[data-controller*="scroll-to-anchor"]')
-          if (scrollContainer) {
-            const scrollKey = `scroll_${new URL(this.backUrlValue).pathname}`
-            const savedScroll = sessionStorage.getItem(scrollKey)
-            if (savedScroll) {
-              // Restore scroll position after a brief delay to ensure content is rendered
-              setTimeout(() => {
-                scrollContainer.scrollTop = parseInt(savedScroll, 10)
-                // Also trigger scroll-to-anchor if there's a scroll_to parameter
-                const url = new URL(this.backUrlValue, window.location.origin)
-                if (url.searchParams.get('scroll_to')) {
-                  // Let scroll-to-anchor controller handle it, but ensure it doesn't override our restore
-                  setTimeout(() => {
-                    const targetId = url.searchParams.get('scroll_to')
-                    const target = document.getElementById(targetId)
-                    if (target) {
-                      const targetRect = target.getBoundingClientRect()
-                      const containerRect = scrollContainer.getBoundingClientRect()
-                      const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20
-                      scrollContainer.scrollTo({
-                        top: Math.max(0, scrollTop),
-                        behavior: 'smooth'
-                      })
-                    }
-                  }, 100)
+        const backUrl = new URL(this.backUrlValue, window.location.origin)
+        const scrollTo = backUrl.searchParams.get('scroll_to')
+        
+        // Set up scroll restoration for money map page
+        if (scrollTo) {
+          const restoreScroll = () => {
+            // Wait for page to load and find the scroll container
+            const findAndScroll = () => {
+              const scrollContainer = document.querySelector('[data-controller*="scroll-to-anchor"]')
+              if (scrollContainer) {
+                const target = document.getElementById(scrollTo)
+                if (target) {
+                  // Calculate scroll position
+                  const targetRect = target.getBoundingClientRect()
+                  const containerRect = scrollContainer.getBoundingClientRect()
+                  const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20
+                  
+                  // Scroll to the target
+                  scrollContainer.scrollTo({
+                    top: Math.max(0, scrollTop),
+                    behavior: 'smooth'
+                  })
+                  
+                  // Also ensure the scroll-to-anchor controller processes it
+                  // by triggering a custom event or directly scrolling
+                  return true
                 }
-              }, 50)
+              }
+              return false
             }
+            
+            // Try immediately
+            if (findAndScroll()) {
+              document.removeEventListener('turbo:load', restoreScroll)
+              document.removeEventListener('turbo:render', restoreScroll)
+              return
+            }
+            
+            // Try multiple times with increasing delays
+            const attempts = [50, 100, 200, 500]
+            attempts.forEach((delay, index) => {
+              setTimeout(() => {
+                if (findAndScroll()) {
+                  document.removeEventListener('turbo:load', restoreScroll)
+                  document.removeEventListener('turbo:render', restoreScroll)
+                }
+              }, delay)
+            })
+            
+            // Clean up after all attempts
+            setTimeout(() => {
+              document.removeEventListener('turbo:load', restoreScroll)
+              document.removeEventListener('turbo:render', restoreScroll)
+            }, 1000)
           }
-          document.removeEventListener('turbo:load', restoreScroll)
+          
+          // Listen for both turbo:load and turbo:render for better reliability
+          document.addEventListener('turbo:load', restoreScroll, { once: true })
+          document.addEventListener('turbo:render', restoreScroll, { once: true })
+          
+          // Also try immediately in case page is already loaded
+          setTimeout(restoreScroll, 0)
         }
-        document.addEventListener('turbo:load', restoreScroll, { once: true })
         
         Turbo.visit(this.backUrlValue)
       } else {

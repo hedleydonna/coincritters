@@ -1,7 +1,7 @@
 # app/controllers/expenses_controller.rb
 class ExpensesController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_expense, only: [:mark_paid, :edit, :update, :destroy, :add_payment]
+  before_action :set_expense, only: [:show, :mark_paid, :edit, :update, :destroy, :add_payment]
 
   def index
     # Auto-create current and next month if they don't exist
@@ -203,6 +203,12 @@ class ExpensesController < ApplicationController
     render :new, status: :unprocessable_entity
   end
 
+  def show
+    @budget = @expense.monthly_budget
+    @viewing_month = @budget.month_year
+    @return_to = params[:return_to]
+  end
+
   def edit
     @budget = @expense.monthly_budget
     @expense_templates = current_user.expense_templates.active.order(:name)
@@ -358,7 +364,7 @@ class ExpensesController < ApplicationController
                       when 'money_map'
                         money_map_path(scroll_to: 'spending-section')
                       else
-                        edit_expense_path(@expense, return_to: params[:return_to])
+                        expense_path(@expense, return_to: params[:return_to])
                       end
       redirect_to redirect_path, 
                   alert: "Payments can only be added to the current month.",
@@ -375,7 +381,7 @@ class ExpensesController < ApplicationController
                       when 'money_map'
                         money_map_path(scroll_to: 'spending-section')
                       else
-                        edit_expense_path(@expense, return_to: params[:return_to])
+                        expense_path(@expense, return_to: params[:return_to])
                       end
       redirect_to redirect_path, 
                   alert: "Payment amount must be greater than 0.",
@@ -394,7 +400,7 @@ class ExpensesController < ApplicationController
                       when 'money_map'
                         money_map_path(scroll_to: 'spending-section')
                       else
-                        edit_expense_path(@expense, return_to: params[:return_to])
+                        expense_path(@expense, return_to: params[:return_to])
                       end
       redirect_to redirect_path, 
                   notice: "Payment of #{helpers.number_to_currency(amount)} added!",
@@ -404,7 +410,7 @@ class ExpensesController < ApplicationController
                       when 'money_map'
                         money_map_path(scroll_to: 'spending-section')
                       else
-                        edit_expense_path(@expense, return_to: params[:return_to])
+                        expense_path(@expense, return_to: params[:return_to])
                       end
       redirect_to redirect_path, 
                   alert: "Error adding payment: #{payment.errors.full_messages.join(', ')}",

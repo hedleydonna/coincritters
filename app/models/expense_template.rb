@@ -7,8 +7,11 @@ class ExpenseTemplate < ApplicationRecord
   # Validations
   # ------------------------------------------------------------------
   validates :name, presence: true, uniqueness: { scope: :user_id, conditions: -> { where(deleted_at: nil) } }
-  validates :default_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :default_amount, numericality: { greater_than: 0, message: "must be greater than 0" }
   validates :frequency, inclusion: { in: %w[monthly weekly biweekly yearly], message: "%{value} is not a valid frequency" }, allow_nil: true
+  
+  # Recalculate affected expenses when default_amount changes
+  after_update :recalculate_affected_expenses, if: :saved_change_to_default_amount?
 
   # Default scope excludes deleted items and orders by name
   default_scope -> { where(deleted_at: nil).order(:name) }
@@ -134,6 +137,36 @@ class ExpenseTemplate < ApplicationRecord
   # Alias for compatibility
   def active?
     deleted_at.nil?
+  end
+
+  private
+
+  # Recalculate affected expenses when default_amount changes
+  # Note: Since expenses store their own allotted_amount, this callback
+  # updates expenses in current/next month that still match the old default_amount
+  # (haven't been manually adjusted). This ensures future planning reflects the new amount.
+  def recalculate_affected_expenses
+    # Find all months that have expenses from this template (current and future)
+    current_month = Time.current.strftime("%Y-%m")
+    next_month = (Date.parse("#{current_month}-01") + 1.month).strftime("%Y-%m")
+    affected_months = [current_month, next_month]
+    
+    # Update expenses in affected months that still have the old default_amount
+    # Only update if they haven't been manually adjusted (allotted_amount matches old default)
+    old_default_amount = saved_change_to_default_amount[0]
+    
+    affected_months.each do |month_year|
+      budget = user.monthly_budgets.find_by(month_year: month_year)
+      next unless budget
+      
+      # Find expenses from this template that still have the old default_amount
+      expenses_to_update = budget.expenses
+        .where(expense_template_id: id)
+        .where(allotted_amount: old_default_amount)
+      
+      # Update them to the new default_amount
+      expenses_to_update.update_all(allotted_amount: default_amount) if expenses_to_update.any?
+    end
   end
 end
 
